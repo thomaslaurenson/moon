@@ -1,22 +1,24 @@
-# Go GitHub Actions Workflows
+# GitHub Actions Workflows
 
-Conventions for structuring GitHub Actions in Go projects.
+Conventions for structuring GitHub Actions workflows across any project type.
 
 ## Design Principles
 
 - Reusable workflows (`workflow_call`) for all job logic — callers just compose them
-- All steps call `make <target>`, never raw Go commands
+- All steps call `make <target>`, never raw commands directly
 - Minimal permissions — `contents: read` by default, `contents: write` only for release
-- Standard runner: `ubuntu-24.04`
-- Go version sourced from `go.mod` via `go-version-file`, never hardcoded
+- Standard runner: `ubuntu-24.04` — always pin the version, never use `ubuntu-latest`
+- Prefer official GitHub actions (`actions/*`) over third-party actions
+- Releases use the `gh` CLI (pre-installed on all runners) — no third-party release actions
+- Workflow file names reflect their trigger: `pr.yml` for pull requests, `tag.yml` for tags
 
 ## Workflow Files
 
 ```
 .github/workflows/
-  lint.yml      # reusable: fmt_check, mod_check, vet
-  test.yml      # reusable: test
-  release.yml   # reusable: goreleaser
+  lint.yml      # reusable: project linting/formatting checks
+  test.yml      # reusable: run tests
+  release.yml   # reusable: create GitHub release via gh CLI
   pr.yml        # caller: lint + test on pull requests
   tag.yml       # caller: lint + test + release on v* tags
 ```
@@ -36,25 +38,16 @@ permissions:
   contents: read
 
 jobs:
-  go_lint:
+  lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - run: make fmt_check
-
-      - run: make mod_check
-
-      - run: make vet
+      - run: make lint
 ```
 
-- No `fetch-depth: 0` — not needed for linting
 - Steps use `make` targets, not raw commands
+- Add language-specific setup steps (e.g. `actions/setup-node`, `actions/setup-python`) before the `make` call if needed
 
 ### test.yml
 
@@ -67,20 +60,16 @@ permissions:
   contents: read
 
 jobs:
-  go_test:
+  test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
+      - uses: actions/checkout@v4
 
       - run: make test
 ```
 
 - No `fetch-depth: 0` — not needed for tests
+- Add language-specific setup steps before the `make` call if needed
 
 ### release.yml
 
@@ -93,17 +82,12 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # required by GoReleaser for changelog/versioning
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
+          fetch-depth: 0  # required to read full git history for release context
 
       - name: Extract release notes from CHANGELOG.md
         run: |
@@ -115,16 +99,23 @@ jobs:
             exit 1
           fi
 
-      - uses: goreleaser/goreleaser-action@v7
-        with:
-          args: release --clean --release-notes /tmp/release-notes.md
+      - name: Build release artifacts
+        run: make build
+
+      - name: Create GitHub release
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file /tmp/release-notes.md \
+            bin/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-- `fetch-depth: 0` is required here for GoReleaser to read git history
-- Release notes are extracted from `CHANGELOG.md` matching the tag name
-- Fails explicitly if no CHANGELOG entry exists for the tag
+- `fetch-depth: 0` required to ensure full git history is available
+- Release notes are extracted from `CHANGELOG.md` matching the tag name — fails explicitly if no entry is found
+- `gh release create` attaches build artifacts from `bin/`; adjust the glob to match your project's output
+- `gh` is pre-installed on all GitHub-hosted runners — no third-party release action needed
 
 ## Caller Workflows
 
@@ -184,7 +175,28 @@ jobs:
 
 ## Conventions
 
+- Always pin runner versions: `ubuntu-24.04`, not `ubuntu-latest`
+- Prefer `actions/checkout`, `actions/setup-*` over third-party equivalents
 - `fetch-depth: 0` only in `release.yml`, not in lint or test workflows
 - `permissions: contents: write` only in `release.yml` and `tag.yml`
-- Concurrency group on `pr.yml` to avoid redundant runs
+- Concurrency group on `pr.yml` to cancel stale runs
 - No workflow runs on direct branch pushes — only PRs and tags
+- All commands go through `make` targets — workflows stay language-agnostic
+
+## CHANGELOG Format
+
+The release workflow expects `CHANGELOG.md` entries in this format:
+
+```markdown
+## v1.2.3
+
+### Added
+
+- Add feature X
+
+### Fixed
+
+- Fix bug Y
+```
+
+The tag name (e.g. `v1.2.3`) must match the `## <tag>` heading exactly. The release workflow fails if no matching entry is found.

@@ -7,7 +7,7 @@ Standards and conventions for Go projects. Use this as a reference when creating
 ```
 cmd/           # cobra command definitions (root.go, run.go, version.go, etc.)
 internal/      # private packages not imported by other modules
-main.go        # entry point — minimal, delegates to cmd/
+main.go        # entry point - minimal, delegates to cmd/
 .github/
   workflows/
   dependabot.yml
@@ -22,8 +22,8 @@ README.md
 
 - Business logic lives in `internal/`, not `cmd/`
 - `cmd/` only handles CLI parsing and wiring
-- No `pkg/` directory — use `internal/` unless the package is intentionally public
-- Do **not** add a named subdirectory under `internal/` (e.g. `internal/myapp/`) — this is only warranted in a monorepo with multiple binaries that need scoped internals. For a single-binary project, packages sit directly under `internal/`
+- No `pkg/` directory - use `internal/` unless the package is intentionally public
+- Do **not** add a named subdirectory under `internal/` (e.g. `internal/myapp/`) - this is only warranted in a monorepo with multiple binaries that need scoped internals. For a single-binary project, packages sit directly under `internal/`
 
 ## Tools
 
@@ -40,23 +40,23 @@ The only tooling used is what ships with Go itself. No third-party linters.
 
 ## Makefile
 
-All CI steps are Makefile targets. GitHub Actions call `make <target>` — never raw Go commands directly in workflows.
+All CI steps are Makefile targets. GitHub Actions call `make <target>` - never raw Go commands directly in workflows.
 
 Key targets:
 
 ```makefile
-fmt:          gofmt -w .
-fmt_check:    gofmt -l . (exits 1 if unformatted files found)
-mod_check:    go mod tidy && git diff --exit-code go.mod go.sum
-vet:          go vet ./...
-test:         go test -race -count=1 ./...
-test_verbose: go test -race -count=1 -v ./...
+fmt:           gofmt -w .
+fmt_check:     gofmt -l . (exits 1 if unformatted files found)
+mod_check:     go mod tidy && git diff --exit-code go.mod go.sum
+vet:           go vet ./...
+test:          go test -race -count=1 ./...
+test_verbose:  go test -race -count=1 -v ./...
 test_coverage: go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...
-ci:           fmt_check mod_check vet test
-build:        go build -ldflags="..." -o bin/<binary> .
-install:      go install -ldflags="..." .
-clean:        rm -rf bin/ dist/
-snapshot:     goreleaser release --snapshot --clean
+ci:            fmt_check mod_check vet test
+build:         go build -ldflags="..." -o bin/<binary> .
+install:       go install -ldflags="..." .
+clean:         rm -rf bin/ dist/
+snapshot:      vgoreleaser release --snapshot --clean
 release_check: goreleaser check
 ```
 
@@ -111,7 +111,7 @@ changelog:
     exclude: ["^docs:", "^test:", "^chore:", "^Merge "]
 ```
 
-- No `release.github` block — GoReleaser auto-detects owner/repo from the git remote
+- No `release.github` block - GoReleaser auto-detects owner/repo from the git remote
 - `CGO_ENABLED=0` for static binaries
 - `mod_timestamp` makes builds reproducible
 - Changelog sorted `desc` (newest commits first)
@@ -124,7 +124,7 @@ bin/
 dist/
 ```
 
-- Use `bin/` not the binary name directly — works for any project
+- Use `bin/` not the binary name directly - works for any project
 
 ## Dependabot
 

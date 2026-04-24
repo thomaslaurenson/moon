@@ -4,13 +4,13 @@ Conventions for README badges across all projects.
 
 ## Design Principles
 
-- `style=flat` on all shields.io badges — no other style variants
+- `style=flat` on all shields.io badges - no other style variants
 - Group badges semantically: CI → release → language/quality
 - Separate groups with a blank line so GitHub renders a visual break
 - Pairs within a group sit on the same line, separated by a single space
 - No click-through links on badges unless the badge is for a package registry (PyPI, etc.)
-- Code coverage is a static badge — update it manually on each release
-- Both CI badges point to `tag.yml` — this reflects the last released build, not every push
+- Code coverage is a static badge - update it manually on each release
+- Both CI badges point to `tag.yml` - this reflects the last released build, not every push
 
 ## Go Projects
 
@@ -23,9 +23,9 @@ Conventions for README badges across all projects.
 ```
 
 Groups:
-1. **CI** — build and test, both sourced from `tag.yml`
-2. **Release** — latest version tag and total download count
-3. **Language/quality** — Go version from `go.mod`, manually-maintained coverage percentage
+1. **CI** - build and test, both sourced from `tag.yml`
+2. **Release** - latest version tag and total download count
+3. **Language/quality** - Go version from `go.mod`, manually-maintained coverage percentage
 
 Replace `XX` in the coverage badge with the actual percentage on each release.
 

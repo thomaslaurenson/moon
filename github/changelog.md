@@ -4,13 +4,13 @@ Conventions for writing `CHANGELOG.md` files across all projects.
 
 ## Design Principles
 
-- Source content from the PR description and recent commits — do not invent entries
-- One bullet per logical change — group related fixes into a single line
+- Source content from the PR description and recent commits - do not invent entries
+- One bullet per logical change - group related fixes into a single line
 - Imperative voice: "Add support for X", not "Added support for X" or "Adds support for X"
 - No trailing period on bullets
-- No inline code in bullets — describe the change in plain English
+- No inline code in bullets - describe the change in plain English
 - Newest release at the top
-- Only include sections that have entries — omit empty sections entirely
+- Only include sections that have entries - omit empty sections entirely
 - Omit patch-level detail (file names, line numbers, function names)
 
 ## Format

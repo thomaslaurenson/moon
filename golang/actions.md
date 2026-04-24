@@ -4,9 +4,9 @@ Conventions for structuring GitHub Actions in Go projects.
 
 ## Design Principles
 
-- Reusable workflows (`workflow_call`) for all job logic — callers just compose them
+- Reusable workflows (`workflow_call`) for all job logic - callers just compose them
 - All steps call `make <target>`, never raw Go commands
-- Minimal permissions — `contents: read` by default, `contents: write` only for release
+- Minimal permissions - `contents: read` by default, `contents: write` only for release
 - Standard runner: `ubuntu-24.04`
 - Go version sourced from `go.mod` via `go-version-file`, never hardcoded
 
@@ -21,7 +21,7 @@ Conventions for structuring GitHub Actions in Go projects.
   tag.yml       # caller: lint + test + release on v* tags
 ```
 
-No `push.yml` — linting and testing are only triggered by PRs and tags.
+No `push.yml` - linting and testing are only triggered by PRs and tags.
 
 ## Reusable Workflows
 
@@ -53,7 +53,7 @@ jobs:
       - run: make vet
 ```
 
-- No `fetch-depth: 0` — not needed for linting
+- No `fetch-depth: 0` - not needed for linting
 - Steps use `make` targets, not raw commands
 
 ### test.yml
@@ -80,7 +80,7 @@ jobs:
       - run: make test
 ```
 
-- No `fetch-depth: 0` — not needed for tests
+- No `fetch-depth: 0` - not needed for tests
 
 ### release.yml
 
@@ -187,4 +187,4 @@ jobs:
 - `fetch-depth: 0` only in `release.yml`, not in lint or test workflows
 - `permissions: contents: write` only in `release.yml` and `tag.yml`
 - Concurrency group on `pr.yml` to avoid redundant runs
-- No workflow runs on direct branch pushes — only PRs and tags
+- No workflow runs on direct branch pushes - only PRs and tags

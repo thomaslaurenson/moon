@@ -4,10 +4,10 @@ Conventions for writing `Makefile` files across all projects.
 
 ## Design Principles
 
-- `make` is a task runner — not a build system (unless the project has no better option)
+- `make` is a task runner - not a build system (unless the project has no better option)
 - Every target is a verb: `build`, `test`, `lint`, not `binary`, `tests`, `linter`
-- CI steps call `make <target>` — never raw commands directly in workflow files
-- No release or tag targets — those are handled externally via shell functions
+- CI steps call `make <target>` - never raw commands directly in workflow files
+- No release or tag targets - those are handled externally via shell functions
 - Target names use underscores: `fmt_check`, `test_coverage`, `build_clean`
 - Keep lines to 100 characters
 
@@ -20,8 +20,8 @@ SHELL := /bin/bash
 .SILENT:
 ```
 
-- `SHELL := /bin/bash` — ensures consistent shell behaviour regardless of the invoking environment
-- `.SILENT:` (no prerequisites) — globally suppresses recipe echoing; equivalent to `@` on every line; use `printf` or `echo` explicitly when output is needed
+- `SHELL := /bin/bash` - ensures consistent shell behaviour regardless of the invoking environment
+- `.SILENT:` (no prerequisites) - globally suppresses recipe echoing; equivalent to `@` on every line; use `printf` or `echo` explicitly when output is needed
 
 ## Variables
 
@@ -52,7 +52,7 @@ Declare one `.PHONY` block at the top of the file, listing every target, in the 
 	clean
 ```
 
-- Always declare every target — eliminates silent no-ops when a directory with the same name exists
+- Always declare every target - eliminates silent no-ops when a directory with the same name exists
 - Order matches file order
 - Use `\` continuation with one tab of indent per group
 
@@ -66,7 +66,7 @@ help: ## Show this help message
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
 ```
 
-- Target comment syntax: `target: ## Short description` — comment on the same line, after `##`
+- Target comment syntax: `target: ## Short description` - comment on the same line, after `##`
 - Adjust the `%-18s` padding to fit the longest target name in the file
 - Help output should fit in a terminal without wrapping (target + description ≤ 100 chars)
 
@@ -83,7 +83,7 @@ Use a comment separator before each logical group of targets. Common sections:
 ```
 
 - One blank line before the separator, no blank line after
-- Only include sections that have targets — omit empty sections
+- Only include sections that have targets - omit empty sections
 
 ## ci Target
 
@@ -93,7 +93,7 @@ Include a `ci` target that mirrors what the `lint.yml` and `test.yml` workflows 
 ci: lint test ## Run all CI checks locally
 ```
 
-- The exact dependencies vary per project — match what the CI workflows actually run
+- The exact dependencies vary per project - match what the CI workflows actually run
 - Place `ci` just before `clean`, after the test section
 
 ## Example (Go)

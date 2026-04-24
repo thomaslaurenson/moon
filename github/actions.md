@@ -4,12 +4,12 @@ Conventions for structuring GitHub Actions workflows across any project type.
 
 ## Design Principles
 
-- Reusable workflows (`workflow_call`) for all job logic — callers just compose them
+- Reusable workflows (`workflow_call`) for all job logic - callers just compose them
 - All steps call `make <target>`, never raw commands directly
-- Minimal permissions — `contents: read` by default, `contents: write` only for release
-- Standard runner: `ubuntu-24.04` — always pin the version, never use `ubuntu-latest`
+- Minimal permissions - `contents: read` by default, `contents: write` only for release
+- Standard runner: `ubuntu-24.04` - always pin the version, never use `ubuntu-latest`
 - Prefer official GitHub actions (`actions/*`) over third-party actions
-- Releases use the `gh` CLI (pre-installed on all runners) — no third-party release actions
+- Releases use the `gh` CLI (pre-installed on all runners) - no third-party release actions
 - Workflow file names reflect their trigger: `pr.yml` for pull requests, `tag.yml` for tags
 
 ## Workflow Files
@@ -23,7 +23,7 @@ Conventions for structuring GitHub Actions workflows across any project type.
   tag.yml       # caller: lint + test + release on v* tags
 ```
 
-No `push.yml` — linting and testing are only triggered by PRs and tags.
+No `push.yml` - linting and testing are only triggered by PRs and tags.
 
 ## Reusable Workflows
 
@@ -68,7 +68,7 @@ jobs:
       - run: make test
 ```
 
-- No `fetch-depth: 0` — not needed for tests
+- No `fetch-depth: 0` - not needed for tests
 - Add language-specific setup steps before the `make` call if needed
 
 ### release.yml
@@ -113,9 +113,9 @@ jobs:
 ```
 
 - `fetch-depth: 0` required to ensure full git history is available
-- Release notes are extracted from `CHANGELOG.md` matching the tag name — fails explicitly if no entry is found
+- Release notes are extracted from `CHANGELOG.md` matching the tag name - fails explicitly if no entry is found
 - `gh release create` attaches build artifacts from `bin/`; adjust the glob to match your project's output
-- `gh` is pre-installed on all GitHub-hosted runners — no third-party release action needed
+- `gh` is pre-installed on all GitHub-hosted runners - no third-party release action needed
 
 ## Caller Workflows
 
@@ -180,8 +180,8 @@ jobs:
 - `fetch-depth: 0` only in `release.yml`, not in lint or test workflows
 - `permissions: contents: write` only in `release.yml` and `tag.yml`
 - Concurrency group on `pr.yml` to cancel stale runs
-- No workflow runs on direct branch pushes — only PRs and tags
-- All commands go through `make` targets — workflows stay language-agnostic
+- No workflow runs on direct branch pushes - only PRs and tags
+- All commands go through `make` targets - workflows stay language-agnostic
 
 ## CHANGELOG Format
 

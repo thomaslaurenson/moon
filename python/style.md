@@ -59,6 +59,44 @@ def my_function(arg1: str, arg2: int) -> list[dict]:
 - Omit `:return:` entirely from `__init__` methods — never document `None` returns.
 - Private helpers (prefixed `_`) follow the same conventions.
 
+### Class docstrings
+
+One-line summary on the class itself. Extended description as a paragraph if needed.
+Parameters belong on `__init__`, not on the class.
+
+```python
+class MyClient:
+    """Brief description of what this client does."""
+
+
+class MyClientWithDetail:
+    """Brief description of what this client does.
+
+    Additional context about the class can go here as a paragraph.
+    """
+```
+
+### Examples in library code
+
+Use `Example::` (double colon) to introduce examples in library method docstrings.
+Indent example lines with four spaces. Use `>>>` for interactive-style examples.
+Do not use `Example:` (single colon) or NumPy/Google section underlines (`--------`).
+
+```python
+def my_method(self, arg: str) -> str:
+    """Do something with arg.
+
+    Example::
+
+        >>> result = client.my_method("value")
+        >>> print(result)
+        'processed_value'
+
+    :param arg: Input value.
+    :return: Processed result.
+    """
+```
+
 ---
 
 ## Spelling
@@ -88,4 +126,19 @@ y = complex_operation()
 
 # Bad: decorative divider — avoid this style
 # --- section name ---
+```
+
+---
+
+## Constants
+
+Module-level constants use `UPPER_SNAKE_CASE`. Private constants (not part of the
+public API) use a leading underscore: `_UPPER_SNAKE_CASE`.
+
+```python
+# Public constant
+DEFAULT_TIMEOUT = 300
+
+# Private constant — internal implementation detail
+_IGNORED_EVENT_TYPES = {"verbose", "playbook_on_start"}
 ```

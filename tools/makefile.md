@@ -2,6 +2,18 @@
 
 Conventions for writing `Makefile` files across all projects.
 
+## Contents
+
+- [Design principles](#design-principles) — make as task runner, verb targets, underscores
+- [Non-negotiable rules](#non-negotiable-rules) — help first, inline comments, per-target .PHONY
+- [Global settings](#global-settings) — SHELL := /bin/bash
+- [Variables](#variables) — naming, assignment operators, alignment
+- [.PHONY](#phony) — declare per target, not in one block
+- [Help target](#help-target) — canonical grep/awk implementation
+- [Section separators](#section-separators) — comment-based grouping
+- [ci target](#ci-target) — mirrors CI pipeline for local validation
+- [Canonical target names](#compact-reference-targets) — build, lint, test, clean reference
+
 ## Design Principles
 
 - `make` is a task runner - not a build system (unless the project has no better option)

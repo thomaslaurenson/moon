@@ -1,6 +1,11 @@
 # Changelog Format
 
-Conventions for writing `CHANGELOG.md` files across all projects.
+## Contents
+
+- [Design principles](#design-principles) — source, voice, formatting rules
+- [Format](#format) — version line, date, section order
+- [Sections](#sections) — when to use Added, Changed, Fixed, Updated, Thanks
+- [Example](#example) — reference entry
 
 ## Design Principles
 

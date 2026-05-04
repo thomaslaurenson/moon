@@ -2,102 +2,19 @@
 
 Style conventions for Python code in this project.
 
----
+## Contents
+
+- [Unusual characters](#unusual-characters) — em dash and other characters to avoid
+- [Spelling](#spelling) — British English rules
+- [Inline comments](#inline-comments) — formatting and capitalisation rules
+- [Constants](#constants) — UPPER_SNAKE_CASE, public vs private
+- [Comment hygiene](#comment-hygiene) — step narration, human comments
+- [Lazy instantiation](#lazy-instantiation) — preferred pattern for deferred setup
+- [Config classes](#config-classes) — os.getenv defaults, no hardcoded values
 
 ## Unusual Characters
 
 - Never use em dash (—)
-
-## Docstrings
-
-Docstrings use **reStructuredText (rST) / Sphinx** syntax, not Google-style sections.
-
-### Module docstrings
-
-Brief summary sentence, followed by a description of what the module does (numbered or
-bulleted list), and a `Usage::` code block where applicable.
-
-Use `Usage::` (double colon) — this is standard rST syntax and creates a rendered code
-block in Sphinx. Do not use `Usage:` (single colon), `Example:`, or RST section underlines
-(`--------`) inside module docstrings. Run commands use `uv run`, never `python`.
-
-```python
-"""Short description of the module.
-
-Does the following:
-
-1. First thing.
-2. Second thing.
-
-Usage::
-
-    uv run tasks/some/script.py --arg value
-"""
-```
-
-### Function and method docstrings
-
-One-line summary sentence on the opening line. Optional extended description as a
-paragraph. Then `:param:`, `:raises:`, and `:return:` fields.
-
-```python
-def my_function(arg1: str, arg2: int) -> list[dict]:
-    """Do something useful.
-
-    Extended description goes here when the summary alone is not sufficient.
-
-    :param arg1: Description of arg1.
-    :param arg2: Description of arg2.
-    :raises ValueError: When arg1 is invalid.
-    :return: List of result dicts.
-    """
-```
-
-- Use `:class:\`~fully.qualified.ClassName\`` when referencing types in param descriptions.
-- Omit `:param:` / `:return:` fields for trivial one-liners where the signature is self-documenting.
-- Use `:return:` (not `:returns:`).
-- Omit `:return:` entirely from `__init__` methods — never document `None` returns.
-- Private helpers (prefixed `_`) follow the same conventions.
-
-### Class docstrings
-
-One-line summary on the class itself. Extended description as a paragraph if needed.
-Parameters belong on `__init__`, not on the class.
-
-```python
-class MyClient:
-    """Brief description of what this client does."""
-
-
-class MyClientWithDetail:
-    """Brief description of what this client does.
-
-    Additional context about the class can go here as a paragraph.
-    """
-```
-
-### Examples in library code
-
-Use `Example::` (double colon) to introduce examples in library method docstrings.
-Indent example lines with four spaces. Use `>>>` for interactive-style examples.
-Do not use `Example:` (single colon) or NumPy/Google section underlines (`--------`).
-
-```python
-def my_method(self, arg: str) -> str:
-    """Do something with arg.
-
-    Example::
-
-        >>> result = client.my_method("value")
-        >>> print(result)
-        'processed_value'
-
-    :param arg: Input value.
-    :return: Processed result.
-    """
-```
-
----
 
 ## Spelling
 
@@ -128,7 +45,14 @@ y = complex_operation()
 # --- section name ---
 ```
 
----
+## Comment Hygiene
+
+- Do not write step narration comments that describe the next line of code.
+  Bad: `# Loop through results`, `# Open the file`
+- Preserve comments that explain why something is done, not what.
+  Good: `# Offset by 1 because the API returns 1-indexed page numbers`
+- Do not over-annotate type hints with redundant inline comments.
+- Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 
 ## Constants
 
@@ -142,3 +66,31 @@ DEFAULT_TIMEOUT = 300
 # Private constant — internal implementation detail
 _IGNORED_EVENT_TYPES = {"verbose", "playbook_on_start"}
 ```
+
+## Lazy Instantiation
+
+Prefer deferred setup — instantiate objects on first access, not at construction time.
+Use a private attribute initialised to `None` and a property that creates it on demand.
+
+```python
+@property
+def instances(self) -> InstanceClient:
+    if self._instances is None:
+        self._instances = InstanceClient(self._session)
+    return self._instances
+```
+
+## Config Classes
+
+Use class-level attributes with `os.getenv` defaults. No `__init__` required.
+
+```python
+import os
+
+class MyConfig:
+    timeout: int = int(os.getenv("MY_TIMEOUT", "30"))
+    base_url: str = os.getenv("MY_BASE_URL", "https://api.example.com")
+```
+
+- Env vars are read once at class load time.
+- Never hardcode credentials, URLs, or environment-specific values.

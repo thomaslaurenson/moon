@@ -2,6 +2,14 @@
 
 Standards and conventions for Python projects. Use this as a reference when creating or refactoring a Python repository.
 
+## Contents
+
+- [Project structure](#project-structure) — library layout vs scripts-only layout
+- [Tools](#tools) — uv, ruff, pytest; what is not used
+- [uv](#uv) — install, sync, run, lock commands
+- [pyproject.toml](#pyprojecttoml) — metadata, dep groups, ruff, pytest, coverage, build backend
+- [Makefile targets](#makefile) — canonical target names and what they do
+
 ## Project Structure
 
 ### Library project
@@ -116,7 +124,7 @@ select = [
 "tests/**" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
-convention = "google"
+convention = "sphinx"
 ```
 
 ### Pytest configuration

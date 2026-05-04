@@ -1,6 +1,11 @@
 # GitHub Badges
 
-Conventions for README badges across all projects.
+## Contents
+
+- [Design principles](#design-principles) — style=flat, grouping, no click-throughs
+- [Go projects](#go-projects) — CI, release, language/quality badge groups
+- [Python projects](#python-projects) — PyPI and licence badges
+- [Pages / static sites](#pages--static-sites) — deploy badge only
 
 ## Design Principles
 

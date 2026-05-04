@@ -2,6 +2,15 @@
 
 Standards and conventions for authoring installable Python library packages.
 
+## Contents
+
+- [Type hints](#type-hints) — required on all signatures, modern union syntax
+- [Docstrings](#docstrings) — rST/Sphinx format, when to include param/return fields
+- [__init__.py](#initpy) — public API exports, what not to import at top level
+- [Optional dependencies](#optional-dependencies) — import guards, error messages
+- [Logging](#logging) — structlog, never print(), context as keyword args
+- [Testing](#testing) — unit vs integration, pytest.mark.integration, conftest
+
 ## Type Hints
 
 - All function and method signatures must include type hints - parameters and return types
@@ -27,29 +36,27 @@ class InstanceClient:
 
 ## Docstrings
 
-Google format, enforced by ruff `D` rules with `convention = "google"`.
+rST/Sphinx format, enforced by ruff `D` rules with `convention = "sphinx"`.
 
 ```python
 def sign_ssh_key(public_key: str, ttl: int = 3600) -> str:
     """Sign an SSH public key using the Vault CA.
 
-    Args:
-        public_key: The SSH public key to sign.
-        ttl: Certificate validity in seconds.
-
-    Returns:
-        The signed certificate as a string.
-
-    Raises:
-        ValueError: If the public key is malformed.
+    :param public_key: The SSH public key to sign.
+    :param ttl: Certificate validity in seconds.
+    :raises ValueError: If the public key is malformed.
+    :return: The signed certificate as a string.
     """
 ```
 
 Rules:
-- Every public function, method, and class requires a docstring
-- One-line docstrings are acceptable for trivial properties and getters
-- `Args`, `Returns`, and `Raises` sections are only included when they add information beyond the type hints
-- `tests/**` files are exempt from docstring rules - configure via `per-file-ignores` in `pyproject.toml`
+- Every public function, method, and class requires a docstring.
+- One-line docstrings are acceptable for trivial properties and getters.
+- `:param:`, `:raises:`, and `:return:` fields are only included when they add
+  information beyond the type hints.
+- Use `:return:` not `:returns:`.
+- Omit `:return:` from `__init__` methods entirely.
+- `tests/**` files are exempt from docstring rules.
 
 ## `__init__.py`
 
@@ -86,46 +93,6 @@ import hvac
 
 - Each optional integration is a separate dep group in `pyproject.toml`
 - The import error message must name the extra the user needs to install
-
-## Client Pattern
-
-Every integration client follows the same lifecycle - no I/O at construction time:
-
-```python
-client = MyClient()       # __init__: store config only, no network calls
-client.creds_from_env()   # read env vars, raise ValueError if missing
-client.create_session()   # establish API connection
-```
-
-- `creds_from_env()` raises `ValueError` with a descriptive message if a required env var is absent
-- `create_session()` is where all network I/O happens
-
-## Lazy Sub-clients
-
-Expose sub-clients as `@property` on the parent client. Instantiate on first access only.
-
-```python
-@property
-def instances(self) -> InstanceClient:
-    if self._instances is None:
-        self._instances = InstanceClient(self._session)
-    return self._instances
-```
-
-## Config Classes
-
-Use class-level attributes with `os.getenv` defaults. No `__init__` required.
-
-```python
-import os
-
-class MyConfig:
-    timeout: int = int(os.getenv("MY_TIMEOUT", "30"))
-    base_url: str = os.getenv("MY_BASE_URL", "https://api.example.com")
-```
-
-- Env vars are read once at class load time
-- Never hardcode credentials, URLs, or environment-specific values
 
 ## Logging
 

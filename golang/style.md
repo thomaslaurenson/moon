@@ -2,7 +2,12 @@
 
 Style conventions for Go code in this project.
 
----
+## Contents
+
+- [Unusual characters](#unusual-characters) — em dash and other characters to avoid
+- [Comments](#comments) — package, function, type, and inline comment conventions
+- [Spelling](#spelling) — British English rules
+- [Naming](#naming) — exported/unexported identifiers, acronyms, interfaces, errors, constants
 
 ## Unusual Characters
 
@@ -97,6 +102,18 @@ y := complexOperation()
 // Bad: decorative divider — avoid this style
 // --- section name ---
 ```
+
+---
+
+## Comment Hygiene
+
+- Do not write step narration comments that describe the next line of code.
+  Bad: `// Initialise the counter`, `// Check for nil`
+- Preserve comments that explain why something is done, not what.
+  Good: `// Use index 0 because the legacy API expects a 0-indexed fallback`
+- Do not use trailing block comments (`// end if`, `// end for`) unless the block
+  exceeds 50 lines.
+- Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 
 ---
 

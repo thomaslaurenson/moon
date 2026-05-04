@@ -2,6 +2,12 @@
 
 Short rules for `.goreleaser.yml` in Go projects.
 
+## Contents
+
+- [Non-negotiable rules](#non-negotiable-rules) — binary-only builds, checksums, signing, ldflags
+- [Notes](#notes) — reproducible builds, CGO, changelog source
+- [Minimal reference](#minimal-reference) — canonical .goreleaser.yml
+
 ## Non-Negotiable Rules
 
 - Build binaries only, not archives (`formats: [binary]`)

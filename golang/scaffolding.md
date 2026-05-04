@@ -2,6 +2,13 @@
 
 Standards and conventions for Go projects. Use this as a reference when creating or refactoring a Go repository.
 
+## Contents
+
+- [Project structure](#project-structure) — directory layout for a single-binary Go project
+- [Tools](#tools) — only what ships with Go, no third-party linters
+- [Makefile targets](#makefile) — canonical target names and what they do
+- [go.mod rules](#gomod) — versioning and tidy rules
+
 ## Project Structure
 
 ```
@@ -71,56 +78,4 @@ Rules:
 - No `replace` directives in committed code
 - Run `go mod tidy` before committing
 
-## .gitignore
 
-```gitignore
-# CUSTOM
-bin/
-dist/
-```
-
-- Use `bin/` not the binary name directly - works for any project
-
-## Dependabot
-
-File: `.github/dependabot.yml`
-
-```yaml
-version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    assignees:
-      - "<username>"
-
-  - package-ecosystem: gomod
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 0  # security updates only
-    assignees:
-      - "<username>"
-```
-
-- GitHub Actions: weekly bumps
-- Go modules: security updates only (`open-pull-requests-limit: 0`)
-
-## README Badges
-
-Place at the top of README.md. All badges use `style=flat`.
-
-```markdown
-![Build Status](https://img.shields.io/github/actions/workflow/status/<owner>/<repo>/tag.yml?style=flat)
-![Test Status](https://img.shields.io/github/actions/workflow/status/<owner>/<repo>/tag.yml?style=flat&label=test)
-
-![Release Version](https://img.shields.io/github/v/release/<owner>/<repo>?style=flat)
-![Release downloads](https://img.shields.io/github/downloads/<owner>/<repo>/total?label=downloads)
-
-![Go Version](https://img.shields.io/github/go-mod/go-version/<owner>/<repo>)
-![Code Coverage](https://img.shields.io/badge/coverage-XX%25-blue)
-```
-
-- Build/test badges point to `tag.yml` (reflects last release health)
-- Coverage badge is updated manually after running `make test_coverage`

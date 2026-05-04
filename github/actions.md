@@ -24,14 +24,15 @@ Use reusable workflows (`workflow_call`) for all job logic. Caller workflows com
 
 ```
 .github/workflows/
-  lint.yml      # reusable: linting and format checks
-  test.yml      # reusable: run tests
+  lint.yml      # reusable: linting, format checks, type checking
+  test.yml      # reusable: run tests (matrix across Python versions for Python projects)
   release.yml   # reusable: build + create GitHub release
   pr.yml        # caller: lint + test on pull requests
   tag.yml       # caller: lint + test + release on v* tags
 ```
 
-No `push.yml` for Go projects. Python projects may add a `push.yml` that runs lint only.
+No `push.yml` for any project. Use `pr.yml` to validate on pull requests and `tag.yml`
+to validate and release on tags.
 
 Concurrency on `pr.yml`: always add a concurrency group to cancel stale runs when new
 commits are pushed to a PR.

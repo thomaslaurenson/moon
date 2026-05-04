@@ -57,9 +57,9 @@ Gitignore rules:
 - Set `autosummary_ignore_module_all = True`
 - Set `autodoc_default_options` with `members: True`, `ignore-module-all: True`,
   `show-inheritance: True`
-- Version: read from installed package metadata via `importlib.metadata.version`,
-  with fallback to parsing `pyproject.toml` directly. Do not rely on `tomllib`
-  unless `requires-python >= 3.11`.
+- Version: read from installed package metadata via `importlib.metadata.version()`.
+  No fallback needed - docs are always built in an environment where the package is
+  installed via `uv sync --extra docs`. Do not add a pyproject.toml parsing fallback.
 - `autodoc_mock_imports`: keep empty unless the docs build fails due to missing
   optional imports. Only add top-level import names, never deep module paths.
 

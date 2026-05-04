@@ -27,6 +27,7 @@ Use this table to find the relevant instruction file for your task.
 | Scaffolding a new Python project | `python/scaffolding.md` |
 | Writing a Python library | `python/library.md` |
 | Sphinx documentation | `python/docs.md` |
+| Writing or reviewing Python tests | `python/testing.md` |
 | C++ code (conventions not yet defined) | `cpp/style.md` |
 | GitHub Actions workflows | `github/actions.md` |
 | README badges | `github/badges.md` |

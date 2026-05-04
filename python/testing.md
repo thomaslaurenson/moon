@@ -1,0 +1,153 @@
+# Python Testing Standards
+
+Standards and conventions for testing Python projects.
+
+## Contents
+
+- [Structure](#structure) - directory layout, file naming
+- [Markers](#markers) - integration marker, registration, skip logic
+- [conftest.py](#conftestpy) - correct marker-based skip pattern
+- [Unit tests](#unit-tests) - rules, mocking, fixtures
+- [Integration tests](#integration-tests) - rules, environment, CI
+- [Coverage](#coverage) - separate from test run, never in addopts
+
+## Structure
+
+```
+tests/
+  __init__.py
+  conftest.py          # shared fixtures
+  unit/
+    __init__.py
+    conftest.py        # unit-specific fixtures if needed
+    test_patch.py      # mirrors warnd/patch.py
+    test_helpers.py    # mirrors warnd/helpers.py
+  integration/
+    __init__.py
+    conftest.py        # integration fixtures, skip logic
+    test_patch.py
+```
+
+- Every test file mirrors a source module: `warnd/patch.py` -> `tests/unit/test_patch.py`
+- Test functions use the pattern `test_<what>_<condition>_<expected>`
+  Example: `test_load_from_file_missing_path_raises_file_not_found`
+- Tests files are exempt from all docstring (`D`) ruff rules
+
+## Markers
+
+Register markers in `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+addopts = "-v --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests as integration tests requiring live credentials or environment",
+]
+```
+
+Apply at class or function level:
+
+```python
+@pytest.mark.integration
+class TestPatchIntegration:
+    def test_load_real_patch(self, patch_dir):
+        ...
+
+# Or on individual functions
+@pytest.mark.integration
+def test_load_real_patch(patch_dir):
+    ...
+```
+
+## conftest.py
+
+The integration `conftest.py` must skip integration tests using marker-based detection,
+not path-based string matching.
+
+```python
+import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    skip_marker = pytest.mark.skip(reason="integration tests require live environment")
+    for item in items:
+        if item.get_closest_marker("integration"):
+            item.add_marker(skip_marker)
+```
+
+Never use path-based skipping:
+
+```python
+# Bad - fragile, breaks if files move
+if "integration" in item.nodeid:
+    item.add_marker(skip_marker)
+```
+
+## Unit Tests
+
+- No network calls, no real filesystem access (use `tmp_path` fixture for temp files)
+- No real credentials or environment variables
+- Mock external calls with `unittest.mock.patch` or `pytest` `monkeypatch`
+- Every unit test must be fast - if a test takes more than a second, it is not a unit test
+- Use `pytest.raises` for exception testing, always assert the message where meaningful
+
+```python
+def test_load_from_file_missing_path_raises_file_not_found(tmp_path):
+    patch = Patch()
+    with pytest.raises(FileNotFoundError, match="File not found"):
+        patch.load_from_file(tmp_path / "nonexistent.exe")
+```
+
+## Integration Tests
+
+- Require a real environment - live files, credentials, or external services
+- Always marked with `@pytest.mark.integration`
+- Skipped automatically in all CI runs - never run in `lint.yml` or `test.yml`
+- The developer runs them locally with `make test_integration`
+- Gate on an environment variable to skip gracefully:
+
+```python
+import os
+import pytest
+
+@pytest.fixture(scope="session")
+def patch_dir():
+    d = os.getenv("WOW_PATCH_DIR")
+    if not d:
+        pytest.skip("WOW_PATCH_DIR not set")
+    return Path(d)
+```
+
+## Coverage
+
+Never add `--cov` flags to `addopts` in `pyproject.toml`. Coverage must be an explicit
+separate step.
+
+```toml
+# Bad - slows every test run
+[tool.pytest.ini_options]
+addopts = "--cov=warnd --cov-report=term-missing"
+
+# Good - plain and fast
+[tool.pytest.ini_options]
+addopts = "-v --strict-markers"
+```
+
+Coverage is run only via the dedicated Makefile target:
+
+```makefile
+test_coverage: ## Run tests with coverage report
+    uv run coverage run -m pytest -m "not integration" && uv run coverage report
+```
+
+Coverage configuration lives in `pyproject.toml`:
+
+```toml
+[tool.coverage.run]
+source = ["<package>"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+```

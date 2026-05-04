@@ -16,6 +16,21 @@ Style conventions for Python code in this project.
 
 - Never use em dash (—)
 
+## Quotes
+
+Use double quotes for all strings. Never use single quotes.
+
+```python
+# Good
+message = "Hello, world"
+path = "data/patches"
+
+# Bad
+message = 'Hello, world'
+```
+
+Ruff format enforces this automatically. Running `make fix` will correct any single-quoted strings.
+
 ## Spelling
 
 Use British English spellings:

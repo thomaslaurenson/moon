@@ -91,15 +91,19 @@ Group by concern. Always define `test` and `dev` at minimum:
 [project.optional-dependencies]
 test = [
     "pytest>=...",
+    "pytest-cov>=...",
     "coverage>=...",
 ]
 dev = [
     "<package>[test]",
     "ruff>=...",
+    "pyright>=...",
 ]
 ```
 
 Add additional groups for optional integrations (e.g. `nectar`, `vault`). Each group should only pull in what it strictly needs.
+
+Never put `uv`, `build`, or `twine` in optional dependency groups. `uv` is a package manager, not a project dependency. `build` and `twine` are invoked via `uv run` in the Makefile.
 
 ### Ruff configuration
 
@@ -110,33 +114,40 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "D",  # pydocstyle
-    "B",  # flake8-bugbear
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "D",    # pydocstyle
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+    "PTH",  # use pathlib over os.path
+    "FA",   # enforce from __future__ import annotations
+    "RET",  # return statement best practices
 ]
-
-[tool.ruff.lint.per-file-ignores]
-"tasks/**" = ["D100", "D103", "E402"]
-"docs/**" = ["D100"]
-"tests/**" = ["D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "sphinx"
+
+[tool.ruff.lint.per-file-ignores]
+"docs/**" = ["D100"]
+"tests/**" = ["D"]
 ```
 
 ### Pytest configuration
 
 ```toml
 [tool.pytest.ini_options]
-addopts = "-v"
+addopts = "-v --strict-markers"
 testpaths = ["tests"]
 markers = [
-    "integration: mark test as integration test (requires live API credentials)",
+    "integration: marks tests as integration tests requiring live credentials or environment",
 ]
 ```
+
+Never add `--cov` to `addopts`. Coverage is a separate explicit Makefile target (`make test_coverage`). Adding it to `addopts` slows every test run and makes `make test` and `make test_coverage` identical.
 
 ### Coverage configuration
 
@@ -168,20 +179,23 @@ All CI steps are Makefile targets. GitHub Actions call `make <target>` - never r
 Key targets:
 
 ```makefile
-install:        uv sync
-install_all:    uv sync --all-extras
-update:         uv lock --upgrade && uv sync --all-extras
-clean:          rm -rf .venv dist .pytest_cache .coverage + __pycache__
-build:          uv build
-lint:           uv run ruff check .
-format_check:   uv run ruff format --check .
-fix:            uv run ruff check --fix . && uv run ruff format .
-test:           uv run pytest -m "not integration"
+install:          uv sync
+install_all:      uv sync --all-extras
+update:           uv lock --upgrade && uv sync --all-extras
+clean:            rm -rf dist .pytest_cache .coverage + __pycache__
+build:            uv build
+lint:             uv run ruff check .
+format_check:     uv run ruff format --check .
+typecheck:        uv run pyright
+fix:              uv run ruff check --fix . && uv run ruff format .
+test:             uv run pytest -m "not integration"
 test_integration: uv run pytest -m integration
-test_coverage:  uv run coverage run -m pytest -m "not integration" && uv run coverage report
+test_coverage:    uv run coverage run -m pytest -m "not integration" && uv run coverage report
+ci:               lint format_check typecheck test
 ```
 
 Rules:
 - `fix` is the one-shot local cleanup command (lint-fix + format)
-- `test` always excludes integration tests - they require live credentials
-- CI calls `make lint` and `make test`, never the underlying commands directly
+- `test` always excludes integration tests - they require live credentials or environment
+- CI calls `make lint`, `make format_check`, `make typecheck`, and `make test` via `make ci` - never raw commands
+- See `python/testing.md` for full testing standards

@@ -7,9 +7,12 @@ Standards and conventions for authoring installable Python library packages.
 - [Type hints](#type-hints) — required on all signatures, modern union syntax
 - [Docstrings](#docstrings) — rST/Sphinx format, when to include param/return fields
 - [__init__.py](#initpy) — public API exports, what not to import at top level
+- [PEP 561](#pep-561) — py.typed marker for typed packages
 - [Optional dependencies](#optional-dependencies) — import guards, error messages
-- [Logging](#logging) — structlog, never print(), context as keyword args
-- [Testing](#testing) — unit vs integration, pytest.mark.integration, conftest
+- [Logging](#logging) — stdlib logging, never print(), context as keyword args
+- [Exceptions](#exceptions) — hierarchy, public API, raise patterns
+- [Type checking](#type-checking) — pyright, configuration, modes
+- [Testing](#testing) — see python/testing.md
 
 ## Type Hints
 
@@ -74,6 +77,22 @@ __all__ = ["MyClient", "MyConfig"]
 - Never import optional-dependency modules at the top level of `__init__.py` - this would break imports for users who don't have those extras installed
 - Sub-package `__init__.py` files follow the same rule: only re-export what is public
 
+## PEP 561
+
+Include an empty `py.typed` marker file in the package root directory. This signals to
+type checkers like pyright and mypy that the package supports inline type annotations.
+
+```
+warnd/
+    __init__.py
+    py.typed       # empty file - signals PEP 561 compliance
+    patch.py
+    ...
+```
+
+Without `py.typed`, pyright will treat your package as untyped and ignore all annotations
+when consumers use your library, even if your annotations are complete and correct.
+
 ## Optional Dependencies
 
 Import guards prevent missing extras from breaking unrelated code. Always import optional packages inside the function or method that uses them, not at module top-level.
@@ -96,31 +115,132 @@ import hvac
 
 ## Logging
 
-Use `structlog`. Never use `print()`.
+Use the Python standard library `logging` module. Never use `print()`. Do not add `structlog`
+or any third-party logging library as a dependency - libraries must not force logging
+configuration on their consumers.
 
 ```python
-import structlog
+import logging
 
-logger = structlog.get_logger()
+logger = logging.getLogger(__name__)
 
-def create_session(self) -> None:
-    logger.info("creating session", url=self._url)
+def load_from_file(self, path: Path) -> None:
+    logger.info("loading file", extra={"path": str(path)})
 ```
 
-- Declare `logger` at module level
-- Pass context as keyword arguments to log calls, not via string formatting
-- Use `logger.debug` for internal detail, `logger.info` for lifecycle events, `logger.warning` / `logger.error` for problems
+- Declare `logger = logging.getLogger(__name__)` at module level in every file that logs
+- Use `__name__` so consumers can control output per-module via their own logging config
+- Pass context via the `extra` keyword argument, not via string formatting
+- Use `logger.debug` for internal detail, `logger.info` for lifecycle events,
+  `logger.warning` / `logger.error` for problems
+- Never configure logging handlers inside a library - that is the consumer's responsibility
+
+Note: `structlog` is appropriate for applications where you control the full stack.
+For libraries, always use stdlib `logging`.
+
+## Exceptions
+
+Every library must define a clear exception hierarchy so consumers can catch errors at
+the appropriate level of specificity.
+
+### Hierarchy
+
+Always define a single root exception named `<LibraryName>Error` that inherits from
+`Exception`. All other library exceptions inherit from this root.
+
+```python
+class WarndError(Exception):
+    """Base exception for all warnd errors."""
+
+class PatchError(WarndError):
+    """Base exception for patch-related errors."""
+
+class PatchLoadError(PatchError):
+    """Raised when a patch file cannot be loaded or parsed."""
+```
+
+Group exceptions by domain under the root. A consumer who wants to catch everything
+catches `WarndError`. A consumer who only cares about patch errors catches `PatchError`.
+
+### Rules
+
+- Every exception class requires a docstring explaining when it is raised
+- Never raise bare `ValueError` or `TypeError` from a public API method - wrap them
+  in a library exception so they are catchable at the `LibraryError` level
+- Always use `raise X from exc` when wrapping an exception to preserve the chain
+- Export all commonly caught exceptions from the top-level `__init__.py`
+
+```python
+# Good - consumer can catch at any level
+raise exceptions.PatchLoadError("Invalid version") from exc
+
+# Bad - escapes the library exception hierarchy
+raise ValueError("Invalid version")
+```
+
+### Export
+
+All exceptions that a consumer is reasonably expected to catch must be importable
+directly from the top-level package:
+
+```python
+from warnd import PatchLoadError, InstallationError
+```
+
+Never require consumers to reach into internal modules:
+
+```python
+# Bad - exposes internal structure
+from warnd.exceptions import PatchLoadError
+```
+
+## Type checking
+
+All library projects must include pyright for static type checking.
+
+### Configuration
+
+Add to `pyproject.toml`:
+
+```toml
+[tool.pyright]
+include = ["<package>"]
+exclude = ["tests"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+```
+
+Add to the `dev` optional dep group:
+
+```toml
+dev = [
+    "<package>[test]",
+    "ruff>=...",
+    "pyright>=1.1.0",
+]
+```
+
+Add to the Makefile:
+
+```makefile
+.PHONY: typecheck
+typecheck: ## Run pyright type checker
+    uv run pyright
+```
+
+Include `typecheck` in the `ci` target:
+
+```makefile
+ci: lint format_check typecheck test ## Run all CI checks locally
+```
+
+### Modes
+
+- Start with `typeCheckingMode = "basic"` for new or existing projects being migrated
+- Move to `"strict"` once the codebase is fully annotated and all basic errors are resolved
+- `tests/` is excluded - test files are exempt from type checking
 
 ## Testing
 
-- **Unit tests**: no network or credentials; use `unittest.mock.patch` and `pytest` `monkeypatch`
-- **Integration tests**: require live credentials; always mark with `@pytest.mark.integration`
-- Integration tests are never run in CI - ask the user to run `make test_integration` locally
-- Fixtures for live clients are defined in `conftest.py`
-
-```python
-@pytest.mark.integration
-def test_list_instances(nectar_client):
-    instances = nectar_client.instances.list(project_id="abc123")
-    assert len(instances) > 0
-```
+See `python/testing.md` for full testing standards covering structure, markers,
+conftest patterns, unit vs integration rules, and coverage.

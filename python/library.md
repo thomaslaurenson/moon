@@ -39,7 +39,7 @@ class InstanceClient:
 
 ## Docstrings
 
-rST/Sphinx format, enforced by ruff `D` rules with `convention = "sphinx"`.
+rST/Sphinx format, enforced by ruff `D` rules with `convention = "pep257"`.
 
 ```python
 def sign_ssh_key(public_key: str, ttl: int = 3600) -> str:

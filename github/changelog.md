@@ -54,10 +54,11 @@
 | `### Added` | New features, subcommands, flags, or capabilities |
 | `### Changed` | Behaviour changes, interface changes, refactors visible to users |
 | `### Fixed` | Bug fixes, error corrections, crash fixes |
+| `### Removed` | Features or behaviours that have been removed |
 | `### Updated` | Dependency bumps or toolchain upgrades (use sparingly) |
 | `### Thanks` | Credit external contributors by GitHub handle |
 
-Section order: **Added → Changed → Fixed → Updated → Thanks**
+Section order: **Added → Changed → Fixed → Removed → Updated → Thanks**
 
 ## Example
 

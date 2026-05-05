@@ -129,7 +129,7 @@ select = [
 ]
 
 [tool.ruff.lint.pydocstyle]
-convention = "sphinx"
+convention = "pep257"
 
 [tool.ruff.lint.per-file-ignores]
 "docs/**" = ["D100"]

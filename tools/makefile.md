@@ -2,18 +2,6 @@
 
 Conventions for writing `Makefile` files across all projects.
 
-## Contents
-
-- [Design principles](#design-principles) — make as task runner, verb targets, underscores
-- [Non-negotiable rules](#non-negotiable-rules) — help first, inline comments, per-target .PHONY
-- [Global settings](#global-settings) — SHELL := /bin/bash
-- [Variables](#variables) — naming, assignment operators, alignment
-- [.PHONY](#phony) — declare per target, not in one block
-- [Help target](#help-target) — canonical grep/awk implementation
-- [Section separators](#section-separators) — comment-based grouping
-- [ci target](#ci-target) — mirrors CI pipeline for local validation
-- [Canonical target names](#compact-reference-targets) — build, lint, test, clean reference
-
 ## Design Principles
 
 - `make` is a task runner - not a build system (unless the project has no better option)
@@ -110,6 +98,7 @@ Use a comment separator before each logical group of targets. Common sections:
 # BUILD
 # LINT
 # TEST
+# GET
 # DOCS
 # TASKS
 ```
@@ -148,4 +137,36 @@ The mandatory behaviour is defined by earlier sections in this file:
 - Help generation from inline `##` comments
 - Per-target `.PHONY` declarations
 - Section separators
+
+## GET Section
+
+All Python project Makefiles must include a `# GET` section with the following targets.
+GitHub Actions workflows call these targets instead of embedding raw bash or awk scripts.
+
+```makefile
+# GET
+
+.PHONY: get_python_project_version
+get_python_project_version: ## Print the project version from pyproject.toml
+	python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"
+
+.PHONY: get_python_required_version
+get_python_required_version: ## Print the required Python version from pyproject.toml
+	grep -oP 'requires-python.*>=\K[0-9.]+' pyproject.toml
+
+.PHONY: get_changelog_entry
+get_changelog_entry: ## Extract the latest CHANGELOG entry to /tmp/release_notes.md
+	@VERSION=$$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"); \
+	awk -v ver="$$VERSION" ' \
+	  /^## / { if (found) exit; if (index($$0, "## " ver " ") || $$0 == "## " ver) { found=1 } next } \
+	  found { lines[n++] = $$0 } \
+	  END { \
+	    s=0; while (s < n && lines[s] ~ /^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e >= s && lines[e] ~ /^[[:space:]]*$$/) e--; \
+	    for (i=s; i<=e; i++) print lines[i] \
+	  } \
+	' CHANGELOG.md > /tmp/release_notes.md; \
+	test -s /tmp/release_notes.md || { echo "No CHANGELOG entry found for $$VERSION" >&2; exit 1; }
+```
+
 - CI workflows invoking `make <target>`

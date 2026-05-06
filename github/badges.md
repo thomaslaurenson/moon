@@ -1,12 +1,5 @@
 # GitHub Badges
 
-## Contents
-
-- [Design principles](#design-principles) — style=flat, grouping, no click-throughs
-- [Go projects](#go-projects) — CI, release, language/quality badge groups
-- [Python projects](#python-projects) — PyPI and licence badges
-- [Pages / static sites](#pages--static-sites) — deploy badge only
-
 ## Design Principles
 
 - `style=flat` on all shields.io badges - no other style variants

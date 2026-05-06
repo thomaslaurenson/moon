@@ -1,14 +1,5 @@
 # Python Sphinx Documentation
 
-## Contents
-
-- [When to add docs](#when-to-add-docs) — libraries yes, scripts-only projects no
-- [Dependencies](#dependencies) — docs optional dep group
-- [Directory structure](#directory-structure) — docs layout and what to gitignore
-- [conf.py rules](#confpy-rules) — extensions, settings, version strategy
-- [api/index.rst](#apiindexrst) — canonical autosummary entry point
-- [Makefile targets](#makefile-targets) — docs, docs_check, docs_clean, docs_linkcheck
-
 ## When to Add Docs
 
 Any installable library package gets a `docs/` directory and Sphinx setup.
@@ -60,8 +51,9 @@ Gitignore rules:
 - Version: read from installed package metadata via `importlib.metadata.version()`.
   No fallback needed - docs are always built in an environment where the package is
   installed via `uv sync --extra docs`. Do not add a pyproject.toml parsing fallback.
-- `autodoc_mock_imports`: keep empty unless the docs build fails due to missing
-  optional imports. Only add top-level import names, never deep module paths.
+- `autodoc_mock_imports`: must remain empty. If a docs build fails due to a missing
+  import, fix it by adding the required dependency to the `docs` extra group in
+  `pyproject.toml`. Never mock an import in Sphinx.
 
 ## api/index.rst
 

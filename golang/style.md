@@ -2,13 +2,6 @@
 
 Style conventions for Go code in this project.
 
-## Contents
-
-- [Unusual characters](#unusual-characters) — em dash and other characters to avoid
-- [Comments](#comments) — package, function, type, and inline comment conventions
-- [Spelling](#spelling) — British English rules
-- [Naming](#naming) — exported/unexported identifiers, acronyms, interfaces, errors, constants
-
 ## Unusual Characters
 
 - Never use em dash (—)

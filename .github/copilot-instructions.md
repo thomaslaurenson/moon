@@ -10,8 +10,7 @@ These rules apply to every file, every language, every task without exception.
 - No decorative dividers in code (`// ---`, `// ===`, `# ---`, `# ===`, etc.). Delete them.
 - No step narration comments. Never write a comment that just describes the next line of code.
   Bad: `// Open the file`, `# Loop through results`
-- Protect human comments. Preserve comments that explain why something is done.
-  Delete comments that only narrate what the code does.
+- Preserve comments that explain the 'why' (business logic, architecture). Aggressively delete and refactor comments that narrate the 'what' (step-by-step code narration).
 - Use British English. `initialise` not `initialize`. `colour` not `color`.
 
 ## Navigation
@@ -33,6 +32,5 @@ Use this table to find the relevant instruction file for your task.
 | README badges | `github/badges.md` |
 | CHANGELOG entries | `github/changelog.md` |
 | Dependabot config | `github/dependabot.md` |
-| Commit messages and branch names | `github/commits.md` |
-| Pull request titles | `github/prs.md` |
+| Commit messages, branch names, and PR titles | `github/conventions.md` |
 | Writing a Makefile | `tools/makefile.md` |

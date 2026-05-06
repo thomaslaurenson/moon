@@ -2,13 +2,6 @@
 
 Standards and conventions for Go projects. Use this as a reference when creating or refactoring a Go repository.
 
-## Contents
-
-- [Project structure](#project-structure) — directory layout for a single-binary Go project
-- [Tools](#tools) — only what ships with Go, no third-party linters
-- [Makefile targets](#makefile) — canonical target names and what they do
-- [go.mod rules](#gomod) — versioning and tidy rules
-
 ## Project Structure
 
 ```
@@ -34,7 +27,7 @@ README.md
 
 ## Tools
 
-The only tooling used is what ships with Go itself. No third-party linters.
+No third-party linters or formatters are permitted. Specifically, DO NOT use `golangci-lint` or `govulncheck` under any circumstances. However, third-party release tools like `goreleaser` and `cosign` are explicitly permitted and required.
 
 | Tool | Purpose |
 |---|---|
@@ -47,30 +40,23 @@ The only tooling used is what ships with Go itself. No third-party linters.
 
 ## Makefile
 
-All CI steps are Makefile targets. GitHub Actions call `make <target>` - never raw Go commands directly in workflows.
+Adhere to the global Makefile structure established in `tools/makefile.md`. Use the following commands for your standard targets:
 
-Key targets:
+- `fmt`: `gofmt -w .`
+- `fmt_check`: `gofmt -l . && git diff --exit-code` (exits 1 if unformatted files found)
+- `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
+- `vet`: `go vet ./...`
+- `test`: `go test -race -count=1 ./...`
+- `test_verbose`: `go test -race -count=1 -v ./...`
+- `test_coverage`: `go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...`
+- `build`: `go build -ldflags="..." -o bin/<binary> .`
+- `install`: `go install -ldflags="..." .`
+- `snapshot`: `goreleaser release --snapshot --clean`
+- `release_check`: `goreleaser check`
+- `clean`: `rm -rf bin/ dist/`
+- `ci`: `fmt_check mod_check vet test`
 
-```makefile
-fmt:           gofmt -w .
-fmt_check:     gofmt -l . (exits 1 if unformatted files found)
-mod_check:     go mod tidy && git diff --exit-code go.mod go.sum
-vet:           go vet ./...
-test:          go test -race -count=1 ./...
-test_verbose:  go test -race -count=1 -v ./...
-test_coverage: go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...
-ci:            fmt_check mod_check vet test
-build:         go build -ldflags="..." -o bin/<binary> .
-install:       go install -ldflags="..." .
-clean:         rm -rf bin/ dist/
-snapshot:      vgoreleaser release --snapshot --clean
-release_check: goreleaser check
-```
-
-Rules:
-- Tests always include `-race -count=1`, including coverage runs
-- The binary is built to `bin/` not the repo root
-- `ci` is the local equivalent of the full CI pipeline
+Tests always include `-race -count=1`, including coverage runs. The binary is built to `bin/`, not the repo root.
 
 ## go.mod
 

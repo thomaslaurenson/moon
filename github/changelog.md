@@ -1,12 +1,5 @@
 # Changelog Format
 
-## Contents
-
-- [Design principles](#design-principles) — source, voice, formatting rules
-- [Format](#format) — version line, date, section order
-- [Sections](#sections) — when to use Added, Changed, Fixed, Updated, Thanks
-- [Example](#example) — reference entry
-
 ## Design Principles
 
 - Source content from the PR description and recent commits - do not invent entries

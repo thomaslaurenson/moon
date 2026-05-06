@@ -2,18 +2,6 @@
 
 Standards and conventions for authoring installable Python library packages.
 
-## Contents
-
-- [Type hints](#type-hints) — required on all signatures, modern union syntax
-- [Docstrings](#docstrings) — rST/Sphinx format, when to include param/return fields
-- [__init__.py](#initpy) — public API exports, what not to import at top level
-- [PEP 561](#pep-561) — py.typed marker for typed packages
-- [Optional dependencies](#optional-dependencies) — import guards, error messages
-- [Logging](#logging) — stdlib logging, never print(), context as keyword args
-- [Exceptions](#exceptions) — hierarchy, public API, raise patterns
-- [Type checking](#type-checking) — pyright, configuration, modes
-- [Testing](#testing) — see python/testing.md
-
 ## Type Hints
 
 - All function and method signatures must include type hints - parameters and return types
@@ -239,8 +227,3 @@ ci: lint format_check typecheck test ## Run all CI checks locally
 - Start with `typeCheckingMode = "basic"` for new or existing projects being migrated
 - Move to `"strict"` once the codebase is fully annotated and all basic errors are resolved
 - `tests/` is excluded - test files are exempt from type checking
-
-## Testing
-
-See `python/testing.md` for full testing standards covering structure, markers,
-conftest patterns, unit vs integration rules, and coverage.

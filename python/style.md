@@ -2,16 +2,6 @@
 
 Style conventions for Python code in this project.
 
-## Contents
-
-- [Unusual characters](#unusual-characters) — em dash and other characters to avoid
-- [Spelling](#spelling) — British English rules
-- [Inline comments](#inline-comments) — formatting and capitalisation rules
-- [Constants](#constants) — UPPER_SNAKE_CASE, public vs private
-- [Comment hygiene](#comment-hygiene) — step narration, human comments
-- [Lazy instantiation](#lazy-instantiation) — preferred pattern for deferred setup
-- [Config classes](#config-classes) — os.getenv defaults, no hardcoded values
-
 ## Unusual Characters
 
 - Never use em dash (—)
@@ -64,8 +54,7 @@ y = complex_operation()
 
 - Do not write step narration comments that describe the next line of code.
   Bad: `# Loop through results`, `# Open the file`
-- Preserve comments that explain why something is done, not what.
-  Good: `# Offset by 1 because the API returns 1-indexed page numbers`
+- Preserve comments that explain the 'why' (business logic, architecture). Aggressively delete and refactor comments that narrate the 'what' (step-by-step code narration).
 - Do not over-annotate type hints with redundant inline comments.
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 

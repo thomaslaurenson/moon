@@ -1,10 +1,5 @@
 # Dependabot
 
-## Contents
-
-- [Config](#config) — canonical dependabot.yml for all projects
-- [Rules](#rules) — scheduling and limits
-
 ## Config
 
 File: `.github/dependabot.yml`

@@ -1,20 +1,12 @@
 # GitHub Actions Workflows
 
-## Contents
-
-- [Core rules](#core-rules) — non-negotiable conventions that apply to all workflows
-- [Workflow structure](#workflow-structure) — reusable vs caller pattern, file layout
-- [CHANGELOG extraction](#changelog-extraction) — canonical awk snippet used in all release workflows
-- [Go-specific setup](#go-specific-setup) — setup-go, go-version-file
-- [Python-specific setup](#python-specific-setup) — setup-uv, extract python version
-- [Reference: tag.yml](#reference-tagyml) — full example of the most complex caller workflow
-
 ## Core Rules
 
 - Runner: always `ubuntu-24.04`. Never `ubuntu-latest` or any unversioned alias.
 - Always prefer official GitHub actions (`actions/*`) before third-party alternatives.
 - Always use the `gh` CLI for creating releases. Never use a third-party release action.
 - All workflow steps call `make <target>`. Never run raw commands directly in a workflow.
+- Never write raw bash or awk scripts in workflows to extract versions or changelogs. Execute the repository's Makefile targets (e.g., `make get_python_project_version`, `make get_changelog_entry`) and pass their standard output to the respective workflow steps.
 - Minimal permissions: `contents: read` by default, `contents: write` only in release workflows.
 - No `fetch-depth: 0` except in release workflows where GoReleaser or CHANGELOG extraction requires it.
 
@@ -43,49 +35,6 @@ concurrency:
   cancel-in-progress: true
 ```
 
-## CHANGELOG Extraction
-
-Use this exact awk snippet in all release workflows. It extracts the section matching the
-current tag from `CHANGELOG.md` and fails explicitly if no entry is found.
-
-For Go projects the tag is read from `GITHUB_REF_NAME` directly:
-
-```bash
-TAG="${GITHUB_REF_NAME}"
-awk "/^## ${TAG} /{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md \
-  > /tmp/release-notes.md
-if [ ! -s /tmp/release-notes.md ]; then
-  echo "No CHANGELOG entry found for ${TAG}" >&2
-  exit 1
-fi
-```
-
-For Python projects the version is read from `pyproject.toml` first, then matched:
-
-```bash
-VERSION=$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
-awk -v ver="$VERSION" '
-  /^## / {
-    if (found) exit
-    if (index($0, "## " ver " ") || $0 == "## " ver) { found=1 }
-    next
-  }
-  found { lines[n++] = $0 }
-  END {
-    start=0
-    while (start < n && lines[start] ~ /^[[:space:]]*$/) start++
-    end=n-1
-    while (end >= start && lines[end] ~ /^[[:space:]]*$/) end--
-    for (i=start; i<=end; i++) print lines[i]
-  }
-' CHANGELOG.md > /tmp/release_notes.md
-if [ ! -s /tmp/release_notes.md ]; then
-  echo "No CHANGELOG entry found for $VERSION" >&2; exit 1
-fi
-```
-
-Pass the output file to `gh release create` with `--notes-file`.
-
 ## Go-Specific Setup
 
 Add these steps before any `make` call in Go workflows:
@@ -111,7 +60,7 @@ Extract the Python version from `pyproject.toml` at runtime. Never hardcode it.
 
 - name: Extract Python version
   id: python-version
-  run: echo "version=$(grep -oP 'requires-python.*>=\K[0-9.]+' pyproject.toml)" >> $GITHUB_OUTPUT
+  run: echo "version=$(make get_python_required_version)" >> $GITHUB_OUTPUT
 
 - uses: actions/setup-python@v5
   with:

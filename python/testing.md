@@ -2,15 +2,6 @@
 
 Standards and conventions for testing Python projects.
 
-## Contents
-
-- [Structure](#structure) - directory layout, file naming
-- [Markers](#markers) - integration marker, registration, skip logic
-- [conftest.py](#conftestpy) - correct marker-based skip pattern
-- [Unit tests](#unit-tests) - rules, mocking, fixtures
-- [Integration tests](#integration-tests) - rules, environment, CI
-- [Coverage](#coverage) - separate from test run, never in addopts
-
 ## Structure
 
 ```
@@ -60,29 +51,7 @@ def test_load_real_patch(patch_dir):
     ...
 ```
 
-## conftest.py
-
-The integration `conftest.py` must skip integration tests using marker-based detection,
-not path-based string matching.
-
-```python
-import pytest
-
-
-def pytest_collection_modifyitems(config, items):
-    skip_marker = pytest.mark.skip(reason="integration tests require live environment")
-    for item in items:
-        if item.get_closest_marker("integration"):
-            item.add_marker(skip_marker)
-```
-
-Never use path-based skipping:
-
-```python
-# Bad - fragile, breaks if files move
-if "integration" in item.nodeid:
-    item.add_marker(skip_marker)
-```
+Integration tests are skipped natively via the Makefile using the flag `pytest -m "not integration"`. Never implement skip logic in `conftest.py`.
 
 ## Unit Tests
 

@@ -2,13 +2,9 @@
 
 Short rules for `.goreleaser.yml` in Go projects.
 
-## Contents
-
-- [Non-negotiable rules](#non-negotiable-rules) — binary-only builds, checksums, signing, ldflags
-- [Notes](#notes) — reproducible builds, CGO, changelog source
-- [Minimal reference](#minimal-reference) — canonical .goreleaser.yml
-
 ## Non-Negotiable Rules
+
+No third-party linters or formatters are permitted. Specifically, DO NOT use `golangci-lint` or `govulncheck` under any circumstances. However, third-party release tools like `goreleaser` and `cosign` are explicitly permitted and required.
 
 - Build binaries only, not archives (`formats: [binary]`)
 - Always output artifacts to `bin` (`dist: bin`)

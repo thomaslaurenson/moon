@@ -80,7 +80,7 @@ help: ## Show this help message
 - Every user-facing target must include this inline comment format
 - Targets without inline comments are treated as a spec violation unless intentionally hidden aliases
 - Adjust the `%-18s` padding to fit the longest target name in the file
-- Help output should fit in a terminal without wrapping (target + description ≤ 100 chars)
+- Help output should fit in a terminal without wrapping (target + description <= 100 chars)
 
 Anti-pattern (do not do this):
 
@@ -131,6 +131,7 @@ Language-specific command choices are project-specific, but structure is stable:
 
 - Go projects typically use `gofmt`, `go vet`, `go test -race -count=1`, and `go mod tidy`
 - Python projects typically use `uv`, `ruff`, and `pytest`
+- C++ projects typically use `clang-format-19`, `clang-tidy-19`, and `ctest`
 
 The mandatory behaviour is defined by earlier sections in this file:
 
@@ -138,10 +139,14 @@ The mandatory behaviour is defined by earlier sections in this file:
 - Per-target `.PHONY` declarations
 - Section separators
 
+---
+
 ## GET Section
 
-All Python project Makefiles must include a `# GET` section with the following targets.
-GitHub Actions workflows call these targets instead of embedding raw bash or awk scripts.
+All project Makefiles must include a `# GET` section. GitHub Actions workflows
+call these targets instead of embedding raw bash or awk scripts in workflow files.
+
+### Python projects
 
 ```makefile
 # GET
@@ -155,7 +160,7 @@ get_python_required_version: ## Print the required Python version from pyproject
 	grep -oP 'requires-python.*>=\K[0-9.]+' pyproject.toml
 
 .PHONY: get_changelog_entry
-get_changelog_entry: ## Extract the latest CHANGELOG entry to /tmp/release_notes.md
+get_changelog_entry: ## Extract the changelog entry for the current version to /tmp/release_notes.md
 	@VERSION=$$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"); \
 	awk -v ver="$$VERSION" ' \
 	  /^## / { if (found) exit; if (index($$0, "## " ver " ") || $$0 == "## " ver) { found=1 } next } \
@@ -169,4 +174,36 @@ get_changelog_entry: ## Extract the latest CHANGELOG entry to /tmp/release_notes
 	test -s /tmp/release_notes.md || { echo "No CHANGELOG entry found for $$VERSION" >&2; exit 1; }
 ```
 
-- CI workflows invoking `make <target>`
+### C++ projects
+
+C++ project version is declared in the root `CMakeLists.txt` via the `project()` `VERSION` parameter. The `get_changelog_entry` target reads the version directly from `CMakeLists.txt`:
+
+```makefile
+# GET
+
+.PHONY: get_project_version
+get_project_version: ## Print the project version from CMakeLists.txt
+	@grep -oP 'project\([^)]*VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt
+
+.PHONY: get_changelog_entry
+get_changelog_entry: ## Extract the changelog entry for the current version to /tmp/release_notes.md
+	@VERSION=$$(grep -oP 'project\([^)]*VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt); \
+	awk -v ver="$$VERSION" ' \
+	  /^## / { if (found) exit; if (index($$0, "## " ver " ") || $$0 == "## " ver) { found=1 } next } \
+	  found { lines[n++] = $$0 } \
+	  END { \
+	    s=0; while (s < n && lines[s] ~ /^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e >= s && lines[e] ~ /^[[:space:]]*$$/) e--; \
+	    for (i=s; i<=e; i++) print lines[i] \
+	  } \
+	' CHANGELOG.md > /tmp/release_notes.md; \
+	test -s /tmp/release_notes.md || { echo "No CHANGELOG entry found for $$VERSION" >&2; exit 1; }
+```
+
+- The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in
+  `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure
+  `VERSION` appears on the same line as the version number.
+- The awk logic is identical across Python and C++ — only the version source
+  differs. This ensures changelog extraction behaviour is consistent.
+- The target exits non-zero if no matching entry is found, which causes CI to
+  fail fast before attempting a release with an empty changelog.

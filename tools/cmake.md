@@ -91,7 +91,8 @@ binaries they all land in the same directory:
 build/
   bin/
     mytool
-    myothertool
+    myapp_unit_tests
+    myapp_functional_tests
   compile_commands.json
 ```
 
@@ -114,6 +115,7 @@ test/
   CMakeLists.txt      # defines test targets
 extern/
   Catch2/             # submodule — never modify
+  subprocess.h/       # submodule — never modify
   StormLib/           # submodule — never modify
 ```
 
@@ -135,9 +137,11 @@ extern/
 
 ### test/CMakeLists.txt responsibilities
 
-- Test executable targets
+- Two test executable targets — one for unit tests, one for functional tests
+- `target_compile_definitions` to bake binary path and test directory into
+  the functional test binary at configure time
 - Linking against `Catch2::Catch2WithMain`
-- `catch_discover_tests`
+- `catch_discover_tests` for both binaries
 
 ---
 
@@ -158,6 +162,78 @@ endif()
 
 ---
 
+## Baking Paths into Test Binaries
+
+Functional tests need to know where the compiled binary lives at runtime.
+Rather than discovering it at runtime, bake the path in at CMake configure
+time using `target_compile_definitions`. This eliminates a whole class of
+path-resolution bugs and makes the test binary fully self-contained:
+
+```cmake
+# In test/CMakeLists.txt
+
+if(WIN32)
+    set(MYAPP_BINARY_PATH "${CMAKE_BINARY_DIR}/bin/myapp.exe")
+else()
+    set(MYAPP_BINARY_PATH "${CMAKE_BINARY_DIR}/bin/myapp")
+endif()
+
+target_compile_definitions(myapp_functional_tests PRIVATE
+    MYAPP_BINARY_PATH="${MYAPP_BINARY_PATH}"
+    MYAPP_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+```
+
+`MYAPP_TEST_DIR` provides the path to the `test/` source directory, replacing
+any runtime `__file__`-style path discovery. Tests access both via the
+`TestEnvironment` singleton — see `cpp/testing.md`.
+
+In test code:
+
+```cpp
+auto result = run(MYAPP_BINARY_PATH, {"create", "--version", "1", input_dir});
+REQUIRE(result.returncode_ == 0);
+```
+
+---
+
+## Two-Binary Test Pattern
+
+Projects with both unit and functional tests define two separate binaries.
+They have different dependencies and must not be mixed:
+
+```cmake
+# Unit tests — links against application source files directly
+add_executable(myapp_unit_tests
+    unit/test_helpers.cpp
+    unit/test_gamerules.cpp
+)
+target_include_directories(myapp_unit_tests PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_link_libraries(myapp_unit_tests PRIVATE Catch2::Catch2WithMain)
+
+# Functional tests — spawns the binary as a subprocess, never links src/
+add_executable(myapp_functional_tests
+    subprocess_helper.cpp
+    functional/test_create.cpp
+    functional/test_extract.cpp
+)
+target_include_directories(myapp_functional_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    "${CMAKE_SOURCE_DIR}/extern/subprocess.h"
+)
+target_link_libraries(myapp_functional_tests PRIVATE Catch2::Catch2WithMain)
+
+include(CTest)
+include(Catch)
+catch_discover_tests(myapp_unit_tests)
+catch_discover_tests(myapp_functional_tests)
+```
+
+The separation is intentional — unit tests link against source, functional
+tests do not. Mixing them produces a binary with unclear dependencies.
+
+---
+
 ## Dependencies
 
 All external dependencies are git submodules pinned to a specific commit,
@@ -168,6 +244,15 @@ extern/
   StormLib/
   CLI11/
   Catch2/
+  subprocess.h/
+```
+
+Always pin to a specific commit hash, never a branch name. Branch names move;
+commit hashes do not:
+
+```bash
+cd extern/Catch2 && git checkout v3.6.0
+cd extern/subprocess.h && git checkout a3f3b8d  # specific commit hash
 ```
 
 Every dependency must have an existence check in the root `CMakeLists.txt`
@@ -186,6 +271,21 @@ Did you forget to run the following commands?
 endif()
 
 add_subdirectory(extern/StormLib)
+```
+
+Single-header libraries such as `subprocess.h` check for the header file
+directly rather than a `CMakeLists.txt`:
+
+```cmake
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/extern/subprocess.h/subprocess.h")
+    message(FATAL_ERROR
+"Missing dependency: subprocess.h
+Tests require the subprocess.h library.
+It is provided as a submodule of this repository.
+Did you forget to run the following commands?
+   git submodule init
+   git submodule update")
+endif()
 ```
 
 Never assume submodules are initialised. Always guard every dependency.
@@ -225,16 +325,19 @@ build: ## Build the project
 
 .PHONY: format
 format: ## Format all source files with clang-format
-	find src -name "*.cpp" -o -name "*.h" | xargs clang-format-19 -i
+	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-19 -i
 
 .PHONY: format_check
 format_check: ## Check formatting without modifying files
-	find src -name "*.cpp" -o -name "*.h" | xargs clang-format-19 --dry-run --Werror
+	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-19 --dry-run --Werror
 
 .PHONY: lint_cpp
 lint_cpp: ## Run clang-tidy static analysis
 	clang-tidy-19 -p build $(shell find src -name "*.cpp")
 ```
+
+Note: `format` and `format_check` include the `test/` directory — test code
+is subject to the same formatting standards as application code.
 
 ### Configuration files
 

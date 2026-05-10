@@ -41,7 +41,7 @@ The suppressed block must be kept as short as possible, and a comment must
 explain why formatting is suppressed:
 
 ```cpp
-// clang-format off — columnar alignment shows command-to-handler mapping clearly
+// clang-format off -- columnar alignment shows command-to-handler mapping clearly
 static const CommandEntry COMMANDS[] = {
     { "extract",  extract_command,  "Extract files from an archive" },
     { "add",      add_command,      "Add files to an archive"       },
@@ -108,9 +108,9 @@ private:
 Use `PascalCase`:
 
 ```cpp
-class GameRules { … };
-struct CompressionRule { … };
-enum class GameProfile { … };
+class GameRules { ... };
+struct CompressionRule { ... };
+enum class GameProfile { ... };
 ```
 
 ### Enum Values
@@ -163,7 +163,82 @@ Use `snake_case` for all source and header files:
 game_rules.cpp
 game_rules.h
 mpq_helpers.cpp
+mpq_helpers.h
 ```
+
+### File Extensions
+
+Use `.cpp` for implementation files and `.h` for header files. Never use
+`.hpp`, `.hxx`, or any other variant — the project uses `.h` throughout and
+mixing extensions creates unnecessary inconsistency:
+
+```
+// Good
+subprocess_helper.h
+subprocess_helper.cpp
+test_files.h
+
+// Bad
+subprocess_helper.hpp
+subprocess_helper.hxx
+```
+
+### Header-only vs Split Files
+
+Whether a file is header-only or split into `.h`/`.cpp` depends on the
+complexity of the implementation:
+
+- **Header-only `.h`** — use for simple structs, fixtures, and small helpers
+  where the entire definition is 50 lines or fewer. Putting a 30-line struct
+  across two files is unnecessary ceremony.
+- **`.h`/`.cpp` split** — use when the implementation has real complexity,
+  multiple private functions, or would meaningfully slow down compilation if
+  included everywhere. The declaration in `.h` is the public contract; the
+  implementation in `.cpp` is the detail.
+
+```
+// Header-only -- simple fixture struct, no complex implementation
+test/fixtures/test_files.h
+
+// Split -- subprocess helper with threading, platform ifdefs, real complexity
+test/subprocess_helper.h
+test/subprocess_helper.cpp
+```
+
+---
+
+## Project Version
+
+Every C++ project must declare its version in the root `CMakeLists.txt` using
+the `project()` command's `VERSION` parameter. This is the single source of
+truth for the project version — never hardcode a version string anywhere else:
+
+```cmake
+project(MyApp VERSION 1.2.3)
+```
+
+The version is then available in CMake as `${PROJECT_VERSION}` and can be baked
+into the binary at configure time using `configure_file`:
+
+```cmake
+# In root CMakeLists.txt
+configure_file(src/version.h.in src/version.h)
+```
+
+```cpp
+// src/version.h.in
+#pragma once
+#define MYAPP_VERSION "@PROJECT_VERSION@"
+```
+
+```cpp
+// Usage in source
+#include "version.h"
+std::cout << "myapp " << MYAPP_VERSION << "\n";
+```
+
+Never hardcode a version string in a `.cpp` file. Never read the version from
+`git describe` at runtime — bake it at configure time.
 
 ---
 

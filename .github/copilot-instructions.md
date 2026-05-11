@@ -6,7 +6,9 @@ These rules apply to every file, every language, every task without exception.
 
 - No em dash (`—`). Rewrite using a comma, parentheses, or two sentences.
 - No smart or curly quotes (`"` `"` `'` `'`). Always use straight ASCII quotes (`"` `'`).
-- No non-ASCII characters in code or comments.
+- No non-ASCII characters in code, comments, or responses. This includes Unicode arrows
+  (`->`, `<-`, not `→`), tick marks (use `yes`/`no`, not `✓`/`✗`), crosses, and decorative
+  glyphs of any kind. Use plain ASCII equivalents or rewrite the sentence.
 - No decorative dividers in code (`// ---`, `// ===`, `# ---`, `# ===`, etc.). Delete them.
 - No step narration comments. Never write a comment that just describes the next line of code.
   Bad: `// Open the file`, `# Loop through results`

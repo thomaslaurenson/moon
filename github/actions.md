@@ -2,16 +2,34 @@
 
 ## Core Rules
 
-- Runner: always `ubuntu-24.04`. Never `ubuntu-latest` or any unversioned alias.
 - Always prefer official GitHub actions (`actions/*`) before third-party alternatives.
 - Always use the `gh` CLI for creating releases. Never use a third-party release action.
-- All workflow steps call `make <target>`. Never run raw commands directly in a workflow.
+- All workflow steps call `make <target>`. Never write raw multi-line bash, awk, or Python
+  scripts inline in a workflow step. Simple one-line commands (e.g. `sudo apt-get install -y
+  shellcheck` or `brew install bash`) are acceptable as raw `run:` commands when there is no
+  corresponding Makefile target.
 - Never write raw bash or awk scripts in workflows to extract versions or changelogs. Use
   the repository's Makefile targets (e.g. `make get_changelog_entry`) and pass their
   standard output to the respective workflow steps.
 - Minimal permissions: `contents: read` by default, `contents: write` only in release and
   prerelease workflows. Test workflows must never declare `contents: write`.
 - No `fetch-depth: 0` except in release workflows where changelog extraction requires it.
+
+---
+
+## Runners
+
+Always pin runners to a specific version. Never use unversioned aliases such as
+`ubuntu-latest` or `macos-latest`.
+
+| OS | Supported pinned versions |
+|---|---|
+| Linux | `ubuntu-24.04`, `ubuntu-24.04-arm` |
+| macOS | `macos-14`, `macos-15` |
+| Windows | `windows-2022`, `windows-2025` |
+
+When GitHub releases a new runner version, update the pin deliberately. Do not rely on
+`-latest` aliases to update automatically.
 
 ---
 

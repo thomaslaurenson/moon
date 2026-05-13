@@ -3,6 +3,7 @@
 ## Design Principles
 
 - `style=flat` on all shields.io badges - no other style variants
+- `logo=github` on all CI and release badges; use the language logo (`go`, `cplusplus`, `python`) on language/quality badges
 - Group badges semantically: CI → release → language/quality
 - Separate groups with a blank line so GitHub renders a visual break
 - Pairs within a group sit on the same line, separated by a single space
@@ -13,11 +14,11 @@
 ## Go Projects
 
 ```markdown
-![Build Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat) ![Test Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&label=test)
+![Build Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&logo=github) ![Test Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&label=test&logo=github)
 
-![Release Version](https://img.shields.io/github/v/release/{owner}/{repo}?style=flat) ![Release downloads](https://img.shields.io/github/downloads/{owner}/{repo}/total?label=downloads)
+![Release Version](https://img.shields.io/github/v/release/{owner}/{repo}?style=flat&logo=github) ![Release downloads](https://img.shields.io/github/downloads/{owner}/{repo}/total?label=downloads&logo=github)
 
-![Go Version](https://img.shields.io/github/go-mod/go-version/{owner}/{repo}) ![Code Coverage](https://img.shields.io/badge/coverage-XX%25-blue)
+![Go Version](https://img.shields.io/github/go-mod/go-version/{owner}/{repo}?logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-XX%25-blue?logo=go)
 ```
 
 Groups:
@@ -30,11 +31,40 @@ Replace `XX` in the coverage badge with the actual percentage on each release.
 ## Python Projects
 
 ```markdown
-[![Python versions](https://img.shields.io/pypi/pyversions/{package})](https://pypi.org/project/{package}/) [![License](https://img.shields.io/github/license/{owner}/{repo})](LICENSE)
+![Build Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&logo=github) ![Test Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&label=test&logo=github)
+
+![Release Version](https://img.shields.io/github/v/release/{owner}/{repo}?style=flat&logo=github) ![Release downloads](https://img.shields.io/github/downloads/{owner}/{repo}/total?label=downloads&logo=github)
+
+![Python Version](https://img.shields.io/pypi/pyversions/{package}?logo=python) ![Code Coverage](https://img.shields.io/badge/Coverage-XX%25-blue?logo=python)
 ```
 
-- Use click-through links: Python versions badge links to PyPI, License badge links to the local `LICENSE` file
-- If the project is not on PyPI, replace the Python versions badge with a static badge: `![Python](https://img.shields.io/badge/python-3.x%2B-blue)`
+Groups:
+1. **CI** - build and test, both sourced from `tag.yml`
+2. **Release** - latest version tag and total download count
+3. **Language/quality** - Python version from PyPI, manually-maintained coverage percentage
+
+Notes:
+- If the project is not on PyPI, replace the Python version badge with a static badge: `![Python Version](https://img.shields.io/badge/python-3.x%2B-blue?logo=python)`
+- Replace `XX` in the coverage badge with the actual percentage on each release.
+
+## C++ Projects
+
+```markdown
+![Build Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&logo=github) ![Test Status](https://img.shields.io/github/actions/workflow/status/{owner}/{repo}/tag.yml?style=flat&label=test&logo=github)
+
+![Release Version](https://img.shields.io/github/v/release/{owner}/{repo}?style=flat&logo=github) ![Release downloads](https://img.shields.io/github/downloads/{owner}/{repo}/total?label=downloads&logo=github)
+
+![C++ Version](https://img.shields.io/badge/Version-XX-blue?logo=cplusplus) ![Code Coverage](https://img.shields.io/badge/Coverage-XX%25-blue?logo=cplusplus)
+```
+
+Groups:
+1. **CI** - build and test, both sourced from `tag.yml`
+2. **Release** - latest version tag and total download count
+3. **Language/quality** - C++ version from root `CMakeLists.txt`, manually-maintained coverage percentage
+
+Notes:
+- Replace `XX` in the version badge with the actual version from root `CMakeLists.txt`
+- Replace `XX` in the coverage badge with the actual percentage on each release.
 
 ## Pages / Static Sites
 

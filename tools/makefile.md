@@ -29,13 +29,13 @@ SHELL := /bin/bash
 ```
 
 - `SHELL := /bin/bash` - ensures consistent shell behaviour regardless of the invoking environment
-- Do **not** use `.SILENT:` — commands should echo to the terminal by default so failures are diagnosable without re-running
-- Use `@` selectively to suppress noisy but unimportant lines (e.g. `@mkdir -p ...`, `@echo "done"`) — never suppress the main command of a recipe
+- Do **not** use `.SILENT:`; commands should echo to the terminal by default so failures are diagnosable without re-running
+- Use `@` selectively to suppress noisy but unimportant lines (e.g. `@mkdir -p ...`, `@echo "done"`); never suppress the main command of a recipe
 
 ## Variables
 
 ```makefile
-BINARY  := narc
+BINARY  := myapp
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS := -s -w -X github.com/example/repo/cmd.Version=$(VERSION)
 
@@ -62,7 +62,7 @@ build: ## Build the binary
 	...
 ```
 
-- Keeps the declaration co-located with the target — adding or removing a target is fully self-contained
+- Keeps the declaration co-located with the target; adding or removing a target is fully self-contained
 - Eliminates the central list maintenance burden; the list can never drift out of sync
 - The `help` target already serves as a table of contents for the file
 
@@ -143,8 +143,7 @@ The mandatory behaviour is defined by earlier sections in this file:
 
 ## GET Section
 
-All project Makefiles must include a `# GET` section. GitHub Actions workflows
-call these targets instead of embedding raw bash or awk scripts in workflow files.
+All project Makefiles must include a `# GET` section. GitHub Actions workflows call these targets instead of embedding raw bash or awk scripts in workflow files.
 
 ### Python projects
 
@@ -200,10 +199,6 @@ get_changelog_entry: ## Extract the changelog entry for the current version to /
 	test -s /tmp/release_notes.md || { echo "No CHANGELOG entry found for $$VERSION" >&2; exit 1; }
 ```
 
-- The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in
-  `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure
-  `VERSION` appears on the same line as the version number.
-- The awk logic is identical across Python and C++ — only the version source
-  differs. This ensures changelog extraction behaviour is consistent.
-- The target exits non-zero if no matching entry is found, which causes CI to
-  fail fast before attempting a release with an empty changelog.
+- The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure `VERSION` appears on the same line as the version number.
+- The awk logic is identical across Python and C++; only the version source differs. This ensures changelog extraction behaviour is consistent.
+- The target exits non-zero if no matching entry is found, which causes CI to fail fast before attempting a release with an empty changelog.

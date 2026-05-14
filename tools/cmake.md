@@ -4,9 +4,9 @@ Conventions for CMake-based C++ projects.
 
 ## Design Principles
 
-- CMake is the build system for all C++ projects — never use raw compiler invocations
-- The Makefile is a task runner that wraps CMake — CI calls `make <target>`, never raw `cmake` commands
-- One `build/` directory for everything — no separate lint or release build directories
+- CMake is the build system for all C++ projects; never use raw compiler invocations
+- The Makefile is a task runner that wraps CMake; CI calls `make <target>`, never raw `cmake` commands
+- One `build/` directory for everything; no separate lint or release build directories
 - Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
 
 ---
@@ -19,9 +19,7 @@ All projects must declare a minimum CMake version of 3.21:
 cmake_minimum_required(VERSION 3.21)
 ```
 
-CMake 3.21 is the oldest version found on any supported build environment.
-Never use `cmake_minimum_required(VERSION 3.10)` or other outdated minimums —
-they unlock legacy behaviour that conflicts with modern CMake practices.
+CMake 3.21 is the oldest version found on any supported build environment. Never use `cmake_minimum_required(VERSION 3.10)` or other outdated minimums; they unlock legacy behaviour that conflicts with modern CMake practices.
 
 ---
 
@@ -35,10 +33,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 ```
 
-- `CMAKE_CXX_STANDARD_REQUIRED ON` — fails the build if the compiler does not
-  support the requested standard, rather than silently falling back
-- `CMAKE_CXX_EXTENSIONS OFF` — disables compiler-specific extensions such as
-  GNU extensions, ensuring the code is portable standard C++
+- `CMAKE_CXX_STANDARD_REQUIRED ON`: fails the build if the compiler does not support the requested standard, rather than silently falling back
+- `CMAKE_CXX_EXTENSIONS OFF`: disables compiler-specific extensions such as GNU extensions, ensuring the code is portable standard C++
 
 ---
 
@@ -64,14 +60,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 ```
 
-- `CMAKE_BUILD_TYPE` defaults to `Debug` — this ensures `compile_commands.json`
-  is always generated with full debug information for clang-tidy
-- `CMAKE_POSITION_INDEPENDENT_CODE ON` — required for shared libraries and
-  good practice for all targets
-- `CMAKE_EXPORT_COMPILE_COMMANDS ON` — generates `compile_commands.json` in
-  the build directory, required for clang-tidy
-- `CMAKE_RUNTIME_OUTPUT_DIRECTORY` — all executables land in `build/bin/`
-  regardless of how many targets the project defines
+- `CMAKE_BUILD_TYPE` defaults to `Debug`: this ensures `compile_commands.json` is always generated with full debug information for clang-tidy
+- `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
+- `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
+- `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables land in `build/bin/` regardless of how many targets the project defines
 
 ---
 
@@ -84,8 +76,7 @@ cmake -B build
 cmake --build build
 ```
 
-Executables are always output to `build/bin/`. For a project with multiple
-binaries they all land in the same directory:
+Executables are always output to `build/bin/`. For a project with multiple binaries they all land in the same directory:
 
 ```
 build/
@@ -96,16 +87,13 @@ build/
   compile_commands.json
 ```
 
-Never create separate build directories for lint, release, or test builds.
-The default `Debug` build type produces a `compile_commands.json` that covers
-all use cases.
+Never create separate build directories for lint, release, or test builds. The default `Debug` build type produces a `compile_commands.json` that covers all use cases.
 
 ---
 
 ## CMakeLists.txt Structure
 
-Every directory that produces a target or manages a distinct concern has its
-own `CMakeLists.txt`. The root never defines targets directly — it orchestrates.
+Every directory that produces a target or manages a distinct concern has its own `CMakeLists.txt`. The root never defines targets directly; it orchestrates.
 
 ```
 CMakeLists.txt        # project settings, dependencies, add_subdirectory calls
@@ -114,9 +102,9 @@ src/
 test/
   CMakeLists.txt      # defines test targets
 extern/
-  Catch2/             # submodule — never modify
-  subprocess.h/       # submodule — never modify
-  StormLib/           # submodule — never modify
+  Catch2/             # submodule - never modify
+  subprocess.h/       # submodule - never modify
+  ThirdPartyLib/      # submodule - never modify
 ```
 
 ### Root CMakeLists.txt responsibilities
@@ -137,9 +125,8 @@ extern/
 
 ### test/CMakeLists.txt responsibilities
 
-- Two test executable targets — one for unit tests, one for functional tests
-- `target_compile_definitions` to bake binary path and test directory into
-  the functional test binary at configure time
+- Two test executable targets; one for unit tests, one for functional tests
+- `target_compile_definitions` to bake binary path and test directory into the functional test binary at configure time
 - Linking against `Catch2::Catch2WithMain`
 - `catch_discover_tests` for both binaries
 
@@ -147,9 +134,7 @@ extern/
 
 ## Testing Option
 
-Every project must declare the `BUILD_TESTING` option in the root
-`CMakeLists.txt`. This allows tests to be disabled for release builds or
-when building on a system without test dependencies:
+Every project must declare the `BUILD_TESTING` option in the root `CMakeLists.txt`. This allows tests to be disabled for release builds or when building on a system without test dependencies:
 
 ```cmake
 option(BUILD_TESTING "Build tests" ON)
@@ -164,10 +149,7 @@ endif()
 
 ## Baking Paths into Test Binaries
 
-Functional tests need to know where the compiled binary lives at runtime.
-Rather than discovering it at runtime, bake the path in at CMake configure
-time using `target_compile_definitions`. This eliminates a whole class of
-path-resolution bugs and makes the test binary fully self-contained:
+Functional tests need to know where the compiled binary lives at runtime. Rather than discovering it at runtime, bake the path in at CMake configure time using `target_compile_definitions`. This eliminates a whole class of path-resolution bugs and makes the test binary fully self-contained:
 
 ```cmake
 # In test/CMakeLists.txt
@@ -184,9 +166,7 @@ target_compile_definitions(myapp_functional_tests PRIVATE
 )
 ```
 
-`MYAPP_TEST_DIR` provides the path to the `test/` source directory, replacing
-any runtime `__file__`-style path discovery. Tests access both via the
-`TestEnvironment` singleton — see `cpp/testing.md`.
+`MYAPP_TEST_DIR` provides the path to the `test/` source directory, replacing any runtime `__file__`-style path discovery. Tests access both via the `TestEnvironment` singleton; see `cpp/testing.md`.
 
 In test code:
 
@@ -199,23 +179,22 @@ REQUIRE(result.returncode_ == 0);
 
 ## Two-Binary Test Pattern
 
-Projects with both unit and functional tests define two separate binaries.
-They have different dependencies and must not be mixed:
+Projects with both unit and functional tests define two separate binaries. They have different dependencies and must not be mixed:
 
 ```cmake
-# Unit tests — links against application source files directly
+# Unit tests - links against application source files directly
 add_executable(myapp_unit_tests
     unit/test_helpers.cpp
-    unit/test_gamerules.cpp
+    unit/test_config.cpp
 )
 target_include_directories(myapp_unit_tests PRIVATE "${CMAKE_SOURCE_DIR}/src")
 target_link_libraries(myapp_unit_tests PRIVATE Catch2::Catch2WithMain)
 
-# Functional tests — spawns the binary as a subprocess, never links src/
+# Functional tests - spawns the binary as a subprocess, never links src/
 add_executable(myapp_functional_tests
     subprocess_helper.cpp
     functional/test_create.cpp
-    functional/test_extract.cpp
+    functional/test_list.cpp
 )
 target_include_directories(myapp_functional_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -229,52 +208,46 @@ catch_discover_tests(myapp_unit_tests)
 catch_discover_tests(myapp_functional_tests)
 ```
 
-The separation is intentional — unit tests link against source, functional
-tests do not. Mixing them produces a binary with unclear dependencies.
+The separation is intentional; unit tests link against source, functional tests do not. Mixing them produces a binary with unclear dependencies.
 
 ---
 
 ## Dependencies
 
-All external dependencies are git submodules pinned to a specific commit,
-stored under `extern/`:
+All external dependencies are git submodules pinned to a specific commit, stored under `extern/`:
 
 ```
 extern/
-  StormLib/
-  CLI11/
+  ThirdPartyLib/
+  ArgParser/
   Catch2/
   subprocess.h/
 ```
 
-Always pin to a specific commit hash, never a branch name. Branch names move;
-commit hashes do not:
+Always pin to a specific commit hash, never a branch name. Branch names move; commit hashes do not:
 
 ```bash
 cd extern/Catch2 && git checkout v3.6.0
 cd extern/subprocess.h && git checkout a3f3b8d  # specific commit hash
 ```
 
-Every dependency must have an existence check in the root `CMakeLists.txt`
-before its `add_subdirectory` call. The error message must name the dependency,
-explain why it is needed, and tell the developer exactly how to fix it:
+Every dependency must have an existence check in the root `CMakeLists.txt` before its `add_subdirectory` call. The error message must name the dependency, explain why it is needed, and tell the developer exactly how to fix it:
 
 ```cmake
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/extern/StormLib/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/extern/ThirdPartyLib/CMakeLists.txt")
     message(FATAL_ERROR
-"Missing dependency: StormLib
-mpqcli requires the StormLib library.
+"Missing dependency: ThirdPartyLib
+myapp requires the ThirdPartyLib library.
 It is provided as a submodule of this repository.
 Did you forget to run the following commands?
    git submodule init
    git submodule update")
 endif()
 
-add_subdirectory(extern/StormLib)
+add_subdirectory(extern/ThirdPartyLib)
 ```
 
-Single-header libraries such as `subprocess.h` check for the header file
-directly rather than a `CMakeLists.txt`:
+Single-header libraries check for the header file directly rather than a `CMakeLists.txt`:
 
 ```cmake
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/extern/subprocess.h/subprocess.h")
@@ -294,9 +267,7 @@ Never assume submodules are initialised. Always guard every dependency.
 
 ## Clang Tooling
 
-Clang tools are pinned to version 19 across all projects for reproducibility.
-Never use the unversioned `clang-format` or `clang-tidy` binaries as the
-system default may differ between machines and CI runners.
+Clang tools are pinned to version 19 across all projects for reproducibility. Never use the unversioned `clang-format` or `clang-tidy` binaries as the system default may differ between machines and CI runners.
 
 ### Installation
 
@@ -336,12 +307,8 @@ lint_cpp: ## Run clang-tidy static analysis
 	clang-tidy-19 -p build $(shell find src -name "*.cpp")
 ```
 
-Note: `format` and `format_check` include the `test/` directory — test code
-is subject to the same formatting standards as application code.
+Note: `format` and `format_check` include the `test/` directory; test code is subject to the same formatting standards as application code.
 
 ### Configuration files
 
-Both `.clang-format` and `.clang-tidy` live at the project root. CMake is
-pointed at the build directory via `-p build` so clang-tidy can find
-`compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy`
-tells clang-tidy to use the root `.clang-format` for any formatting checks.
+Both `.clang-format` and `.clang-tidy` live at the project root. CMake is pointed at the build directory via `-p build` so clang-tidy can find `compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.

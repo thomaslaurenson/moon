@@ -59,6 +59,6 @@ Update/mpqeditor and uv (#40)
 ```
 
 - Type is capitalised (`Feature`, `Refactor`, `Fix`, `Update`)
-- Description is lowercase with spaces — not kebab-case
+- Description is lowercase with spaces, not kebab-case
 - PR number is appended in parentheses
 - Matches the branch name closely but uses spaces instead of hyphens

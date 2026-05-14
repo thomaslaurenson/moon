@@ -17,9 +17,7 @@ Use British English spellings:
 
 ## Formatting
 
-Formatting is enforced automatically by clang-format. Running `make format` will
-reformat all source files. The canonical configuration lives in `.clang-format`
-at the project root.
+Formatting is enforced automatically by clang-format. Running `make format` will reformat all source files. The canonical configuration lives in `.clang-format` at the project root.
 
 Key settings that diverge from stock LLVM style:
 
@@ -33,12 +31,9 @@ Key settings that diverge from stock LLVM style:
 
 ### Suppressing clang-format
 
-`// clang-format off` and `// clang-format on` are permitted only when manual
-alignment genuinely aids readability — for example, a table or lookup structure
-where columnar layout communicates meaning that clang-format would destroy.
+`// clang-format off` and `// clang-format on` are permitted only when manual alignment genuinely aids readability; for example, a table or lookup structure where columnar layout communicates meaning that clang-format would destroy.
 
-The suppressed block must be kept as short as possible, and a comment must
-explain why formatting is suppressed:
+The suppressed block must be kept as short as possible, and a comment must explain why formatting is suppressed:
 
 ```cpp
 // clang-format off -- columnar alignment shows command-to-handler mapping clearly
@@ -50,8 +45,7 @@ static const CommandEntry COMMANDS[] = {
 // clang-format on
 ```
 
-Never use `clang-format off` to preserve arbitrary personal formatting
-preferences.
+Never use `clang-format off` to preserve arbitrary personal formatting preferences.
 
 ---
 
@@ -65,11 +59,11 @@ Use `snake_case`:
 
 ```cpp
 // Good
-bool open_mpq_archive(const std::string &path, HANDLE *archive);
-std::string normalize_file_path(const std::string &path);
+bool open_archive(const std::string &path, HANDLE *handle);
+std::string normalise_file_path(const std::string &path);
 
 // Bad
-bool OpenMpqArchive(const std::string &path, HANDLE *archive);
+bool OpenArchive(const std::string &path, HANDLE *handle);
 ```
 
 ### Variables and Parameters
@@ -88,18 +82,16 @@ std::string archivePath = get_path();
 
 ### Member Variables
 
-Use `snake_case` with a trailing underscore. The trailing underscore distinguishes
-member variables from local variables and parameters, and avoids shadowing in
-constructors:
+Use `snake_case` with a trailing underscore. The trailing underscore distinguishes member variables from local variables and parameters, and avoids shadowing in constructors:
 
 ```cpp
-class GameRules {
+class AppConfig {
 public:
-    GameRules(GameProfile profile) : profile_(profile) {}
+    AppConfig(OperationMode mode) : mode_(mode) {}
 
 private:
-    GameProfile profile_;
-    std::vector<CompressionRule> rules_;
+    OperationMode mode_;
+    std::vector<ProcessingRule> rules_;
 };
 ```
 
@@ -108,9 +100,9 @@ private:
 Use `PascalCase`:
 
 ```cpp
-class GameRules { ... };
-struct CompressionRule { ... };
-enum class GameProfile { ... };
+class AppConfig { ... };
+struct ProcessingRule { ... };
+enum class OperationMode { ... };
 ```
 
 ### Enum Values
@@ -118,10 +110,10 @@ enum class GameProfile { ... };
 Use `UPPER_SNAKE_CASE`:
 
 ```cpp
-enum class GameProfile {
-    GENERIC,
-    WARCRAFT_3,
-    STARCRAFT,
+enum class OperationMode {
+    DEFAULT,
+    FAST,
+    VERBOSE,
 };
 ```
 
@@ -136,8 +128,7 @@ const std::string DEFAULT_LOCALE = "enUS";
 
 ### No Hungarian Notation
 
-Do not use Hungarian notation prefixes. The type is already stated in the
-declaration — prefixes add noise without value:
+Do not use Hungarian notation prefixes. The type is already stated in the declaration; prefixes add noise without value:
 
 ```cpp
 // Good
@@ -151,74 +142,41 @@ std::string szFileName;
 DWORD dwFlags;
 ```
 
-Third-party libraries such as StormLib use Hungarian notation in their own APIs.
-This is unavoidable and explicitly exempt — do not rename parameters or members
-that originate from external library types.
+Third-party libraries that use Hungarian notation in their own APIs are explicitly exempt; do not rename parameters or members that originate from external library types.
 
 ### File Names
 
 Use `snake_case` for all source and header files:
 
 ```
-game_rules.cpp
-game_rules.h
-mpq_helpers.cpp
-mpq_helpers.h
+app_config.cpp
+app_config.h
+file_helpers.cpp
+file_helpers.h
 ```
 
 ### File Extensions
 
-Use `.cpp` for implementation files and `.h` for header files. Never use
-`.hpp`, `.hxx`, or any other variant — the project uses `.h` throughout and
-mixing extensions creates unnecessary inconsistency:
-
-```
-// Good
-subprocess_helper.h
-subprocess_helper.cpp
-test_files.h
-
-// Bad
-subprocess_helper.hpp
-subprocess_helper.hxx
-```
+Use `.cpp` for implementation files and `.h` for header files. Never use `.hpp`, `.hxx`, or any other variant; the project uses `.h` throughout and mixing extensions creates unnecessary inconsistency.
 
 ### Header-only vs Split Files
 
-Whether a file is header-only or split into `.h`/`.cpp` depends on the
-complexity of the implementation:
+Whether a file is header-only or split into `.h`/`.cpp` depends on the complexity of the implementation:
 
-- **Header-only `.h`** — use for simple structs, fixtures, and small helpers
-  where the entire definition is 50 lines or fewer. Putting a 30-line struct
-  across two files is unnecessary ceremony.
-- **`.h`/`.cpp` split** — use when the implementation has real complexity,
-  multiple private functions, or would meaningfully slow down compilation if
-  included everywhere. The declaration in `.h` is the public contract; the
-  implementation in `.cpp` is the detail.
-
-```
-// Header-only -- simple fixture struct, no complex implementation
-test/fixtures/test_files.h
-
-// Split -- subprocess helper with threading, platform ifdefs, real complexity
-test/subprocess_helper.h
-test/subprocess_helper.cpp
-```
+- **Header-only `.h`**: use for simple structs, fixtures, and small helpers where the entire definition is 50 lines or fewer. Putting a 30-line struct across two files is unnecessary ceremony.
+- **`.h`/`.cpp` split**: use when the implementation has real complexity, multiple private functions, or would meaningfully slow down compilation if included everywhere. The declaration in `.h` is the public contract; the implementation in `.cpp` is the detail.
 
 ---
 
 ## Project Version
 
-Every C++ project must declare its version in the root `CMakeLists.txt` using
-the `project()` command's `VERSION` parameter. This is the single source of
-truth for the project version — never hardcode a version string anywhere else:
+Every C++ project must declare its version in the root `CMakeLists.txt` using the `project()` command's `VERSION` parameter. This is the single source of truth for the project version; never hardcode a version string anywhere else:
 
 ```cmake
 project(MyApp VERSION 1.2.3)
 ```
 
-The version is then available in CMake as `${PROJECT_VERSION}` and can be baked
-into the binary at configure time using `configure_file`:
+The version is then available in CMake as `${PROJECT_VERSION}` and can be baked into the binary at configure time using `configure_file`:
 
 ```cmake
 # In root CMakeLists.txt
@@ -237,8 +195,7 @@ configure_file(src/version.h.in src/version.h)
 std::cout << "myapp " << MYAPP_VERSION << "\n";
 ```
 
-Never hardcode a version string in a `.cpp` file. Never read the version from
-`git describe` at runtime — bake it at configure time.
+Never hardcode a version string in a `.cpp` file. Never read the version from `git describe` at runtime; bake it at configure time.
 
 ---
 
@@ -246,29 +203,22 @@ Never hardcode a version string in a `.cpp` file. Never read the version from
 
 ### Function Comments
 
-Every function declared in a header file must have a Doxygen comment on its
-declaration. Functions defined only in a `.cpp` file (static helpers, private
-implementation) must have their Doxygen comment in the `.cpp` file.
+Every function declared in a header file must have a Doxygen comment on its declaration. Functions defined only in a `.cpp` file (static helpers, private implementation) must have their Doxygen comment in the `.cpp` file.
 
-Never duplicate a comment in both the `.h` declaration and the `.cpp` definition.
-The declaration is the contract — that is where the comment lives.
+Never duplicate a comment in both the `.h` declaration and the `.cpp` definition. The declaration is the contract; that is where the comment lives.
 
-Use triple-slash `///` style. The first line is a single summary sentence with
-no full stop. An optional extended description may follow after a blank `///`
-line. Every parameter is documented with `@param`. `@return` is always present
-unless the function returns `void`:
+Use triple-slash `///` style. The first line is a single summary sentence with no full stop. An optional extended description may follow after a blank `///` line. Every parameter is documented with `@param`. `@return` is always present unless the function returns `void`:
 
 ```cpp
-/// Opens an MPQ archive from the given path.
+/// Opens an archive from the given path.
 ///
-/// The archive handle must be closed with close_mpq_archive when no
-/// longer needed.
+/// The handle must be closed with close_archive when no longer needed.
 ///
-/// @param path Path to the MPQ archive file.
-/// @param archive Pointer to the archive handle to populate.
-/// @param flags StormLib open flags.
+/// @param path Path to the archive file.
+/// @param handle Pointer to the handle to populate.
+/// @param flags Open flags.
 /// @return true on success, false on failure.
-bool open_mpq_archive(const std::string &path, HANDLE *archive, uint32_t flags);
+bool open_archive(const std::string &path, HANDLE *handle, uint32_t flags);
 ```
 
 For `void` functions, omit `@return`:
@@ -277,7 +227,7 @@ For `void` functions, omit `@return`:
 /// Normalises a file path to use backslashes and lowercase.
 ///
 /// @param path Path string to normalise in place.
-void normalize_file_path(std::string &path);
+void normalise_file_path(std::string &path);
 ```
 
 ### Inline Comments
@@ -285,7 +235,7 @@ void normalize_file_path(std::string &path);
 - Start with `//` followed by a single space.
 - First word is capitalised.
 - Never use a full stop, unless the comment is multiple sentences.
-- No decorative dividers — avoid `// ---`, `// ===`, `// ***`, or similar.
+- No decorative dividers; avoid `// ---`, `// ===`, `// ***`, or similar.
 
 ```cpp
 // Good: single-line comment
@@ -302,19 +252,15 @@ std::transform(path.begin(), path.end(), path.begin(),
 
 ### Comment Hygiene
 
-- Do not write step narration comments that describe the next line of code.
-  Bad: `// Loop through files`, `// Check if handle is valid`
-- Preserve comments that explain why something is done, not what.
-  Good: `// StormLib expects backslashes regardless of platform`
+- Do not write step narration comments that describe the next line of code. Bad: `// Loop through files`, `// Check if handle is valid`
+- Preserve comments that explain why something is done, not what. Good: `// Library expects backslashes regardless of platform`
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 
 ---
 
 ## Static Analysis
 
-Static analysis is enforced by clang-tidy. Running `make lint` will run the
-full check suite. The canonical configuration lives in `.clang-tidy` at the
-project root.
+Static analysis is enforced by clang-tidy. Running `make lint` will run the full check suite. The canonical configuration lives in `.clang-tidy` at the project root.
 
 ### Baseline checks
 
@@ -331,24 +277,20 @@ WarningsAsErrors: "*"
 FormatStyle: file
 ```
 
-- `clang-analyzer-*` — deep static analysis for real bugs: null dereferences,
-  memory leaks, dead code, and undefined behaviour
-- `modernize-use-nullptr` — enforces `nullptr` over `NULL` throughout
-- `readability-identifier-naming` — enforces the naming conventions defined above
-- `WarningsAsErrors` — all warnings are errors; if a check is worth having it
-  is worth fixing
+- `clang-analyzer-*`: deep static analysis for real bugs; null dereferences, memory leaks, dead code, and undefined behaviour
+- `modernize-use-nullptr`: enforces `nullptr` over `NULL` throughout
+- `readability-identifier-naming`: enforces the naming conventions defined above
+- `WarningsAsErrors`: all warnings are errors; if a check is worth having it is worth fixing
 
 ### Project-specific checks and suppressions
 
-Additional checks and suppressions are added per project in the project's own
-`.clang-tidy` file. Every suppression must include a comment explaining why it
-is justified:
+Additional checks and suppressions are added per project in the project's own `.clang-tidy` file. Every suppression must include a comment explaining why it is justified:
 
 ```yaml
 Checks: >
   -bugprone-narrowing-conversions
-# Suppressed: StormLib uses DWORD/int32_t interchangeably at its API boundary.
-# Fixing these would require wrapping every StormLib call with explicit casts
+# Suppressed: third-party library uses DWORD/int32_t interchangeably at its API boundary.
+# Fixing these would require wrapping every library call with explicit casts
 # that add noise without improving safety.
 ```
 

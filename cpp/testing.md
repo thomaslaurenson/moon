@@ -6,12 +6,10 @@ Standards and conventions for testing C++ projects.
 
 Two testing layers are used in combination:
 
-- **Catch2** — unit tests for pure logic functions with no external dependencies
-- **Catch2** — functional tests that spawn the compiled binary as a subprocess
-  and verify its CLI behaviour end-to-end
+- **Catch2**: unit tests for pure logic functions with no external dependencies
+- **Catch2**: functional tests that spawn the compiled binary as a subprocess and verify its CLI behaviour end-to-end
 
-Both layers must pass before a change is considered complete. All tests are
-written in C++ — there is no Python test layer.
+Both layers must pass before a change is considered complete. All tests are written in C++; there is no Python test layer.
 
 ---
 
@@ -24,34 +22,31 @@ test/
     test_files.h
   functional/             # Catch2 functional tests against the compiled binary
     test_create.cpp       # mirrors the create subcommand
-    test_extract.cpp      # mirrors the extract subcommand
+    test_list.cpp         # mirrors the list subcommand
   unit/                   # Catch2 unit tests for internal logic
     test_helpers.cpp      # mirrors src/helpers.cpp
-    test_gamerules.cpp    # mirrors src/gamerules.cpp
+    test_config.cpp       # mirrors src/config.cpp
   subprocess_helper.h     # cross-platform subprocess runner
   subprocess_helper.cpp
   CMakeLists.txt
 ```
 
 - One unit test file per source file, named `test_<source>.cpp`
-- Functional tests mirror CLI subcommands or user-facing behaviour, not
-  internal source files
+- Functional tests mirror CLI subcommands or user-facing behaviour, not internal source files
 - Fixtures live in `test/fixtures/`, one header per fixture
 
 ---
 
 ## Catch2 Setup
 
-Pin Catch2 as a git submodule under `extern/Catch2` so the version is
-controlled and no system install is required:
+Pin Catch2 as a git submodule under `extern/Catch2` so the version is controlled and no system install is required:
 
 ```bash
 git submodule add https://github.com/catchorg/Catch2.git extern/Catch2
 cd extern/Catch2 && git checkout v3.6.0
 ```
 
-Catch2 v3 is not a single-header library — it is a compiled library with
-multiple headers. Always use it as a submodule, never copy individual headers.
+Catch2 v3 is not a single-header library; it is a compiled library with multiple headers. Always use it as a submodule, never copy individual headers.
 
 In the root `CMakeLists.txt`:
 
@@ -64,20 +59,19 @@ if(BUILD_TESTING)
 endif()
 ```
 
-In `test/CMakeLists.txt`, two binaries are defined — one for unit tests and
-one for functional tests:
+In `test/CMakeLists.txt`, two binaries are defined; one for unit tests and one for functional tests:
 
 ```cmake
 add_executable(myapp_unit_tests
     unit/test_helpers.cpp
-    unit/test_gamerules.cpp
+    unit/test_config.cpp
 )
 target_link_libraries(myapp_unit_tests PRIVATE Catch2::Catch2WithMain)
 
 add_executable(myapp_functional_tests
     subprocess_helper.cpp
     functional/test_create.cpp
-    functional/test_extract.cpp
+    functional/test_list.cpp
 )
 target_link_libraries(myapp_functional_tests PRIVATE Catch2::Catch2WithMain)
 
@@ -93,8 +87,7 @@ catch_discover_tests(myapp_functional_tests)
 
 ### Test structure
 
-Use one `TEST_CASE` per function under test, with `SECTION` blocks for
-individual scenarios. The `TEST_CASE` name is the function name:
+Use one `TEST_CASE` per function under test, with `SECTION` blocks for individual scenarios. The `TEST_CASE` name is the function name:
 
 ```cpp
 #include <catch2/catch_test_macros.hpp>
@@ -119,14 +112,14 @@ Tag each `TEST_CASE` with the name of the source file under test:
 
 ```cpp
 TEST_CASE("next_power_of_two", "[helpers]") { … }
-TEST_CASE("parse_game_rules", "[gamerules]") { … }
+TEST_CASE("parse_config", "[config]") { … }
 ```
 
 Run a subset during development:
 
 ```bash
 ./build/bin/myapp_unit_tests [helpers]
-./build/bin/myapp_unit_tests [gamerules]
+./build/bin/myapp_unit_tests [config]
 ```
 
 ### What to unit test
@@ -138,9 +131,7 @@ A function gets a unit test if it can be called without:
 - A third-party library handle or session
 - Any global system state
 
-Pure logic functions — string manipulation, maths, parsing, pattern matching —
-always get unit tests. Functions tightly coupled to external libraries or the
-filesystem are covered by functional tests instead.
+Pure logic functions (string manipulation, maths, parsing, pattern matching) always get unit tests. Functions tightly coupled to external libraries or the filesystem are covered by functional tests instead.
 
 Every bug fix must include a unit test that reproduces the bug before the fix.
 
@@ -148,39 +139,30 @@ Every bug fix must include a unit test that reproduces the bug before the fix.
 
 ## Functional Tests
 
-Functional tests spawn the compiled binary as a subprocess and assert on its
-stdout, stderr, and exit code. They are black-box tests — they never link
-against application source files.
+Functional tests spawn the compiled binary as a subprocess and assert on its stdout, stderr, and exit code. They are black-box tests; they never link against application source files.
 
 ### Subprocess helper
 
-Every project that has functional tests includes a cross-platform subprocess
-helper: `test/subprocess_helper.h` and `test/subprocess_helper.cpp`. This
-helper is not written from scratch each time — copy it from an existing project
-that already uses this pattern.
+Every project that has functional tests includes a cross-platform subprocess helper: `test/subprocess_helper.h` and `test/subprocess_helper.cpp`. This helper is not written from scratch each time; copy it from an existing project that already uses this pattern.
 
-The helper exposes a `run()` function that returns a `RunResult` containing
-`stdout_output_`, `stderr_output_`, `returncode_`, and `timed_out_`. A
-`RunOptions` struct controls optional stdin input and working directory.
+The helper exposes a `run()` function that returns a `RunResult` containing `stdout_output_`, `stderr_output_`, `returncode_`, and `timed_out_`. A `RunOptions` struct controls optional stdin input and working directory.
 
 Usage in a functional test:
 
 ```cpp
 #include "../subprocess_helper.h"
 
-TEST_CASE("create mpq target does not exist", "[create]") {
+TEST_CASE("create: target does not exist", "[create]") {
     auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
-    REQUIRE(result.returncode_ == 105);
+    REQUIRE(result.returncode_ == 1);
 }
 ```
 
-The binary path is baked in at CMake configure time via
-`target_compile_definitions` — see `tools/cmake.md` for the pattern.
+The binary path is baked in at CMake configure time via `target_compile_definitions`; see `tools/cmake.md` for the pattern.
 
 ### subprocess.h dependency
 
-The subprocess helper is built on top of `subprocess.h`, a small cross-platform
-C library. Pin it as a git submodule under `extern/subprocess.h`:
+The subprocess helper is built on top of `subprocess.h`, a small cross-platform C library. Pin it as a git submodule under `extern/subprocess.h`:
 
 ```bash
 git submodule add https://github.com/sheredom/subprocess.h.git extern/subprocess.h
@@ -191,9 +173,7 @@ Always pin to a specific commit hash, never a branch name.
 
 ### Fixtures
 
-Fixtures are plain C++ structs that set up and tear down state for tests.
-They are function-scoped — constructed at the start of each test and destroyed
-at the end. Each fixture lives in its own header in `test/fixtures/`.
+Fixtures are plain C++ structs that set up and tear down state for tests. They are function-scoped; constructed at the start of each test and destroyed at the end. Each fixture lives in its own header in `test/fixtures/`.
 
 ```cpp
 // test/fixtures/test_files.h
@@ -221,16 +201,14 @@ Instantiate in a test:
 TEST_CASE("add file to archive", "[add]") {
     TestFiles files;
     auto result = run(MYAPP_BINARY_PATH,
-                      {"add", (files.files_dir_ / "cats.txt").string(), "out.mpq"});
+                      {"add", (files.files_dir_ / "sample.txt").string(), "out.dat"});
     REQUIRE(result.returncode_ == 0);
 }
 ```
 
 ### Asserting on CLI output
 
-Use a `lines_to_set` helper to split stdout or stderr into a set of lines for
-order-independent comparison. Define it as a static function at the top of each
-functional test file:
+Use a `lines_to_set` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it as a static function at the top of each functional test file:
 
 ```cpp
 static std::set<std::string> lines_to_set(const std::string &output,
@@ -257,9 +235,7 @@ REQUIRE(output == expected);
 
 ### Platform differences
 
-Use `#ifdef _WIN32` for expected values that differ between Windows and
-POSIX — for example file sizes that differ due to CRLF vs LF line endings.
-Never use runtime platform detection in tests:
+Use `#ifdef _WIN32` for expected values that differ between Windows and POSIX; for example file sizes that differ due to CRLF vs LF line endings. Never use runtime platform detection in tests:
 
 ```cpp
 #ifdef _WIN32
@@ -272,14 +248,13 @@ REQUIRE(result.stdout_output_.find(expected_size) != std::string::npos);
 
 ### Skipping tests with optional dependencies
 
-Use Catch2's `SKIP()` macro when a test depends on a file or resource that may
-not be present in all environments:
+Use Catch2's `SKIP()` macro when a test depends on a file or resource that may not be present in all environments:
 
 ```cpp
-TEST_CASE("verify patch signature", "[verify]") {
-    fs::path patch = env.test_dir_ / "data" / "patches" / "patch.mpq";
-    if (!fs::exists(patch)) {
-        SKIP("Patch file not found — run scripts/download_test_data.sh");
+TEST_CASE("verify signature", "[verify]") {
+    fs::path data = env.test_dir_ / "data" / "sample.dat";
+    if (!fs::exists(data)) {
+        SKIP("Test data not found - run scripts/download_test_data.sh");
     }
     // test body
 }
@@ -290,8 +265,8 @@ TEST_CASE("verify patch signature", "[verify]") {
 Tag each functional `TEST_CASE` with the subcommand or feature under test:
 
 ```cpp
-TEST_CASE("create mpq versions", "[create]") { … }
-TEST_CASE("extract with output directory", "[extract]") { … }
+TEST_CASE("create versions", "[create]") { … }
+TEST_CASE("list with filter", "[list]") { … }
 ```
 
 Run a subset during development:

@@ -10,8 +10,7 @@ Style conventions for Go code in this project.
 
 ### Package comments
 
-Every package has a package comment immediately before the `package` declaration.
-Start with `// Package <name>` followed by a summary sentence.
+Every package has a package comment immediately before the `package` declaration. Start with `// Package <name>` followed by a summary sentence.
 
 ```go
 // Package parser reads and validates configuration files.
@@ -30,9 +29,7 @@ package retry
 
 ### Function and method comments
 
-Exported functions and methods must have a doc comment. Start with the name of the
-function as the first word. Use a complete sentence. Put the summary on a single opening
-line — godoc shows this line in index views.
+Exported functions and methods must have a doc comment. Start with the name of the function as the first word. Use a complete sentence. Put the summary on a single opening line; godoc shows this line in index views.
 
 ```go
 // ParseConfig reads a configuration file from path and returns a Config.
@@ -49,12 +46,11 @@ For more detail, add a blank comment line after the summary:
 func Run(ctx context.Context, args []string) error {
 ```
 
-Unexported functions do not require doc comments, but add one when the purpose is
-not obvious.
+Unexported functions do not require doc comments, but add one when the purpose is not obvious.
 
 ### Type comments
 
-Exported types follow the same pattern — start with the type name:
+Exported types follow the same pattern; start with the type name:
 
 ```go
 // Config holds the resolved settings for a single run.
@@ -82,7 +78,7 @@ type Store interface {
 - First word is capitalised.
 - Never use a full stop, unless a multiline comment.
 - For continuation lines (when a comment wraps to a second line), capitalisation is not required.
-- No decorative styles — avoid `// ---`, `// ===`, `// ***`, or similar dividers.
+- No decorative styles; avoid `// ---`, `// ===`, `// ***`, or similar dividers.
 
 ```go
 // Good: single-line comment
@@ -92,7 +88,7 @@ x := computeValue()
 // continuation lines do not need to start with a capital letter.
 y := complexOperation()
 
-// Bad: decorative divider — avoid this style
+// Bad: decorative divider - avoid this style
 // --- section name ---
 ```
 
@@ -100,12 +96,9 @@ y := complexOperation()
 
 ## Comment Hygiene
 
-- Do not write step narration comments that describe the next line of code.
-  Bad: `// Initialise the counter`, `// Check for nil`
-- Preserve comments that explain why something is done, not what.
-  Good: `// Use index 0 because the legacy API expects a 0-indexed fallback`
-- Do not use trailing block comments (`// end if`, `// end for`) unless the block
-  exceeds 50 lines.
+- Do not write step narration comments that describe the next line of code. Bad: `// Initialise the counter`, `// Check for nil`
+- Preserve comments that explain why something is done, not what. Good: `// Use index 0 because the legacy API expects a 0-indexed fallback`
+- Do not use trailing block comments (`// end if`, `// end for`) unless the block exceeds 50 lines.
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 
 ---
@@ -138,7 +131,7 @@ http.Client
 
 ### Acronyms
 
-Acronyms are written in consistent case — either all upper or all lower — never mixed:
+Acronyms are written in consistent case, either all upper or all lower, never mixed:
 
 ```go
 // Good
@@ -191,8 +184,7 @@ func (e *ParseError) Error() string {
 
 ### Constants
 
-Package-level constants use `CamelCase` when exported, `mixedCase` when unexported.
-Do not use `UPPER_SNAKE_CASE` for constants in Go.
+Package-level constants use `CamelCase` when exported, `mixedCase` when unexported. Do not use `UPPER_SNAKE_CASE` for constants in Go.
 
 ```go
 // Exported constant

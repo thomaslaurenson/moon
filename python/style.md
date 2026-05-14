@@ -34,9 +34,9 @@ Use British English spellings:
 
 - Start with `#` followed by a single space.
 - First word is capitalised.
-- Never use a full stop, unless a multiline comment
+- Never use a full stop, unless a multiline comment.
 - For continuation lines (when a comment wraps to a second line), capitalisation is not required.
-- No decorative styles — avoid `# ---`, `# ===`, `# ***`, or similar dividers.
+- No decorative styles; avoid `# ---`, `# ===`, `# ***`, or similar dividers.
 
 ```python
 # Good: single-line comment
@@ -46,35 +46,32 @@ x = compute_value()
 # continuation lines do not need to start with a capital letter.
 y = complex_operation()
 
-# Bad: decorative divider — avoid this style
+# Bad: decorative divider - avoid this style
 # --- section name ---
 ```
 
 ## Comment Hygiene
 
-- Do not write step narration comments that describe the next line of code.
-  Bad: `# Loop through results`, `# Open the file`
+- Do not write step narration comments that describe the next line of code. Bad: `# Loop through results`, `# Open the file`
 - Preserve comments that explain the 'why' (business logic, architecture). Aggressively delete and refactor comments that narrate the 'what' (step-by-step code narration).
 - Do not over-annotate type hints with redundant inline comments.
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 
 ## Constants
 
-Module-level constants use `UPPER_SNAKE_CASE`. Private constants (not part of the
-public API) use a leading underscore: `_UPPER_SNAKE_CASE`.
+Module-level constants use `UPPER_SNAKE_CASE`. Private constants (not part of the public API) use a leading underscore: `_UPPER_SNAKE_CASE`.
 
 ```python
 # Public constant
 DEFAULT_TIMEOUT = 300
 
-# Private constant — internal implementation detail
+# Private constant - internal implementation detail
 _IGNORED_EVENT_TYPES = {"verbose", "playbook_on_start"}
 ```
 
 ## Lazy Instantiation
 
-Prefer deferred setup — instantiate objects on first access, not at construction time.
-Use a private attribute initialised to `None` and a property that creates it on demand.
+Prefer deferred setup; instantiate objects on first access, not at construction time. Use a private attribute initialised to `None` and a property that creates it on demand.
 
 ```python
 @property

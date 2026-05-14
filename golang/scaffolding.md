@@ -10,9 +10,17 @@ internal/      # private packages not imported by other modules
 main.go        # entry point - minimal, delegates to cmd/
 .github/
   workflows/
-  dependabot.yml
+    dependabot.yml
+    lint.yml
+    test.yml
+    release.yml
+    prerelease.yml
+    pr.yml
+    main.yml
+    tag.yml
 .gitignore
 .goreleaser.yml
+.goreleaser.prerelease.yml
 go.mod
 go.sum
 Makefile
@@ -53,15 +61,14 @@ Adhere to the global Makefile structure established in `tools/makefile.md`. Use 
 - `install`: `go install -ldflags="..." .`
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `release_check`: `goreleaser check`
+- `get_changelog`: extract release notes for a given tag from `CHANGELOG.md`, output to stdout (used by the release workflow via `make get_changelog TAG=v1.0.0 > /tmp/release-notes.md`)
 - `clean`: `rm -rf bin/ dist/`
 - `ci`: `fmt_check mod_check vet test`
 
-Tests always include `-race -count=1`, including coverage runs. The binary is built to `bin/`, not the repo root.
+Tests always include `-race -count=1`, including coverage runs. The binary is built to `bin/`, not the repo root. Coverage is measured over `./internal/...` only; not `cmd/` or the root package.
 
 ## go.mod
 
 - Use the latest stable Go version
 - No `replace` directives in committed code
 - Run `go mod tidy` before committing
-
-

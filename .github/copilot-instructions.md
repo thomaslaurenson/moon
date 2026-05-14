@@ -23,16 +23,25 @@ Use this table to find the relevant instruction file for your task.
 |---|---|
 | Writing or reviewing Go code | `golang/style.md` |
 | Scaffolding a new Go project | `golang/scaffolding.md` |
+| Writing or reviewing Go tests | `golang/testing.md` |
+| Go GitHub Actions workflows | `golang/workflows.md` |
 | GoReleaser config | `golang/goreleaser.md` |
 | Writing or reviewing Python code | `python/style.md` |
 | Scaffolding a new Python project | `python/scaffolding.md` |
 | Writing a Python library | `python/library.md` |
 | Sphinx documentation | `python/docs.md` |
 | Writing or reviewing Python tests | `python/testing.md` |
-| C++ code (conventions not yet defined) | `cpp/style.md` |
-| GitHub Actions workflows | `github/actions.md` |
+| Python GitHub Actions workflows | `python/workflows.md` |
+| Writing or reviewing C++ code | `cpp/style.md` |
+| Writing or reviewing C++ tests | `cpp/testing.md` |
+| C++ GitHub Actions workflows | `cpp/workflows.md` |
+| Writing or reviewing Bash code | `bash/style.md` |
+| Writing or reviewing Bash tests | `bash/testing.md` |
+| GitHub Actions workflows (generic) | `github/actions.md` |
 | README badges | `github/badges.md` |
 | CHANGELOG entries | `github/changelog.md` |
 | Dependabot config | `github/dependabot.md` |
 | Commit messages, branch names, and PR titles | `github/conventions.md` |
 | Writing a Makefile | `tools/makefile.md` |
+| CMake build configuration | `tools/cmake.md` |
+| Dockerfile and Docker Compose | `tools/docker.md` |

@@ -43,8 +43,7 @@ def sign_ssh_key(public_key: str, ttl: int = 3600) -> str:
 Rules:
 - Every public function, method, and class requires a docstring.
 - One-line docstrings are acceptable for trivial properties and getters.
-- `:param:`, `:raises:`, and `:return:` fields are only included when they add
-  information beyond the type hints.
+- `:param:`, `:raises:`, and `:return:` fields are only included when they add information beyond the type hints.
 - Use `:return:` not `:returns:`.
 - Omit `:return:` from `__init__` methods entirely.
 - `tests/**` files are exempt from docstring rules.
@@ -62,24 +61,22 @@ __all__ = ["MyClient", "MyConfig"]
 ```
 
 - Only symbols intended for external consumers belong here
-- Never import optional-dependency modules at the top level of `__init__.py` - this would break imports for users who don't have those extras installed
+- Never import optional-dependency modules at the top level of `__init__.py`; this would break imports for users who don't have those extras installed
 - Sub-package `__init__.py` files follow the same rule: only re-export what is public
 
 ## PEP 561
 
-Include an empty `py.typed` marker file in the package root directory. This signals to
-type checkers like pyright and mypy that the package supports inline type annotations.
+Include an empty `py.typed` marker file in the package root directory. This signals to type checkers like pyright and mypy that the package supports inline type annotations.
 
 ```
-warnd/
+<package>/
     __init__.py
     py.typed       # empty file - signals PEP 561 compliance
-    patch.py
+    client.py
     ...
 ```
 
-Without `py.typed`, pyright will treat your package as untyped and ignore all annotations
-when consumers use your library, even if your annotations are complete and correct.
+Without `py.typed`, pyright will treat your package as untyped and ignore all annotations when consumers use your library, even if your annotations are complete and correct.
 
 ## Optional Dependencies
 
@@ -103,9 +100,7 @@ import hvac
 
 ## Logging
 
-Use the Python standard library `logging` module. Never use `print()`. Do not add `structlog`
-or any third-party logging library as a dependency - libraries must not force logging
-configuration on their consumers.
+Use the Python standard library `logging` module. Never use `print()`. Do not add `structlog` or any third-party logging library as a dependency; libraries must not force logging configuration on their consumers.
 
 ```python
 import logging
@@ -119,48 +114,42 @@ def load_from_file(self, path: Path) -> None:
 - Declare `logger = logging.getLogger(__name__)` at module level in every file that logs
 - Use `__name__` so consumers can control output per-module via their own logging config
 - Pass context via the `extra` keyword argument, not via string formatting
-- Use `logger.debug` for internal detail, `logger.info` for lifecycle events,
-  `logger.warning` / `logger.error` for problems
-- Never configure logging handlers inside a library - that is the consumer's responsibility
+- Use `logger.debug` for internal detail, `logger.info` for lifecycle events, `logger.warning` / `logger.error` for problems
+- Never configure logging handlers inside a library; that is the consumer's responsibility
 
-Note: `structlog` is appropriate for applications where you control the full stack.
-For libraries, always use stdlib `logging`.
+Note: `structlog` is appropriate for applications where you control the full stack. For libraries, always use stdlib `logging`.
 
 ## Exceptions
 
-Every library must define a clear exception hierarchy so consumers can catch errors at
-the appropriate level of specificity.
+Every library must define a clear exception hierarchy so consumers can catch errors at the appropriate level of specificity.
 
 ### Hierarchy
 
-Always define a single root exception named `<LibraryName>Error` that inherits from
-`Exception`. All other library exceptions inherit from this root.
+Always define a single root exception named `<LibraryName>Error` that inherits from `Exception`. All other library exceptions inherit from this root.
 
 ```python
-class WarndError(Exception):
-    """Base exception for all warnd errors."""
+class MyLibraryError(Exception):
+    """Base exception for all mylib errors."""
 
-class PatchError(WarndError):
-    """Base exception for patch-related errors."""
+class DataError(MyLibraryError):
+    """Base exception for data-related errors."""
 
-class PatchLoadError(PatchError):
-    """Raised when a patch file cannot be loaded or parsed."""
+class DataLoadError(DataError):
+    """Raised when a data file cannot be loaded or parsed."""
 ```
 
-Group exceptions by domain under the root. A consumer who wants to catch everything
-catches `WarndError`. A consumer who only cares about patch errors catches `PatchError`.
+Group exceptions by domain under the root. A consumer who wants to catch everything catches `MyLibraryError`. A consumer who only cares about data errors catches `DataError`.
 
 ### Rules
 
 - Every exception class requires a docstring explaining when it is raised
-- Never raise bare `ValueError` or `TypeError` from a public API method - wrap them
-  in a library exception so they are catchable at the `LibraryError` level
+- Never raise bare `ValueError` or `TypeError` from a public API method; wrap them in a library exception so they are catchable at the `LibraryError` level
 - Always use `raise X from exc` when wrapping an exception to preserve the chain
 - Export all commonly caught exceptions from the top-level `__init__.py`
 
 ```python
 # Good - consumer can catch at any level
-raise exceptions.PatchLoadError("Invalid version") from exc
+raise exceptions.DataLoadError("Invalid version") from exc
 
 # Bad - escapes the library exception hierarchy
 raise ValueError("Invalid version")
@@ -168,18 +157,17 @@ raise ValueError("Invalid version")
 
 ### Export
 
-All exceptions that a consumer is reasonably expected to catch must be importable
-directly from the top-level package:
+All exceptions that a consumer is reasonably expected to catch must be importable directly from the top-level package:
 
 ```python
-from warnd import PatchLoadError, InstallationError
+from <package> import DataLoadError, ConfigError
 ```
 
 Never require consumers to reach into internal modules:
 
 ```python
 # Bad - exposes internal structure
-from warnd.exceptions import PatchLoadError
+from <package>.exceptions import DataLoadError
 ```
 
 ## Type checking
@@ -226,4 +214,4 @@ ci: lint format_check typecheck test ## Run all CI checks locally
 
 - Start with `typeCheckingMode = "basic"` for new or existing projects being migrated
 - Move to `"strict"` once the codebase is fully annotated and all basic errors are resolved
-- `tests/` is excluded - test files are exempt from type checking
+- `tests/` is excluded; test files are exempt from type checking

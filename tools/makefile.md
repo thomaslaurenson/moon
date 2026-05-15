@@ -216,7 +216,7 @@ TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
 
 .PHONY: get_version
 get_version: ## Print the project version from src/app.bash
-	@grep -oP 'VERSION="\K[0-9]+\.[0-9]+\.[0-9]+' src/app.bash
+	@grep -oE 'VERSION="[0-9]+\.[0-9]+\.[0-9]+"' src/app.bash | sed 's/VERSION="//;s/"//'
 
 .PHONY: get_changelog_entry
 get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG=v1.0.0)
@@ -247,3 +247,4 @@ The key differences from the Python/C++ pattern:
 - Strip the `v` prefix in the recipe (`$${tag#v}`) because git tags use `v1.0.0` but CHANGELOG entries use bare versions (`1.0.0`).
 - The target exits non-zero if TAG is empty or no matching entry is found.
 - Release artifact steps (tarball creation, version patching, checksum generation) are CI-only and do not belong in the Makefile. Keep them inline in the release workflow.
+- Avoid `grep -oP` (GNU-only, unavailable on macOS). Use `grep -oE` or `sed -n` instead. When matching a prefix like `readonly VERSION=`, anchor with `.*VERSION=` rather than `^VERSION=`.

@@ -72,7 +72,7 @@ build: ## Build the binary
 
 ```makefile
 help: ## Show this help message
-	grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
 ```
 
@@ -202,3 +202,48 @@ get_changelog_entry: ## Extract the changelog entry for the current version to /
 - The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure `VERSION` appears on the same line as the version number.
 - The awk logic is identical across Python and C++; only the version source differs. This ensures changelog extraction behaviour is consistent.
 - The target exits non-zero if no matching entry is found, which causes CI to fail fast before attempting a release with an empty changelog.
+
+### Bash/Shell projects
+
+Bash/shell projects version from a source file (e.g. `VERSION="0.2.3"` in `src/app.bash`). The `get_changelog_entry` target prints to stdout rather than a temp file, making it composable: callers can pipe or redirect as needed.
+
+The target accepts `TAG` on the command line (`make get_changelog_entry TAG=v1.0.0`) and defaults to the latest git tag. The `v` prefix is stripped before looking up the changelog entry.
+
+```makefile
+TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
+
+# GET
+
+.PHONY: get_version
+get_version: ## Print the project version from src/app.bash
+	@grep -oP 'VERSION="\K[0-9]+\.[0-9]+\.[0-9]+' src/app.bash
+
+.PHONY: get_changelog_entry
+get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG=v1.0.0)
+	@tag="$(TAG)"; tag="$${tag#v}"; \
+	if [[ -z "$$tag" ]]; then \
+	  printf 'get_changelog_entry: TAG is empty; pass TAG=v1.0.0 or create a git tag\n' >&2; \
+	  exit 1; \
+	fi; \
+	notes="$$(awk -v tag="$$tag" ' \
+	  /^## / { if (found) exit; if (index($$0,"## "tag" ")==1 || $$0=="## "tag) found=1; next } \
+	  found { lines[n++]=$$0 } \
+	  END { \
+	    s=0; while (s<n && lines[s]~/^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e>=s && lines[e]~/^[[:space:]]*$$/) e--; \
+	    for (i=s;i<=e;i++) print lines[i] \
+	  }' CHANGELOG.md)"; \
+	if [[ -z "$$notes" ]]; then \
+	  printf 'get_changelog_entry: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  exit 1; \
+	fi; \
+	printf '%s\n' "$$notes"
+```
+
+The key differences from the Python/C++ pattern:
+
+- Outputs to stdout, not `/tmp/release_notes.md`. The calling workflow redirects as needed: `make get_changelog_entry TAG=v1.0.0 > /tmp/release-notes.md`.
+- `TAG ?=` defaults to the latest git tag via `git describe`. Use `$(TAG)` (not `$${TAG}`) in the recipe so Make's variable expansion is used; shell does not inherit Make variables set via `?=`.
+- Strip the `v` prefix in the recipe (`$${tag#v}`) because git tags use `v1.0.0` but CHANGELOG entries use bare versions (`1.0.0`).
+- The target exits non-zero if TAG is empty or no matching entry is found.
+- Release artifact steps (tarball creation, version patching, checksum generation) are CI-only and do not belong in the Makefile. Keep them inline in the release workflow.

@@ -5,13 +5,16 @@
 - Always prefer official GitHub actions (`actions/*`) before third-party alternatives.
 - Use the `gh` CLI for creating releases by default. `goreleaser-action` is the only
   permitted exception, and only for Go projects; see `golang/workflows.md`.
-- All workflow steps call `make <target>`. Never write raw multi-line bash, awk, or Python
-  scripts inline in a workflow step. Simple one-line commands (e.g. `sudo apt-get install -y
-  shellcheck`) are acceptable as raw `run:` commands when there is no corresponding Makefile
-  target.
-- Never write raw bash or awk scripts in workflows to extract versions or changelogs. Use
-  the repository's Makefile targets (e.g. `make get_changelog TAG=v1.0.0`) and pass their
-  standard output to the respective workflow steps.
+- Create a Makefile target for a workflow step when **any** of the following is true:
+  - The logic is useful to run locally (e.g. `make check_version`, `make get_changelog_entry`)
+  - The step appears in more than one workflow
+  - The step contains non-trivial logic: multi-line bash, awk, version parsing, or conditional checks
+- Inline `run:` is acceptable when the step is release-only, CI-specific, and the command is
+  straightforward (e.g. building a tarball, patching a version string, generating checksums).
+  Single-line commands with no conditional logic do not need a Makefile target.
+- Version and changelog extraction must always go through Makefile targets. Never write raw
+  bash or awk to parse versions or changelogs inline in a workflow step. Use targets such as
+  `make get_version` and `make get_changelog_entry TAG=v1.0.0`.
 - Minimal permissions: `contents: read` by default, `contents: write` only in release and
   prerelease workflows. Test workflows must never declare `contents: write`.
 - No `fetch-depth: 0` except in release workflows where changelog extraction requires it.

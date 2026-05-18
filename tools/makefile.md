@@ -131,7 +131,7 @@ Language-specific command choices are project-specific, but structure is stable:
 
 - Go projects typically use `gofmt`, `go vet`, `go test -race -count=1`, and `go mod tidy`
 - Python projects typically use `uv`, `ruff`, and `pytest`
-- C++ projects typically use `clang-format-19`, `clang-tidy-19`, and `ctest`
+- C++ projects typically use `clang-format-18`, `clang-tidy-18`, and `ctest`
 
 The mandatory behaviour is defined by earlier sections in this file:
 

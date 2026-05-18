@@ -267,7 +267,7 @@ Never assume submodules are initialised. Always guard every dependency.
 
 ## Clang Tooling
 
-Clang tools are pinned to version 19 across all projects for reproducibility. Never use the unversioned `clang-format` or `clang-tidy` binaries as the system default may differ between machines and CI runners.
+Clang tools are pinned to version 18 across all projects for reproducibility. Never use the unversioned `clang-format` or `clang-tidy` binaries as the system default may differ between machines and CI runners.
 
 ### Installation
 
@@ -276,7 +276,7 @@ The Makefile must provide an `install_clang_tools` target:
 ```makefile
 .PHONY: install_clang_tools
 install_clang_tools: ## Install clang-format and clang-tidy at pinned version
-	sudo apt-get install -y clang-format-19 clang-tidy-19
+	sudo apt-get install -y clang-format-18 clang-tidy-18
 ```
 
 ### Makefile targets
@@ -296,15 +296,15 @@ build: ## Build the project
 
 .PHONY: fmt
 fmt: ## Format all source files with clang-format
-	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-19 -i
+	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-18 -i
 
 .PHONY: fmt_check
 fmt_check: ## Check formatting without modifying files
-	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-19 --dry-run --Werror
+	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-18 --dry-run --Werror
 
 .PHONY: lint_cpp
 lint_cpp: ## Run clang-tidy static analysis
-	clang-tidy-19 -p build $(shell find src -name "*.cpp")
+	clang-tidy-18 -p build $(shell find src -name "*.cpp")
 ```
 
 Note: `fmt` and `fmt_check` include the `test/` directory; test code is subject to the same formatting standards as application code.

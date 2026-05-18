@@ -55,11 +55,11 @@ README.md
 | Tool | Purpose |
 |---|---|
 | `cmake` | Build system |
-| `clang-format-19` | Formatter |
-| `clang-tidy-19` | Static analysis |
+| `clang-format-18` | Formatter |
+| `clang-tidy-18` | Static analysis |
 | `ctest` | Test runner (via `make test`) |
 
-Always pin clang tools to version 19. Never use the unversioned `clang-format` or
+Always pin clang tools to version 18. Never use the unversioned `clang-format` or
 `clang-tidy` binaries.
 
 **Not used:** `conan`, `vcpkg`, or any other package manager. All dependencies are git
@@ -71,10 +71,10 @@ Adhere to the global Makefile structure in `tools/makefile.md`. Standard targets
 
 - `configure`: `cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`
 - `build`: `cmake --build build`
-- `fmt`: format all source files with `clang-format-19 -i`
-- `fmt_check`: dry-run format check with `clang-format-19 --dry-run --Werror`
-- `lint_cpp`: run `clang-tidy-19 -p build` over `src/`
-- `install_clang_tools`: `sudo apt-get install -y clang-format-19 clang-tidy-19`
+- `fmt`: format all source files with `clang-format-18 -i`
+- `fmt_check`: dry-run format check with `clang-format-18 --dry-run --Werror`
+- `lint_cpp`: run `clang-tidy-18 -p build` over `src/`
+- `install_clang_tools`: `sudo apt-get install -y clang-format-18 clang-tidy-18`
 - `test`: `cmake --build build && cd build && ctest --output-on-failure`
 - `test_unit`: run only Catch2 unit tests via `ctest -R unit`
 - `test_functional`: run only Catch2 functional tests via `ctest -R functional`

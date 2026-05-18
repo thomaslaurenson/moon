@@ -74,7 +74,7 @@ Install clang tools via the Makefile target before running any lint step:
   run: make install_clang_tools
 ```
 
-`install_clang_tools` installs `clang-format-19` and `clang-tidy-19` at the pinned version. CMake 3.21+ ships with `ubuntu-24.04` so no CMake install step is needed.
+`install_clang_tools` installs `clang-format-18` and `clang-tidy-18` at the pinned version. CMake 3.21+ ships with `ubuntu-24.04` so no CMake install step is needed.
 
 ---
 

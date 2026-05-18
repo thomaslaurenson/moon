@@ -111,7 +111,7 @@ jobs:
 
 ### `release.yml`
 
-Release notes are extracted from `CHANGELOG.md` via `make get_changelog` and passed to goreleaser with `--release-notes`.
+Release notes are extracted from `CHANGELOG.md` via `make get_changelog_entry` and passed to goreleaser with `--release-notes`.
 
 ```yaml
 name: Release
@@ -139,7 +139,7 @@ jobs:
       - uses: sigstore/cosign-installer@v4.1.2
 
       - name: Extract release notes from CHANGELOG.md
-        run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
+        run: make get_changelog_entry TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
 
       - uses: goreleaser/goreleaser-action@v7
         with:

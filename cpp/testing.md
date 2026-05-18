@@ -175,6 +175,33 @@ Always pin to a specific commit hash, never a branch name.
 
 Fixtures are plain C++ structs that set up and tear down state for tests. They are function-scoped; constructed at the start of each test and destroyed at the end. Each fixture lives in its own header in `test/fixtures/`.
 
+`test_environment.h` is the one exception: it is a singleton that holds the CMake-baked paths (`MYAPP_BINARY_PATH`, `MYAPP_TEST_DIR`). It provides a single access point for values that are constant across the entire test run and do not vary per test:
+
+```cpp
+// test/fixtures/test_environment.h
+#pragma once
+#include <filesystem>
+#include <string>
+
+namespace fs = std::filesystem;
+
+/// Singleton that exposes CMake-baked build and source paths to functional tests.
+struct TestEnvironment {
+    static const TestEnvironment &instance() {
+        static TestEnvironment env;
+        return env;
+    }
+
+    const fs::path binary_path { MYAPP_BINARY_PATH };
+    const fs::path test_dir    { MYAPP_TEST_DIR };
+
+private:
+    TestEnvironment() = default;
+};
+```
+
+All other fixtures (e.g. `TestFiles`) are function-scoped structs that include `test_environment.h` when they need the binary or test directory paths.
+
 ```cpp
 // test/fixtures/test_files.h
 #pragma once

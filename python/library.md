@@ -182,9 +182,10 @@ Add to `pyproject.toml`:
 [tool.pyright]
 include = ["<package>"]
 exclude = ["tests"]
-pythonVersion = "3.10"
 typeCheckingMode = "basic"
 ```
+
+Do not set `pythonVersion`; pyright infers it automatically from `requires-python` in `pyproject.toml`.
 
 Add to the `dev` optional dep group:
 
@@ -207,7 +208,7 @@ typecheck: ## Run pyright type checker
 Include `typecheck` in the `ci` target:
 
 ```makefile
-ci: lint format_check typecheck test ## Run all CI checks locally
+ci: lint fmt_check typecheck test ## Run all CI checks locally
 ```
 
 ### Modes

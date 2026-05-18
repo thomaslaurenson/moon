@@ -34,5 +34,4 @@ the appropriate package ecosystem for the project.
 
 - GitHub Actions: weekly version bumps
 - Go modules / Python packages: weekly updates, dev dependencies grouped into a single PR
-- Replace `<username>` with the repo owner's GitHub handle
-- Replace `<gomod|pip>` with the appropriate ecosystem for the project
+- Use `gomod` for Go projects, `pip` for Python projects

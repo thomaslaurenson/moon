@@ -33,6 +33,7 @@ Use this table to find the relevant instruction file for your task.
 | Writing or reviewing Python tests | `python/testing.md` |
 | Python GitHub Actions workflows | `python/workflows.md` |
 | Writing or reviewing C++ code | `cpp/style.md` |
+| Scaffolding a new C++ project | `cpp/scaffolding.md` |
 | Writing or reviewing C++ tests | `cpp/testing.md` |
 | C++ GitHub Actions workflows | `cpp/workflows.md` |
 | Writing or reviewing Bash code | `bash/style.md` |

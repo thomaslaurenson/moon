@@ -49,6 +49,9 @@ Always use these pinned versions. Never use `@latest` or unversioned aliases:
 | `actions/setup-go` | `v6` |
 | `actions/setup-python` | `v5` |
 | `astral-sh/setup-uv` | `v7` |
+| `astral-sh/ruff-action` | `v3` |
+| `goreleaser/goreleaser-action` | `v7` |
+| `sigstore/cosign-installer` | `v4.1.2` |
 
 ---
 
@@ -91,6 +94,9 @@ concurrency:
   group: prerelease
   cancel-in-progress: true
 ```
+
+Concurrency on `tag.yml`: no concurrency group. Tag pushes are immutable events; cancelling
+a release run mid-flight can leave partial releases. Let every tag run complete.
 
 ---
 
@@ -143,6 +149,8 @@ Include only the entries that apply to the project:
 | `CMakeLists.txt` | C++ projects |
 | `Dockerfile*` | C++ projects that build via Docker |
 | `pyproject.toml` | Python projects |
+| `<package>/**` | Python projects (replace with the package directory name) |
+| `tests/**` | Python projects |
 
 The `paths:` filter on `main.yml` must match `pr.yml` exactly; the same changes that trigger a PR check should trigger a prerelease when merged.
 
@@ -152,6 +160,8 @@ The `paths:` filter on `main.yml` must match `pr.yml` exactly; the same changes 
 
 Triggers on `v*.*.*` tags. Runs lint and test, then release. Release only runs after both
 pass.
+
+Tag pushes are not filtered with `paths:`; every tag push runs all jobs unconditionally. This is intentional: a release should never be silently skipped because it only touched a path not in the filter.
 
 ```yaml
 name: Tag and Release

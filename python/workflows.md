@@ -13,9 +13,11 @@ paths:
   - ".github/workflows/**"
   - "Makefile"
   - "pyproject.toml"
-  - "src/**"
+  - "<package>/**"
   - "tests/**"
 ```
+
+Replace `<package>` with the actual package directory name (the installable package at the repo root). For scripts-only projects that have no installable package, use `tasks/**` instead.
 
 ---
 
@@ -48,7 +50,7 @@ For lint-only jobs, extract the ruff version and use the ruff action directly; n
   id: ruff-version
   run: echo "version=$(grep -oP 'ruff>=\K[0-9.]+' pyproject.toml)" >> $GITHUB_OUTPUT
 
-- uses: chartboost/ruff-action@v1
+- uses: astral-sh/ruff-action@v3
   with:
     version: ${{ steps.ruff-version.outputs.version }}
     args: check .

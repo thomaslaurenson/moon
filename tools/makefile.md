@@ -122,7 +122,7 @@ ci: lint test ## Run all CI checks locally
 Use these canonical target names where they fit your project:
 
 - Build: `build`, `install`
-- Lint/format: `fmt`, `fmt_check`, `lint`, `mod_check`, `vet`, `lint_fix`
+- Lint/format: `fmt`, `fmt_check`, `lint`, `mod_check`, `vet`, `fix`
 - Test: `test`, `test_verbose`, `test_coverage`
 - Aggregation: `ci`
 - Cleanup: `clean`
@@ -202,6 +202,41 @@ get_changelog_entry: ## Extract the changelog entry for the current version to /
 - The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure `VERSION` appears on the same line as the version number.
 - The awk logic is identical across Python and C++; only the version source differs. This ensures changelog extraction behaviour is consistent.
 - The target exits non-zero if no matching entry is found, which causes CI to fail fast before attempting a release with an empty changelog.
+
+### Go projects
+
+Go project version comes from the git tag set by goreleaser. The `get_changelog_entry` target accepts `TAG` on the command line and outputs to stdout. The calling workflow redirects to a temp file.
+
+```makefile
+TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
+
+# GET
+
+.PHONY: get_changelog_entry
+get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG=v1.0.0)
+	@tag="$(TAG)"; tag="$${tag#v}"; \
+	if [[ -z "$$tag" ]]; then \
+	  printf 'get_changelog_entry: TAG is empty; pass TAG=v1.0.0 or create a git tag\n' >&2; \
+	  exit 1; \
+	fi; \
+	notes="$$(awk -v tag="$$tag" ' \
+	  /^## / { if (found) exit; if (index($$0,"## "tag" ")==1 || $$0=="## "tag) found=1; next } \
+	  found { lines[n++]=$$0 } \
+	  END { \
+	    s=0; while (s<n && lines[s]~/^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e>=s && lines[e]~/^[[:space:]]*$$/) e--; \
+	    for (i=s;i<=e;i++) print lines[i] \
+	  }' CHANGELOG.md)"; \
+	if [[ -z "$$notes" ]]; then \
+	  printf 'get_changelog_entry: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  exit 1; \
+	fi; \
+	printf '%s\n' "$$notes"
+```
+
+- Same pattern as Bash/Shell projects: outputs to stdout and accepts `TAG` on the command line.
+- The calling release workflow redirects: `make get_changelog_entry TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md`.
+- Strip the `v` prefix in the recipe (`$${tag#v}`) because git tags use `v1.0.0` but CHANGELOG entries use bare versions (`1.0.0`).
 
 ### Bash/Shell projects
 

@@ -11,7 +11,7 @@ Conventions for branch names, commit messages, and PR titles across all projects
 
 ## Commit Messages
 
-Direct commits (not PR merges) are short imperative or past-tense phrases:
+Direct commits (not PR merges) use past tense:
 
 ```
 Fixed permission error in release workflow
@@ -24,6 +24,8 @@ Removed unused tag and release script
 - No trailing period
 - Multiple small changes on one line can be comma-separated
 - No conventional-commits prefixes (`feat:`, `fix:`, etc.)
+
+Note: CHANGELOG entries use imperative voice ("Add support for X"), not past tense. Commit messages and changelog entries are different audiences — commits describe what happened; changelog entries describe what the release does.
 
 ## Branch Names
 

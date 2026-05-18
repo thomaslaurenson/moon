@@ -2,6 +2,12 @@
 
 Style conventions for Bash scripts and sourced files.
 
+## Unusual Characters
+
+- Never use em dash (—)
+
+---
+
 ## Shebang
 
 Executable scripts must start with:
@@ -13,6 +19,10 @@ Executable scripts must start with:
 Prefer `#!/usr/bin/env bash` over `#!/bin/bash` for portability; it resolves bash from the environment rather than assuming a fixed path, which is important on macOS where `/bin/bash` is 3.2.
 
 Sourced files (`.sh` libraries) do not require a shebang line.
+
+---
+
+## Spelling
 
 ---
 

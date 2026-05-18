@@ -102,7 +102,7 @@ select = [
 convention = "pep257"
 
 [tool.ruff.lint.per-file-ignores]
-"docs/**" = ["D100"]
+"docs/**" = ["D100"]  # library projects only; omit for scripts-only projects
 "tests/**" = ["D"]
 ```
 
@@ -197,14 +197,14 @@ Include the following badges in the README:
 Adhere to the global Makefile structure established in `tools/makefile.md`. Use the following commands for your standard targets:
 
 - `build`: `uv build`
-- `test`: `uv run pytest --cov=<package> -m "not integration"`
+- `test`: `uv run pytest -m "not integration"`
 - `test_integration`: `uv run pytest -m integration`
 - `test_coverage`: `uv run coverage run -m pytest -m "not integration" && uv run coverage report`
 - `lint`: `uv run ruff check .`
-- `format_check`: `uv run ruff format --check .`
+- `fmt_check`: `uv run ruff format --check .`
 - `typecheck`: `uv run pyright`
 - `fix`: `uv run ruff check --fix . && uv run ruff format .`
-- `ci`: `lint format_check typecheck test`
+- `ci`: `lint fmt_check typecheck test`
 
 Include the `# GET` section targets from `tools/makefile.md`.
 
@@ -248,6 +248,6 @@ Adhere to the global Makefile structure established in `tools/makefile.md`. Use 
 - `test`: `uv run pytest -m "not integration"`
 - `test_integration`: `uv run pytest -m integration`
 - `lint`: `uv run ruff check .`
-- `format_check`: `uv run ruff format --check .`
+- `fmt_check`: `uv run ruff format --check .`
 - `fix`: `uv run ruff check --fix . && uv run ruff format .`
-- `ci`: `lint format_check test`
+- `ci`: `lint fmt_check test`

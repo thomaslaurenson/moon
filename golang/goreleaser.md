@@ -2,11 +2,7 @@
 
 Short rules for `.goreleaser.yml` in Go projects.
 
-## Non-Negotiable Rules
-
-No third-party linters or formatters are permitted. Specifically, DO NOT use `golangci-lint` or `govulncheck` under any circumstances. However, third-party release tools like `goreleaser` and `cosign` are explicitly permitted and required.
-
-- Build binaries only, not archives (`formats: [binary]`)
+## Non-Negotiable Rules- Build binaries only, not archives (`formats: [binary]`)
 - Always generate `checksums.txt` with SHA256
 - Always sign `checksums.txt` with `cosign` using bundle format (`--bundle`)
 - Always inject version via `ldflags`
@@ -137,7 +133,7 @@ The `git.ignore_tags` prevents goreleaser treating a previous `-dev` tag as the 
 
 ## Notes
 
-- `CHANGELOG.md` release notes are extracted in the workflow via `make get_changelog TAG=...` and passed to goreleaser with `--release-notes`
+- `CHANGELOG.md` release notes are extracted in the workflow via `make get_changelog_entry TAG=...` and passed to goreleaser with `--release-notes`
 - Prefer `CGO_ENABLED=0` and `mod_timestamp` for reproducible static builds
 - Do not add `release.github` unless there is a project-specific reason
 - cosign uses `--bundle` (not `--output-signature`); the bundle format includes the certificate and signature in a single file

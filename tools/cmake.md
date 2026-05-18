@@ -294,12 +294,12 @@ configure: ## Configure the cmake build
 build: ## Build the project
 	cmake --build build
 
-.PHONY: format
-format: ## Format all source files with clang-format
+.PHONY: fmt
+fmt: ## Format all source files with clang-format
 	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-19 -i
 
-.PHONY: format_check
-format_check: ## Check formatting without modifying files
+.PHONY: fmt_check
+fmt_check: ## Check formatting without modifying files
 	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-19 --dry-run --Werror
 
 .PHONY: lint_cpp
@@ -307,7 +307,7 @@ lint_cpp: ## Run clang-tidy static analysis
 	clang-tidy-19 -p build $(shell find src -name "*.cpp")
 ```
 
-Note: `format` and `format_check` include the `test/` directory; test code is subject to the same formatting standards as application code.
+Note: `fmt` and `fmt_check` include the `test/` directory; test code is subject to the same formatting standards as application code.
 
 ### Configuration files
 

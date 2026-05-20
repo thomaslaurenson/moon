@@ -46,3 +46,8 @@ Use this table to find the relevant instruction file for your task.
 | Writing a Makefile | `tools/makefile.md` |
 | CMake build configuration | `tools/cmake.md` |
 | Dockerfile and Docker Compose | `tools/docker.md` |
+| Writing or reviewing WoW 1.12 vanilla addon code | `wow/lua/vanilla.md` |
+| Scaffolding a new WoW vanilla addon project | `wow/addon/project.md` |
+| WoW vanilla event system and script handlers | `wow/addon/events.md` |
+| WoW vanilla frame API and UI elements | `wow/addon/frames.md` |
+| WoW addon code patterns, SavedVariables, and localisation | `wow/addon/patterns.md` |

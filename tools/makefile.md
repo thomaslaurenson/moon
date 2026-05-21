@@ -148,75 +148,77 @@ All project Makefiles must include a `# GET` section. GitHub Actions workflows c
 ### Python projects
 
 ```makefile
-# GET
+TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
 
+# GET
 .PHONY: get_python_project_version
 get_python_project_version: ## Print the project version from pyproject.toml
-	python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"
+	@grep '^version = ' pyproject.toml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'
 
 .PHONY: get_python_required_version
 get_python_required_version: ## Print the required Python version from pyproject.toml
-	grep -oP 'requires-python.*>=\K[0-9.]+' pyproject.toml
+	@grep 'requires-python' pyproject.toml | grep -oE '[0-9]+\.[0-9]+'
 
-.PHONY: get_changelog_entry
-get_changelog_entry: ## Extract the changelog entry for the current version to /tmp/release_notes.md
-	@VERSION=$$(python3 -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"); \
-	awk -v ver="$$VERSION" ' \
-	  /^## / { if (found) exit; if (index($$0, "## " ver " ") || $$0 == "## " ver) { found=1 } next } \
-	  found { lines[n++] = $$0 } \
-	  END { \
-	    s=0; while (s < n && lines[s] ~ /^[[:space:]]*$$/) s++; \
-	    e=n-1; while (e >= s && lines[e] ~ /^[[:space:]]*$$/) e--; \
-	    for (i=s; i<=e; i++) print lines[i] \
-	  } \
-	' CHANGELOG.md > /tmp/release_notes.md; \
-	test -s /tmp/release_notes.md || { echo "No CHANGELOG entry found for $$VERSION" >&2; exit 1; }
+.PHONY: get_changelog
+get_changelog: ## Print release notes for TAG to stdout (default: latest tag; override with TAG=v1.0.0)
+	@if [ -z "$(TAG)" ]; then \
+		echo "Error: no tag resolved. Create a git tag or pass TAG=v1.0.0" >&2; \
+		exit 1; \
+	fi
+	@notes=$$(awk -v tag="$(TAG)" \
+		'/^## /{if(found)exit; if(index($$0,"## "tag" ")==1 || $$0=="## "tag)found=1; next} found{print}' \
+		CHANGELOG.md); \
+	if [ -z "$$notes" ]; then \
+		echo "Error: no CHANGELOG entry found for $(TAG)" >&2; \
+		exit 1; \
+	fi; \
+	echo "$$notes"
 ```
 
 ### C++ projects
 
-C++ project version is declared in the root `CMakeLists.txt` via the `project()` `VERSION` parameter. The `get_changelog_entry` target reads the version directly from `CMakeLists.txt`:
-
-```makefile
-# GET
-
-.PHONY: get_project_version
-get_project_version: ## Print the project version from CMakeLists.txt
-	@grep -oP 'project\([^)]*VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt
-
-.PHONY: get_changelog_entry
-get_changelog_entry: ## Extract the changelog entry for the current version to /tmp/release_notes.md
-	@VERSION=$$(grep -oP 'project\([^)]*VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt); \
-	awk -v ver="$$VERSION" ' \
-	  /^## / { if (found) exit; if (index($$0, "## " ver " ") || $$0 == "## " ver) { found=1 } next } \
-	  found { lines[n++] = $$0 } \
-	  END { \
-	    s=0; while (s < n && lines[s] ~ /^[[:space:]]*$$/) s++; \
-	    e=n-1; while (e >= s && lines[e] ~ /^[[:space:]]*$$/) e--; \
-	    for (i=s; i<=e; i++) print lines[i] \
-	  } \
-	' CHANGELOG.md > /tmp/release_notes.md; \
-	test -s /tmp/release_notes.md || { echo "No CHANGELOG entry found for $$VERSION" >&2; exit 1; }
-```
-
-- The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure `VERSION` appears on the same line as the version number.
-- The awk logic is identical across Python and C++; only the version source differs. This ensures changelog extraction behaviour is consistent.
-- The target exits non-zero if no matching entry is found, which causes CI to fail fast before attempting a release with an empty changelog.
-
-### Go projects
-
-Go project version comes from the git tag set by goreleaser. The `get_changelog_entry` target accepts `TAG` on the command line and outputs to stdout. The calling workflow redirects to a temp file.
+C++ project version is declared in the root `CMakeLists.txt` via the `project()` `VERSION` parameter.
 
 ```makefile
 TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
 
 # GET
+.PHONY: get_project_version
+get_project_version: ## Print the project version from CMakeLists.txt
+	@grep -oE 'VERSION [0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'
 
-.PHONY: get_changelog_entry
-get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG=v1.0.0)
+.PHONY: get_changelog
+get_changelog: ## Print release notes for TAG to stdout (default: latest tag; override with TAG=v1.0.0)
+	@if [ -z "$(TAG)" ]; then \
+		echo "Error: no tag resolved. Create a git tag or pass TAG=v1.0.0" >&2; \
+		exit 1; \
+	fi
+	@notes=$$(awk -v tag="$(TAG)" \
+		'/^## /{if(found)exit; if(index($$0,"## "tag" ")==1 || $$0=="## "tag)found=1; next} found{print}' \
+		CHANGELOG.md); \
+	if [ -z "$$notes" ]; then \
+		echo "Error: no CHANGELOG entry found for $(TAG)" >&2; \
+		exit 1; \
+	fi; \
+	echo "$$notes"
+```
+
+- The version regex matches the `project(MyApp VERSION 1.2.3)` pattern in `CMakeLists.txt`. If the `project()` call spans multiple lines, ensure `VERSION` appears on the same line as the version number.
+- The target exits non-zero if TAG is empty or no matching entry is found, which causes CI to fail fast before attempting a release with an empty changelog.
+
+### Go projects
+
+Go project version comes from the git tag set by goreleaser. The `get_changelog` target accepts `TAG` on the command line and outputs to stdout. The calling workflow redirects to a temp file.
+
+```makefile
+TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
+
+# GET
+.PHONY: get_changelog
+get_changelog: ## Print release notes for TAG to stdout (default: latest tag; override with TAG=v1.0.0)
 	@tag="$(TAG)"; tag="$${tag#v}"; \
 	if [[ -z "$$tag" ]]; then \
-	  printf 'get_changelog_entry: TAG is empty; pass TAG=v1.0.0 or create a git tag\n' >&2; \
+	  printf 'get_changelog: TAG is empty; pass TAG=v1.0.0 or create a git tag\n' >&2; \
 	  exit 1; \
 	fi; \
 	notes="$$(awk -v tag="$$tag" ' \
@@ -228,36 +230,35 @@ get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG
 	    for (i=s;i<=e;i++) print lines[i] \
 	  }' CHANGELOG.md)"; \
 	if [[ -z "$$notes" ]]; then \
-	  printf 'get_changelog_entry: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  printf 'get_changelog: no CHANGELOG entry for %s\n' "$$tag" >&2; \
 	  exit 1; \
 	fi; \
 	printf '%s\n' "$$notes"
 ```
 
 - Same pattern as Bash/Shell projects: outputs to stdout and accepts `TAG` on the command line.
-- The calling release workflow redirects: `make get_changelog_entry TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md`.
+- The calling release workflow redirects: `make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md`.
 - Strip the `v` prefix in the recipe (`$${tag#v}`) because git tags use `v1.0.0` but CHANGELOG entries use bare versions (`1.0.0`).
 
 ### Bash/Shell projects
 
-Bash/shell projects version from a source file (e.g. `VERSION="0.2.3"` in `src/app.bash`). The `get_changelog_entry` target prints to stdout rather than a temp file, making it composable: callers can pipe or redirect as needed.
+Bash/shell projects version from a source file (e.g. `VERSION="0.2.3"` in `src/app.bash`). The `get_changelog` target prints to stdout, making it composable: callers can pipe or redirect as needed.
 
-The target accepts `TAG` on the command line (`make get_changelog_entry TAG=v1.0.0`) and defaults to the latest git tag. The `v` prefix is stripped before looking up the changelog entry.
+The target accepts `TAG` on the command line (`make get_changelog TAG=v1.0.0`) and defaults to the latest git tag. The `v` prefix is stripped before looking up the changelog entry.
 
 ```makefile
 TAG ?= $(shell git describe --tags --abbrev=0 2>/dev/null)
 
 # GET
-
 .PHONY: get_version
 get_version: ## Print the project version from src/app.bash
 	@grep -oE 'VERSION="[0-9]+\.[0-9]+\.[0-9]+"' src/app.bash | sed 's/VERSION="//;s/"//'
 
-.PHONY: get_changelog_entry
-get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG=v1.0.0)
+.PHONY: get_changelog
+get_changelog: ## Print release notes for TAG to stdout (default: latest tag; override with TAG=v1.0.0)
 	@tag="$(TAG)"; tag="$${tag#v}"; \
 	if [[ -z "$$tag" ]]; then \
-	  printf 'get_changelog_entry: TAG is empty; pass TAG=v1.0.0 or create a git tag\n' >&2; \
+	  printf 'get_changelog: TAG is empty; pass TAG=v1.0.0 or create a git tag\n' >&2; \
 	  exit 1; \
 	fi; \
 	notes="$$(awk -v tag="$$tag" ' \
@@ -269,17 +270,15 @@ get_changelog_entry: ## Print release notes for TAG to stdout (override with TAG
 	    for (i=s;i<=e;i++) print lines[i] \
 	  }' CHANGELOG.md)"; \
 	if [[ -z "$$notes" ]]; then \
-	  printf 'get_changelog_entry: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  printf 'get_changelog: no CHANGELOG entry for %s\n' "$$tag" >&2; \
 	  exit 1; \
 	fi; \
 	printf '%s\n' "$$notes"
 ```
 
-The key differences from the Python/C++ pattern:
-
-- Outputs to stdout, not `/tmp/release_notes.md`. The calling workflow redirects as needed: `make get_changelog_entry TAG=v1.0.0 > /tmp/release-notes.md`.
+- All `get_changelog` targets output to stdout. The calling workflow redirects as needed: `make get_changelog TAG=v1.0.0 > /tmp/release-notes.md`.
 - `TAG ?=` defaults to the latest git tag via `git describe`. Use `$(TAG)` (not `$${TAG}`) in the recipe so Make's variable expansion is used; shell does not inherit Make variables set via `?=`.
-- Strip the `v` prefix in the recipe (`$${tag#v}`) because git tags use `v1.0.0` but CHANGELOG entries use bare versions (`1.0.0`).
+- Strip the `v` prefix in the recipe (`$${tag#v}`) because git tags use `v1.0.0` but CHANGELOG entries use bare versions (`1.0.0`). Python/C++ projects that include the `v` prefix in CHANGELOG headers do not strip it.
 - The target exits non-zero if TAG is empty or no matching entry is found.
 - Release artifact steps (tarball creation, version patching, checksum generation) are CI-only and do not belong in the Makefile. Keep them inline in the release workflow.
 - Avoid `grep -oP` (GNU-only, unavailable on macOS). Use `grep -oE` or `sed -n` instead. When matching a prefix like `readonly VERSION=`, anchor with `.*VERSION=` rather than `^VERSION=`.

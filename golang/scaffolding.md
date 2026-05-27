@@ -58,6 +58,7 @@ Adhere to the global Makefile structure established in `tools/makefile.md`. Use 
 - `test_verbose`: `go test -race -count=1 -v ./...`
 - `test_coverage`: `go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...`
 - `build`: `go build -ldflags="..." -o bin/<binary> .`
+- `build_snapshot`: `goreleaser build --snapshot --clean`
 - `install`: `go install -ldflags="..." .`
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `release_check`: `goreleaser check`

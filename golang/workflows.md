@@ -15,6 +15,7 @@ paths:
   - go.mod
   - go.sum
   - .goreleaser*.yml
+  - .gpipe.yml
   - Makefile
 ```
 
@@ -35,23 +36,22 @@ Add these before any `make` call in reusable workflows. Always use `go-version-f
 
 ---
 
-## Releases: Goreleaser Instead of `gh` CLI
+## Releases: Build, gpipe, Publish
 
-Go projects use `goreleaser/goreleaser-action` for releases. This is the only exception to the `gh` CLI release rule in `github/actions.md`. Goreleaser handles building, signing, and publishing in a single step. See `golang/goreleaser.md` for config details.
+Go projects use a three-step release pattern:
 
-Install cosign before running goreleaser:
+1. **Build** - `goreleaser/goreleaser-action` with `args: build --clean` to produce platform binaries in `dist/`. Goreleaser does not publish.
+2. **gpipe** - `thomaslaurenson/gpipe-action@v1` to generate `install.sh`, `install.ps1`, `checksums.txt`, and the cosign bundle `checksums.txt.sigstore.json`.
+3. **Publish** - `gh release create` to create the GitHub release and upload all assets.
 
-```yaml
-- uses: sigstore/cosign-installer@v4.1.2
-```
-
-Always set `GORELEASER_CURRENT_TAG`. Without it, goreleaser may pick up a `-dev` tag pointing at the same commit as the release tag and release the wrong version:
+Always set `GORELEASER_CURRENT_TAG`. Without it, goreleaser may pick up a `-dev` tag pointing at the same commit as the release tag and build the wrong version:
 
 ```yaml
 env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 ```
+
+`id-token: write` is required on the workflow and its caller (`tag.yml`) for cosign OIDC signing inside `gpipe-action`.
 
 ---
 
@@ -111,7 +111,7 @@ jobs:
 
 ### `release.yml`
 
-Release notes are extracted from `CHANGELOG.md` via `make get_changelog_entry` and passed to goreleaser with `--release-notes`.
+Release notes are extracted from `CHANGELOG.md` via `make get_changelog TAG=...`. The `id-token: write` permission is required for cosign OIDC signing inside `gpipe-action`. Replace `<name>` with the project binary name.
 
 ```yaml
 name: Release
@@ -124,7 +124,7 @@ permissions:
   id-token: write
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -136,25 +136,46 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: sigstore/cosign-installer@v4.1.2
-
       - name: Extract release notes from CHANGELOG.md
-        run: make get_changelog_entry TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
+        run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
 
-      - uses: goreleaser/goreleaser-action@v7
+      - name: Build binaries
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: release --clean --release-notes /tmp/release-notes.md
+          args: build --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
+
+      - uses: thomaslaurenson/gpipe-action@v1
+        with:
+          cosign_sign: true
+
+      - name: Create GitHub release
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md \
+            dist/<name>-* \
+            install.sh \
+            install.ps1 \
+            checksums.txt \
+            checksums.txt.sigstore.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### `prerelease.yml`
 
-Creates a rolling dev prerelease on every push to `main`. The dev tag is derived from the latest release tag with an incremented patch version and `-dev` suffix (e.g. `v0.5.1` becomes `v0.5.2-dev`). The tag and release are deleted and recreated on every run.
+Creates a rolling dev prerelease on every push to `main`. The GitHub release always uses the static `dev` tag so there is only ever one dev release on the releases page. GoReleaser runs in `--snapshot` mode, which bypasses the semver tag requirement entirely. The version embedded in the binary is set via `snapshot.version_template` in the goreleaser config (e.g. `{{ incpatch .Version }}-dev`), which walks existing release tags in history. No `GORELEASER_CURRENT_TAG` is needed.
 
-Delete the release by exact tag name. Do not use a generic grep pattern, and do not use `|| true`. Masking deletion failures allows goreleaser to find an existing release with stale assets, which causes all asset uploads to fail with `already_exists`.
+`fetch-depth: 0` and `fetch-tags: true` are still required so GoReleaser can walk the full tag history to resolve `{{ .Version }}` inside the snapshot template.
+
+Delete the `dev` release by exact tag name. Do not use a generic grep pattern, and do not use `|| true`. Masking deletion failures allows `gh release create` to find an existing release with stale assets, which causes all asset uploads to fail with `already_exists`.
+
+The `.goreleaser.prerelease.yml` `git.ignore_tags` must list both `"*-dev"` and `"dev"` so GoReleaser never treats either as a base tag when resolving `{{ .Version }}`.
+
+Replace `<name>` with the project binary name.
 
 ```yaml
 name: Prerelease
@@ -164,7 +185,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   prerelease:
@@ -173,35 +193,17 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
 
-      - uses: sigstore/cosign-installer@v4.1.2
-
-      - name: Compute dev tag
-        id: dev_tag
-        run: |
-          LATEST=$(git tag --list 'v*.*.*' | grep -Ev -- '-' | sort -V | tail -1)
-          if [ -z "$LATEST" ]; then
-            echo "Error: no release tag found" >&2
-            exit 1
-          fi
-          PATCH=$(echo "$LATEST" | cut -d. -f3)
-          DEV_TAG="$(echo "$LATEST" | cut -d. -f1-2).$((PATCH + 1))-dev"
-          echo "dev_tag=${DEV_TAG}" >> "$GITHUB_OUTPUT"
-          echo "Computed dev tag: ${DEV_TAG} (from latest release: ${LATEST})"
-
       - name: Delete any existing dev release
         run: |
-          DEV_TAG="${{ steps.dev_tag.outputs.dev_tag }}"
-          if gh release view "${DEV_TAG}" > /dev/null 2>&1; then
-            gh release delete "${DEV_TAG}" --yes --cleanup-tag
-            echo "Deleted existing dev release: ${DEV_TAG}"
-          else
-            echo "No existing dev release for ${DEV_TAG}"
+          if gh release view "dev" > /dev/null 2>&1; then
+            gh release delete "dev" --yes --cleanup-tag
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -210,21 +212,61 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f ${{ steps.dev_tag.outputs.dev_tag }}
-          git push origin ${{ steps.dev_tag.outputs.dev_tag }} --force
+          git tag -f dev
+          git push origin dev --force
 
-      - name: Generate dev release notes
-        run: echo "Built from commit ${{ github.sha }}" > /tmp/dev-release-notes.md
-
-      - uses: goreleaser/goreleaser-action@v7
+      - name: Build binaries
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: >
-            release
-            --clean
-            --config .goreleaser.prerelease.yml
-            --release-notes /tmp/dev-release-notes.md
+          args: build --snapshot --clean --config .goreleaser.prerelease.yml
+
+      - name: Create dev release
+        run: |
+          gh release create "dev" \
+            --title "Dev (Pre-release)" \
+            --notes "Built from commit ${{ github.sha }}" \
+            --prerelease \
+            dist/<name>-*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: ${{ steps.dev_tag.outputs.dev_tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### `main.yml`
+
+Triggers on every push to `main`. Runs lint and test, then calls `prerelease.yml` if both pass.
+
+```yaml
+name: Main
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "**.go"
+      - go.mod
+      - go.sum
+      - .goreleaser*.yml
+      - .gpipe.yml
+      - Makefile
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  test:
+    uses: ./.github/workflows/test.yml
+
+  prerelease:
+    needs: [lint, test]
+    uses: ./.github/workflows/prerelease.yml
+    secrets: inherit
 ```

@@ -95,3 +95,18 @@ class MyConfig:
 
 - Env vars are read once at class load time.
 - Never hardcode credentials, URLs, or environment-specific values.
+
+Some config classes also carry **internal constants** that are not environment-specific (for example, a mapping of team member IDs to email addresses, a set of fixed API group IDs, or a set of named connection profiles). These are permitted as hardcoded class-level attributes. All class-level attributes, whether sourced from `os.getenv` or hardcoded, must have type annotations.
+
+```python
+import os
+
+class FreshdeskConfig:
+    timeout: int = int(os.getenv("FRESHDESK_TIMEOUT", "30"))
+
+    # Hardcoded internal constants - not environment-specific
+    prod: dict[str, int] = {
+        "email_config_id": 6000071619,
+        "group_id": 6000207769,
+    }
+```

@@ -24,6 +24,7 @@ class InstanceClient:
 - Use `X | Y` union syntax (not `Union[X, Y]`)
 - Use `list[X]`, `dict[K, V]` (not `List[X]`, `Dict[K, V]`)
 - Only import from `typing` when no built-in equivalent exists
+- Always annotate `__init__` with `-> None`
 
 ## Docstrings
 
@@ -97,6 +98,33 @@ import hvac
 
 - Each optional integration is a separate dep group in `pyproject.toml`
 - The import error message must name the extra the user needs to install
+
+## `TYPE_CHECKING` Guard
+
+Use a `TYPE_CHECKING` guard when annotating parameters or return types that come from
+external packages not otherwise imported at runtime in that module. Combined with
+`from __future__ import annotations`, the annotation is only evaluated by the type
+checker, never at runtime.
+
+```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import hvac
+    from keystoneauth1.session import Session
+
+
+def authenticate(client: hvac.Client, session: Session | None = None) -> None:
+    ...
+```
+
+Rules:
+- Always pair a `TYPE_CHECKING` guard with `from __future__ import annotations`.
+- Use it for packages that are required dependencies but not imported elsewhere in the module.
+- Use it for packages that are optional extras, to avoid breaking imports for users who do not have them installed.
+- Do not use it for packages that are already imported at the top of the module for runtime use.
 
 ## Logging
 

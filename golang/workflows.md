@@ -225,7 +225,7 @@ jobs:
         run: |
           gh release create "dev" \
             --title "Dev (Pre-release)" \
-            --notes "Built from commit ${{ github.sha }}" \
+            --notes "Built from commit [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" \
             --prerelease \
             dist/<name>-*
         env:

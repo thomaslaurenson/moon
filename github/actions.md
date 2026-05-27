@@ -262,7 +262,7 @@ jobs:
           gh release create dev \
             --title "Dev (Pre-release)" \
             --prerelease \
-            --notes "**Commit:** ${{ github.sha }}" \
+            --notes "[${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})" \
             <artifact files>
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

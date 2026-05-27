@@ -61,7 +61,7 @@ Indent with 2 spaces. Never use tabs.
 
 ### Line Length
 
-Maximum line length is 80 characters. For long strings or commands, use line continuation with `\` or a heredoc.
+Maximum line length is 100 characters. For long strings or commands, use line continuation with `\` or a heredoc.
 
 ```bash
 # Good: split long command with continuation
@@ -303,13 +303,15 @@ printf 'error: %s\n' "$message" >&2
 
 ## Error Handling
 
-Define a `die` helper at the top of every executable script to print an error message to stderr and exit with status 1:
+Define an error-exit helper at the top of every executable script to print a
+message to stderr and exit with status 1. Name it `die` or `error`:
 
 ```bash
-die() { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }
+die()   { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }
+error() { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }
 ```
 
-Use `die` consistently rather than inline `echo … >&2; exit 1` patterns:
+Use the helper consistently rather than inline `echo … >&2; exit 1` patterns:
 
 ```bash
 # Good
@@ -384,6 +386,11 @@ find "$data_dir" -name "*.txt" \( -type f -o -type l \)
 For scripts long enough to contain more than one function, wrap the entry point in a `main` function and call it at the bottom of the file. This keeps all executable code inside functions and allows all variables to be declared `local`:
 
 ```bash
+# Entry point: parse the subcommand and dispatch to the appropriate handler.
+#
+# Arguments:
+#   $1 - Subcommand name (default: help)
+#   $@ - Arguments forwarded to the subcommand handler
 main() {
   local cmd="${1:-help}"
   shift || true

@@ -87,6 +87,13 @@ test/
 Every test file must define a `setup` function that configures the environment before each test. Set `REPO_ROOT` relative to `BATS_TEST_DIRNAME` so tests run correctly regardless of the working directory:
 
 ```bash
+# Configure the environment before each test.
+#
+# Environment:
+#   REPO_ROOT  - absolute path to the repository root, derived from BATS_TEST_DIRNAME
+#   DATA_DIR   - path to fixture data used by tests
+#   APP_CMD    - path to the mock command helper
+#   SCRIPT     - path to the script under test
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   export DATA_DIR="$REPO_ROOT/test/fixtures/data"
@@ -115,12 +122,12 @@ Use `run` to capture exit status and output, then assert `$status` and `$output`
 ```bash
 @test "list: exits 0" {
   run bash "$SCRIPT" list
-  [ "$status" -eq 0 ]
+  (( status == 0 ))
 }
 
 @test "create: rejects invalid entry name" {
   run bash "$SCRIPT" create bad_name
-  [ "$status" -ne 0 ]
+  (( status != 0 ))
   [[ "$output" =~ "invalid entry name" ]]
 }
 ```
@@ -137,7 +144,7 @@ Replace external dependencies with mock executables placed in `test/helpers/`. A
   mkdir -p "$tmpbin"
   ln -s "$REPO_ROOT/test/helpers/mock_selector" "$tmpbin/selector"
   run env "PATH=$tmpbin:$PATH" "MOCK_OUTPUT=myentry" bash "$SCRIPT" run myentry
-  [ "$status" -eq 0 ]
+  (( status == 0 ))
   [[ "$output" == "ok" ]]
 }
 ```

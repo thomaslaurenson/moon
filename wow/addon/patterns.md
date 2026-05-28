@@ -107,7 +107,7 @@ Declare in the TOC:
 ## SavedVariablesPerCharacter: MyAddon_charConfig
 ```
 
-`SavedVariables` are shared across all characters on the account. `SavedVariablesPerCharacter` stores one copy per character and realm. SavedVariables are guaranteed populated by the time `ADDON_LOADED` fires — do not assume they are available at file parse time.
+`SavedVariables` are shared across all characters on the account. `SavedVariablesPerCharacter` stores one copy per character and realm. SavedVariables are guaranteed populated by the time `ADDON_LOADED` fires. Do not assume they are available at file parse time.
 
 ```lua
 local frame = CreateFrame("Frame")

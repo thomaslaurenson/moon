@@ -51,7 +51,7 @@
 | `### Updated` | Dependency bumps or toolchain upgrades (use sparingly) |
 | `### Thanks` | Credit external contributors by GitHub handle |
 
-Section order: **Added → Changed → Fixed → Removed → Updated → Thanks**
+Section order: **Added > Changed > Fixed > Removed > Updated > Thanks**
 
 ## Example
 

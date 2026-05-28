@@ -29,7 +29,7 @@ Always guard with `event ==` before checking `arg1`. Checking `arg1` alone is un
 | `PLAYER_ENTERING_WORLD` | -- | Player loads into any zone or instance |
 | `PLAYER_LOGOUT` | -- | Player is logging out |
 
-Use `ADDON_LOADED` with a name check for initialisation — SavedVariables are guaranteed available:
+Use `ADDON_LOADED` with a name check for initialisation. SavedVariables are guaranteed available:
 
 ```lua
 frame:RegisterEvent("ADDON_LOADED")
@@ -137,7 +137,7 @@ frame:RegisterEvent("UNIT_HEALTH")
 
 ## Addon Messaging (Cross-Client)
 
-Use `SendAddonMessage` for network communication between clients. There is no custom event dispatcher for within-client addon communication — call functions directly.
+Use `SendAddonMessage` for network communication between clients. There is no custom event dispatcher for within-client addon communication. Call functions directly.
 
 ```lua
 local PREFIX = "MyAddon"
@@ -160,7 +160,7 @@ local function Broadcast(key, value)
 end
 ```
 
-`SendAddonMessage(prefix, message, channel)` — `channel` is `"PARTY"`, `"RAID"`, `"GUILD"`, `"BATTLEGROUND"`, or `"WHISPER"`. Max message length is 255 bytes. Messages are received by all clients in the channel including the sender. Throttle to at most once per 0.5 s.
+`SendAddonMessage(prefix, message, channel)`: `channel` is `"PARTY"`, `"RAID"`, `"GUILD"`, `"BATTLEGROUND"`, or `"WHISPER"`. Max message length is 255 bytes. Messages are received by all clients in the channel including the sender. Throttle to at most once per 0.5 s.
 
 ## Buff and Debuff API
 

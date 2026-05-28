@@ -25,7 +25,7 @@ Removed unused tag and release script
 - Multiple small changes on one line can be comma-separated
 - No conventional-commits prefixes (`feat:`, `fix:`, etc.)
 
-Note: CHANGELOG entries use imperative voice ("Add support for X"), not past tense. Commit messages and changelog entries are different audiences — commits describe what happened; changelog entries describe what the release does.
+Note: CHANGELOG entries use imperative voice ("Add support for X"), not past tense. Commit messages and changelog entries are different audiences. Commits describe what happened; changelog entries describe what the release does.
 
 ## Branch Names
 
@@ -39,7 +39,7 @@ update/mpqeditor-and-uv
 ```
 
 - All lowercase, kebab-case
-- Description should be short but unambiguous (3–5 words)
+- Description should be short but unambiguous (3-5 words)
 - No issue numbers in branch names
 
 | Type | When to use |

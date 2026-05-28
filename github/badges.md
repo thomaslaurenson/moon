@@ -4,7 +4,7 @@
 
 - `style=flat` on all shields.io badges - no other style variants
 - `logo=github` on all CI and release badges; use the language logo (`go`, `cplusplus`, `python`) on language/quality badges
-- Group badges semantically: CI → release → language/quality
+- Group badges semantically: CI > release > language/quality
 - Separate groups with a blank line so GitHub renders a visual break
 - Pairs within a group sit on the same line, separated by a single space
 - No click-through links on badges unless the badge is for a package registry (PyPI, etc.)

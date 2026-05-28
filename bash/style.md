@@ -22,10 +22,6 @@ Sourced files (`.sh` libraries) do not require a shebang line.
 
 ---
 
-## Spelling
-
----
-
 ## Shell Options
 
 Every executable script must set these options immediately after the shebang:
@@ -131,10 +127,10 @@ Use `lowercase_with_underscores`. Private functions (not part of the public inte
 
 ```bash
 # Public function
-process_item() { … }
+process_item() { ... }
 
 # Private function
-_select_item() { … }
+_select_item() { ... }
 ```
 
 ### Variables
@@ -146,7 +142,7 @@ process_file() {
   local file_path="$1"
   local line_count
   line_count="$(wc -l < "$file_path")"
-  …
+  ...
 }
 ```
 
@@ -198,38 +194,38 @@ Use `"$@"` to forward arguments. Never use `$*` unless you specifically need all
 
 ## Tests and Conditionals
 
-Prefer `[[ … ]]` over `[ … ]` and `test`. The double-bracket form prevents word splitting and supports pattern matching:
+Prefer `[[ ... ]]` over `[ ... ]` and `test`. The double-bracket form prevents word splitting and supports pattern matching:
 
 ```bash
 # Good
-if [[ -f "${file}" ]]; then …
-if [[ "${var}" == "expected" ]]; then …
-if [[ "${var}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then …
+if [[ -f "${file}" ]]; then ...
+if [[ "${var}" == "expected" ]]; then ...
+if [[ "${var}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then ...
 
 # Bad
-if [ -f "$file" ]; then …
+if [ -f "$file" ]; then ...
 ```
 
 Use `-z` and `-n` explicitly to test for empty or non-empty strings:
 
 ```bash
 # Good
-if [[ -z "${var}" ]]; then …
-if [[ -n "${var}" ]]; then …
+if [[ -z "${var}" ]]; then ...
+if [[ -n "${var}" ]]; then ...
 
 # Bad: implicit truthiness test
-if [[ "${var}" ]]; then …
+if [[ "${var}" ]]; then ...
 ```
 
-Use `(( … ))` for arithmetic comparisons. Never use `$[ … ]`, `expr`, or `let`:
+Use `(( ... ))` for arithmetic comparisons. Never use `$[ ... ]`, `expr`, or `let`:
 
 ```bash
 # Good
-if (( count > 0 )); then …
+if (( count > 0 )); then ...
 (( total += 1 ))
 
 # Bad
-if [ "$count" -gt 0 ]; then …
+if [ "$count" -gt 0 ]; then ...
 total=$(expr "$total" + 1)
 ```
 
@@ -237,7 +233,7 @@ total=$(expr "$total" + 1)
 
 ## Command Substitution
 
-Always use `$(…)` over backticks. Backticks require escaping when nested and are harder to read:
+Always use `$(...)` over backticks. Backticks require escaping when nested and are harder to read:
 
 ```bash
 # Good
@@ -311,7 +307,7 @@ die()   { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }
 error() { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }
 ```
 
-Use the helper consistently rather than inline `echo … >&2; exit 1` patterns:
+Use the helper consistently rather than inline `echo ... >&2; exit 1` patterns:
 
 ```bash
 # Good
@@ -346,7 +342,7 @@ The comment describes the function's behaviour, followed by labelled sections fo
 #   0 on success
 #   exits 1 if the candidate is invalid or no item can be resolved
 _resolve_item() {
-  …
+  ...
 }
 ```
 

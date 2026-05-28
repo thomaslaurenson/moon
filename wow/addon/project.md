@@ -42,7 +42,7 @@ modules\ui.lua
 ## File Loading Rules
 
 - Files are listed one per line, relative to the addon folder
-- Path separator is backslash `\` — a WoW engine requirement even on Linux/macOS
+- Path separator is backslash `\` (a WoW engine requirement even on Linux/macOS)
 - Files execute in the exact order listed; load dependencies before the files that use them
 - Lines beginning with `#` (single hash, not `##`) are comments
 
@@ -66,7 +66,7 @@ init\env.xml
 
 XML paths also use backslashes. Relative paths are from the XML file's own directory.
 
-Prefer pure Lua frame creation over XML — it avoids parsing ambiguity and is easier to maintain.
+Prefer pure Lua frame creation over XML. It avoids parsing ambiguity and is easier to maintain.
 
 ## Project Structure Patterns
 

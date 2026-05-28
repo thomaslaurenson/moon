@@ -6,16 +6,16 @@ The vanilla 1.12 client embeds Lua 5.0. Many Lua features an LLM produces by def
 
 - `## Interface: 11200` is the only valid interface version
 - Path separators in TOC and XML files must be backslash `\` (written `\\` in Lua strings)
-- `frame:SetScript("OnEvent", function()` takes **zero parameters** — use globals `this`, `event`, `arg1`...`arg9`
-- Never write `function(self, event, ...)` for event handlers — that is WoW 2.0+ API
-- Do not use `os.*` or `io.*` — removed from the WoW sandbox
-- Do not use `_ENV` — use `getfenv()` / `setfenv()`
+- `frame:SetScript("OnEvent", function()` takes **zero parameters**. Use globals `this`, `event`, `arg1`...`arg9`
+- Never write `function(self, event, ...)` for event handlers (WoW 2.0+ API only)
+- Do not use `os.*` or `io.*` (removed from the WoW sandbox)
+- Do not use `_ENV`. Use `getfenv()` / `setfenv()`
 - Vanilla has no `hooksecurefunc`; use a manual save-and-replace hook pattern instead
-- Do not use `InCombatLockdown()` — the secure frame system does not exist in vanilla
-- Do not use `C_Timer.*` — use `OnUpdate` with an elapsed counter instead
-- Do not use `COMBAT_LOG_EVENT_UNFILTERED` — use `CHAT_MSG_*` events and parse the message string
-- Do not use `UnitGUID` — only available with the SuperWoW server mod; guard with `if UnitGUID then`
-- Do not use `GetItemInfoInstant` — use `GetItemInfo` with a link
+- Do not use `InCombatLockdown()` (the secure frame system does not exist in vanilla)
+- Do not use `C_Timer.*`. Use `OnUpdate` with an elapsed counter instead
+- Do not use `COMBAT_LOG_EVENT_UNFILTERED`. Use `CHAT_MSG_*` events and parse the message string
+- Do not use `UnitGUID` (only available with the SuperWoW server mod; guard with `if UnitGUID then`)
+- Do not use `GetItemInfoInstant`. Use `GetItemInfo` with a link
 - Do not use `RegisterUnitWatch` or secure frame templates (`SecureActionButtonTemplate`, etc.)
 
 ## Lua 5.0 Incompatibilities
@@ -31,7 +31,7 @@ The vanilla 1.12 client embeds Lua 5.0. Many Lua features an LLM produces by def
 | `string.find` with captures | `string.match` |
 | `getfenv()` / `setfenv()` | `_ENV` |
 
-No `%` modulo operator — use `math.mod(a, b)`. No `table.move`, `table.pack`, or `table.unpack`.
+No `%` modulo operator. Use `math.mod(a, b)`. No `table.move`, `table.pack`, or `table.unpack`.
 
 ```lua
 local count     = table.getn(myTable)
@@ -97,8 +97,8 @@ These WoW-provided globals replace removed stdlib functions:
 
 | WoW global | Replaces |
 |---|---|
-| `GetTime()` | `os.time()` — float seconds since server start |
-| `date("%H:%M:%S")` | `os.date()` — strftime-style |
+| `GetTime()` | `os.time()`, float seconds since server start |
+| `date("%H:%M:%S")` | `os.date()`, strftime-style |
 | `strtrim(s)` | no Lua 5.0 equivalent |
 
 ## Client Version Detection

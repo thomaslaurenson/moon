@@ -6,7 +6,7 @@
 local frame = CreateFrame(frameType, frameName, parent)
 ```
 
-`frameName` is optional — pass `nil` for anonymous frames. Named frames are accessible as globals via `_G["name"]`. Use `UIParent` as the parent for top-level frames.
+`frameName` is optional. Pass `nil` for anonymous frames. Named frames are accessible as globals via `_G["name"]`. Use `UIParent` as the parent for top-level frames.
 
 ## Frame Types
 
@@ -56,7 +56,7 @@ frame:SetWidth(200)
 frame:SetHeight(100)
 ```
 
-`SetSize` is not available in all vanilla builds — prefer `SetWidth`/`SetHeight`.
+`SetSize` is not available in all vanilla builds. Prefer `SetWidth`/`SetHeight`.
 
 ## Visibility
 

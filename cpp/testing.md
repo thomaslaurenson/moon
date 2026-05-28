@@ -111,8 +111,8 @@ TEST_CASE("next_power_of_two", "[helpers]") {
 Tag each `TEST_CASE` with the name of the source file under test:
 
 ```cpp
-TEST_CASE("next_power_of_two", "[helpers]") { … }
-TEST_CASE("parse_config", "[config]") { … }
+TEST_CASE("next_power_of_two", "[helpers]") { ... }
+TEST_CASE("parse_config", "[config]") { ... }
 ```
 
 Run a subset during development:
@@ -292,8 +292,8 @@ TEST_CASE("verify signature", "[verify]") {
 Tag each functional `TEST_CASE` with the subcommand or feature under test:
 
 ```cpp
-TEST_CASE("create versions", "[create]") { … }
-TEST_CASE("list with filter", "[list]") { … }
+TEST_CASE("create versions", "[create]") { ... }
+TEST_CASE("list with filter", "[list]") { ... }
 ```
 
 Run a subset during development:

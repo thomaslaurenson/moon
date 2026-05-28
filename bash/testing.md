@@ -107,10 +107,10 @@ setup() {
 Test names use the pattern `group: description` where the group identifies the subcommand, function, or feature under test:
 
 ```bash
-@test "list: exits 0" { … }
-@test "list: returns entries in sorted order" { … }
-@test "create: rejects invalid entry name" { … }
-@test "create: output confirms entry was written" { … }
+@test "list: exits 0" { ... }
+@test "list: returns entries in sorted order" { ... }
+@test "create: rejects invalid entry name" { ... }
+@test "create: output confirms entry was written" { ... }
 ```
 
 Names are descriptive enough that a failure message identifies the problem without reading the test body.
@@ -136,7 +136,7 @@ Always assert both `$status` and relevant `$output` content. Never assert only o
 
 ### Mocks
 
-Replace external dependencies with mock executables placed in `test/helpers/`. Add the helpers directory to `PATH` in `setup` or use `env PATH=… bash …` inline for tests that need to control PATH precisely:
+Replace external dependencies with mock executables placed in `test/helpers/`. Add the helpers directory to `PATH` in `setup` or use `env PATH=... bash ...` inline for tests that need to control PATH precisely:
 
 ```bash
 @test "run: uses selector when no entry argument is given" {

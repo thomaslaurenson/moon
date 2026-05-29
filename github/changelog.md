@@ -16,7 +16,7 @@
 ```markdown
 # Changelog
 
-## v1.2.3 - YYYY-MM-DD
+## 1.2.3 - YYYY-MM-DD
 
 ### Added
 
@@ -36,9 +36,9 @@
 ```
 
 - File header is `# Changelog`, not `# CHANGELOG`
-- Version line: `## vX.Y.Z - YYYY-MM-DD`
+- Version line: `## X.Y.Z - YYYY-MM-DD`
 - Date is ISO 8601 (`YYYY-MM-DD`)
-- Version prefix `v` is optional but must be consistent within a repo
+- Version prefix (`v`) should not be used
 
 ## Sections
 
@@ -56,7 +56,7 @@ Section order: **Added > Changed > Fixed > Removed > Updated > Thanks**
 ## Example
 
 ```markdown
-## v0.5.1 - 2026-04-15
+## 0.5.1 - 2026-04-15
 
 ### Added
 

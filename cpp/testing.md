@@ -29,6 +29,9 @@ test/
   subprocess_helper.h     # cross-platform subprocess runner
   subprocess_helper.cpp
   CMakeLists.txt
+extern/
+  Catch2/                 # submodule - pinned to v3.x
+  subprocess.h/           # submodule - pinned to a specific commit
 ```
 
 - One unit test file per source file, named `test_<source>.cpp`
@@ -307,13 +310,14 @@ Run a subset during development:
 ## Makefile Targets
 
 ```makefile
-.PHONY: test test_unit test_functional
-
+.PHONY: test
 test: test_unit test_functional ## Run all tests
 
+.PHONY: test_unit
 test_unit: ## Run Catch2 unit tests
 	cmake --build build && cd build && ctest --output-on-failure -R unit
 
+.PHONY: test_functional
 test_functional: ## Run Catch2 functional tests
 	cmake --build build && cd build && ctest --output-on-failure -R functional
 ```

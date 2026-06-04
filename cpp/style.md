@@ -17,7 +17,7 @@ Use British English spellings:
 
 ## Formatting
 
-Formatting is enforced automatically by clang-format. Running `make format` will reformat all source files. The canonical configuration lives in `.clang-format` at the project root.
+Formatting is enforced automatically by clang-format. Running `make fmt` will reformat all source files. The canonical configuration lives in `.clang-format` at the project root.
 
 Key settings that diverge from stock LLVM style:
 
@@ -260,38 +260,4 @@ std::transform(path.begin(), path.end(), path.begin(),
 
 ## Static Analysis
 
-Static analysis is enforced by clang-tidy. Running `make lint` will run the full check suite. The canonical configuration lives in `.clang-tidy` at the project root.
-
-### Baseline checks
-
-Every project enables this baseline and nothing more by default:
-
-```yaml
-Checks: >
-  clang-analyzer-core.*,
-  clang-analyzer-cplusplus.*,
-  clang-analyzer-deadcode.*,
-  modernize-use-nullptr,
-  readability-identifier-naming
-WarningsAsErrors: "*"
-FormatStyle: file
-```
-
-- `clang-analyzer-*`: deep static analysis for real bugs; null dereferences, memory leaks, dead code, and undefined behaviour
-- `modernize-use-nullptr`: enforces `nullptr` over `NULL` throughout
-- `readability-identifier-naming`: enforces the naming conventions defined above
-- `WarningsAsErrors`: all warnings are errors; if a check is worth having it is worth fixing
-
-### Project-specific checks and suppressions
-
-Additional checks and suppressions are added per project in the project's own `.clang-tidy` file. Every suppression must include a comment explaining why it is justified:
-
-```yaml
-Checks: >
-  -bugprone-narrowing-conversions
-# Suppressed: third-party library uses DWORD/int32_t interchangeably at its API boundary.
-# Fixing these would require wrapping every library call with explicit casts
-# that add noise without improving safety.
-```
-
-Never suppress a check without a documented reason.
+Static analysis is enforced by clang-tidy via `make lint_cpp`. See `tools/clang_tidy.md` for the baseline check set, suppression conventions, and guidance on adding project-specific checks.

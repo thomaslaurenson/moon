@@ -227,11 +227,11 @@ jobs:
 
 ## Changelog Extraction
 
-Never extract the changelog with inline awk or bash in a workflow step. Use the `get_changelog_entry` Makefile target instead. The target reads the version from `CMakeLists.txt` and writes the matching entry to stdout, which is then passed to the release step:
+Never extract the changelog with inline awk or bash in a workflow step. Use the `get_changelog` Makefile target instead. Pass the tag explicitly; the target writes the matching entry to stdout:
 
 ```yaml
 - name: Extract release notes from CHANGELOG.md
-  run: make get_changelog_entry > /tmp/release-notes.md
+  run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
 ```
 
-The target exits non-zero if no entry is found for the current version, failing the release before it can publish with an empty changelog.
+The target exits non-zero if TAG is empty or no matching entry is found, failing the release before it can publish with an empty changelog.

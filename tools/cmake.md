@@ -11,6 +11,41 @@ Conventions for CMake-based C++ projects.
 
 ---
 
+## Repository Layout
+
+Every C++ project must contain these files and directories at the root:
+
+```
+.clang-format
+.clang-tidy
+.github/
+  workflows/
+    build.yml
+    lint.yml
+    test.yml
+    release.yml
+    prerelease.yml
+    pr.yml
+    tag.yml
+    main.yml
+  dependabot.yml
+CMakeLists.txt        # root: project settings, options, add_subdirectory calls
+Dockerfile.glibc
+Dockerfile.musl
+Makefile
+CHANGELOG.md
+README.md
+src/                  # business logic; see § CMakeLists.txt Structure
+extern/               # git submodules only; never copy third-party headers manually
+test/                 # see cpp/testing.md for internal structure
+```
+
+- `src/` contains all application source; no header-only projects unless the implementation is 50 lines or fewer
+- `extern/` contains only git submodules — never manually copied headers or installed libraries
+- Two Dockerfiles are required: one for glibc builds, one for musl (static) builds; see `tools/docker.md`
+
+---
+
 ## Minimum Version
 
 All projects must declare a minimum CMake version of 3.21:
@@ -263,6 +298,26 @@ endif()
 
 Never assume submodules are initialised. Always guard every dependency.
 
+### Including extern/ headers
+
+Use the `SYSTEM` keyword on every `target_include_directories` call that points into `extern/`. This marks those paths as system headers, so clang-tidy and the compiler suppress all warnings from third-party code by default:
+
+```cmake
+# Application source includes a third-party library header:
+target_include_directories(myapp SYSTEM PRIVATE
+    "${CMAKE_SOURCE_DIR}/extern/ThirdPartyLib/src"
+)
+
+# Project-owned headers (generated files, src/) use PRIVATE without SYSTEM:
+target_include_directories(myapp PRIVATE
+    "${CMAKE_BINARY_DIR}"
+)
+```
+
+- `SYSTEM PRIVATE` tells CMake to pass `-isystem` instead of `-I` for those paths
+- clang-tidy excludes system headers from all analysis by default; without `SYSTEM`, third-party headers generate thousands of suppressed warnings that inflate output and slow analysis
+- Never combine `extern/` and project-owned paths in one `target_include_directories` call; they require different keywords
+
 ---
 
 ## Clang Tooling
@@ -303,9 +358,17 @@ fmt_check: ## Check formatting without modifying files
 	find src test -name "*.cpp" -o -name "*.h" | xargs clang-format-18 --dry-run --Werror
 
 .PHONY: lint_cpp
-lint_cpp: ## Run clang-tidy static analysis
-	clang-tidy-18 -p build $(shell find src -name "*.cpp")
+lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
+	clang-tidy-18 --quiet -p build \
+	--header-filter="$(CURDIR)/src/.*" src/*.cpp 2>&1 \
+	| grep -v " warnings generated"; \
+	exit $${PIPESTATUS[0]}
 ```
+
+- `--quiet` suppresses the "Suppressed N warnings" summary and hint lines
+- `--header-filter="$(CURDIR)/src/.*"` limits diagnostic output to project source headers; extern/ headers are already excluded as system headers (see § Including extern/ headers) but this provides belt-and-suspenders coverage
+- `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe
+- `make configure` must be run before `make lint_cpp`; clang-tidy reads `build/compile_commands.json` to resolve include paths
 
 Note: `fmt` and `fmt_check` include the `test/` directory; test code is subject to the same formatting standards as application code.
 

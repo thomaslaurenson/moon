@@ -19,15 +19,17 @@ Use British English spellings:
 
 Formatting is enforced automatically by clang-format. Running `make fmt` will reformat all source files. The canonical configuration lives in `.clang-format` at the project root.
 
-Key settings that diverge from stock LLVM style:
+Settings that deviate from LLVM defaults:
 
-| Setting | Value |
-|---|---|
-| `BasedOnStyle` | `LLVM` |
-| `IndentWidth` | `4` |
-| `ColumnLimit` | `100` |
-| `PointerAlignment` | `Right` |
-| `BreakBeforeBraces` | `Attach` |
+| Setting | LLVM default | Our value |
+|---|---|---|
+| `IndentWidth` | `2` | `4` |
+| `ColumnLimit` | `80` | `100` |
+| `AccessModifierOffset` | `-2` | `-4` |
+| `AllowShortFunctionsOnASingleLine` | `All` | `InlineOnly` |
+| `IncludeBlocks` | `Preserve` | `Regroup` |
+
+All other settings inherit from LLVM. Notably: `PointerAlignment: Right`, `BreakBeforeBraces: Attach`, and `IndentCaseLabels: false` are already the LLVM defaults and require no override.
 
 ### Suppressing clang-format
 
@@ -55,15 +57,15 @@ Naming is enforced by clang-tidy's `readability-identifier-naming` check.
 
 ### Functions
 
-Use `snake_case`:
+Use `PascalCase`:
 
 ```cpp
 // Good
-bool open_archive(const std::string &path, HANDLE *handle);
-std::string normalise_file_path(const std::string &path);
+bool OpenArchive(const std::string &path, HANDLE *handle);
+std::string NormaliseFilePath(const std::string &path);
 
 // Bad
-bool OpenArchive(const std::string &path, HANDLE *handle);
+bool open_archive(const std::string &path, HANDLE *handle);
 ```
 
 ### Variables and Parameters
@@ -73,11 +75,11 @@ Use `snake_case`:
 ```cpp
 // Good
 int file_count = 0;
-std::string archive_path = get_path();
+std::string archive_path = GetPath();
 
 // Bad
 int fileCount = 0;
-std::string archivePath = get_path();
+std::string archivePath = GetPath();
 ```
 
 ### Member Variables
@@ -119,11 +121,11 @@ enum class OperationMode {
 
 ### Constants
 
-Use `UPPER_SNAKE_CASE`. Declare with `constexpr` or `const` as appropriate:
+Use `snake_case`. Declare with `constexpr` or `const` as appropriate:
 
 ```cpp
-constexpr int MAX_FILE_COUNT = 1024;
-const std::string DEFAULT_LOCALE = "enUS";
+constexpr int max_file_count = 1024;
+const std::string default_locale = "enUS";
 ```
 
 ### No Hungarian Notation
@@ -212,13 +214,13 @@ Use triple-slash `///` style. The first line is a single summary sentence with n
 ```cpp
 /// Opens an archive from the given path.
 ///
-/// The handle must be closed with close_archive when no longer needed.
+/// The handle must be closed with CloseArchive when no longer needed.
 ///
 /// @param path Path to the archive file.
 /// @param handle Pointer to the handle to populate.
 /// @param flags Open flags.
 /// @return true on success, false on failure.
-bool open_archive(const std::string &path, HANDLE *handle, uint32_t flags);
+bool OpenArchive(const std::string &path, HANDLE *handle, uint32_t flags);
 ```
 
 For `void` functions, omit `@return`:
@@ -227,7 +229,7 @@ For `void` functions, omit `@return`:
 /// Normalises a file path to use backslashes and lowercase.
 ///
 /// @param path Path string to normalise in place.
-void normalise_file_path(std::string &path);
+void NormaliseFilePath(std::string &path);
 ```
 
 ### Inline Comments

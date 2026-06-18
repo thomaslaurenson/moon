@@ -2,8 +2,6 @@
 
 Supplements `github/actions.md`. Universal rules (runners, action versions, workflow structure, caller patterns, concurrency, permissions) apply unchanged. This file covers Go-specific divergences and reusable workflow bodies only.
 
----
-
 ## Paths Filter
 
 Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
@@ -19,8 +17,6 @@ paths:
   - Makefile
 ```
 
----
-
 ## Go Setup Steps
 
 Add these before any `make` call in reusable workflows. Always use `go-version-file: go.mod`; never hardcode a Go version:
@@ -33,8 +29,6 @@ Add these before any `make` call in reusable workflows. Always use `go-version-f
 ```
 
 `fetch-depth: 0` is required only in `release.yml` (goreleaser and changelog extraction need full history). Omit it in `lint.yml` and `test.yml`.
-
----
 
 ## Releases: Build, gpipe, Publish
 
@@ -52,8 +46,6 @@ env:
 ```
 
 `id-token: write` is required on the workflow and its caller (`tag.yml`) for cosign OIDC signing inside `gpipe-action`.
-
----
 
 ## Reusable Workflow Bodies
 

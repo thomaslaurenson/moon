@@ -70,8 +70,6 @@ type Store interface {
 }
 ```
 
----
-
 ## Inline Comments
 
 - Start with `//` followed by a single space.
@@ -92,8 +90,6 @@ y := complexOperation()
 // --- section name ---
 ```
 
----
-
 ## Comment Hygiene
 
 - Do not write step narration comments that describe the next line of code. Bad: `// Initialise the counter`, `// Check for nil`
@@ -101,16 +97,12 @@ y := complexOperation()
 - Do not use trailing block comments (`// end if`, `// end for`) unless the block exceeds 50 lines.
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
 
----
-
 ## Spelling
 
 Use British English spellings:
 
 - `Initialise` not `Initialize`
 - `Colour` not `Color`
-
----
 
 ## Naming
 

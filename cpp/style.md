@@ -13,8 +13,6 @@ Use British English spellings:
 - `Initialise` not `Initialize`
 - `Colour` not `Color`
 
----
-
 ## Formatting
 
 Formatting is enforced automatically by clang-format. Running `make fmt` will reformat all source files. The canonical configuration lives in `.clang-format` at the project root.
@@ -48,8 +46,6 @@ static const CommandEntry COMMANDS[] = {
 ```
 
 Never use `clang-format off` to preserve arbitrary personal formatting preferences.
-
----
 
 ## Naming Conventions
 
@@ -168,8 +164,6 @@ Whether a file is header-only or split into `.h`/`.cpp` depends on the complexit
 - **Header-only `.h`**: use for simple structs, fixtures, and small helpers where the entire definition is 50 lines or fewer. Putting a 30-line struct across two files is unnecessary ceremony.
 - **`.h`/`.cpp` split**: use when the implementation has real complexity, multiple private functions, or would meaningfully slow down compilation if included everywhere. The declaration in `.h` is the public contract; the implementation in `.cpp` is the detail.
 
----
-
 ## Project Version
 
 Every C++ project must declare its version in the root `CMakeLists.txt` using the `project()` command's `VERSION` parameter. This is the single source of truth for the project version; never hardcode a version string anywhere else:
@@ -198,8 +192,6 @@ std::cout << "myapp " << MYAPP_VERSION << "\n";
 ```
 
 Never hardcode a version string in a `.cpp` file. Never read the version from `git describe` at runtime; bake it at configure time.
-
----
 
 ## Comments
 
@@ -257,8 +249,6 @@ std::transform(path.begin(), path.end(), path.begin(),
 - Do not write step narration comments that describe the next line of code. Bad: `// Loop through files`, `// Check if handle is valid`
 - Preserve comments that explain why something is done, not what. Good: `// Library expects backslashes regardless of platform`
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
-
----
 
 ## Static Analysis
 

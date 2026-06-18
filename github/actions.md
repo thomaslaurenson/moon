@@ -6,7 +6,7 @@
 - Use the `gh` CLI for creating releases by default. `goreleaser-action` is the only
   permitted exception, and only for Go projects; see `golang/workflows.md`.
 - Create a Makefile target for a workflow step when **any** of the following is true:
-  - The logic is useful to run locally (e.g. `make check_version`, `make get_changelog_entry`)
+  - The logic is useful to run locally (e.g. `make check_version`, `make get_changelog`)
   - The step appears in more than one workflow
   - The step contains non-trivial logic: multi-line bash, awk, version parsing, or conditional checks
 - Inline `run:` is acceptable when the step is release-only, CI-specific, and the command is
@@ -14,12 +14,10 @@
   Single-line commands with no conditional logic do not need a Makefile target.
 - Version and changelog extraction must always go through Makefile targets. Never write raw
   bash or awk to parse versions or changelogs inline in a workflow step. Use targets such as
-  `make get_version` and `make get_changelog_entry TAG=v1.0.0`.
+  `make get_version` and `make get_changelog TAG=v1.0.0`.
 - Minimal permissions: `contents: read` by default, `contents: write` only in release and
   prerelease workflows. Test workflows must never declare `contents: write`.
 - No `fetch-depth: 0` except in release workflows where changelog extraction requires it.
-
----
 
 ## Runners
 
@@ -34,8 +32,6 @@ Always pin runners to a specific version. Never use unversioned aliases such as
 
 When GitHub releases a new runner version, update the pin deliberately. Do not rely on
 `-latest` aliases to update automatically.
-
----
 
 ## Action Versions
 
@@ -52,8 +48,6 @@ Always use these pinned versions. Never use `@latest` or unversioned aliases:
 | `astral-sh/ruff-action` | `v3` |
 | `goreleaser/goreleaser-action` | `v7` |
 | `sigstore/cosign-installer` | `v4.1.2` |
-
----
 
 ## Workflow Structure
 
@@ -86,19 +80,16 @@ concurrency:
   cancel-in-progress: true
 ```
 
-Concurrency on `main.yml`: always add a concurrency group to cancel in-progress prerelease
-runs when new commits land on main:
+Concurrency on `main.yml`: always add a concurrency group scoped to the branch. Set `cancel-in-progress: false` so a prerelease run is never cancelled mid-flight, which can leave partial releases or stale assets:
 
 ```yaml
 concurrency:
-  group: prerelease
-  cancel-in-progress: true
+  group: main-${{ github.ref }}
+  cancel-in-progress: false
 ```
 
 Concurrency on `tag.yml`: no concurrency group. Tag pushes are immutable events; cancelling
 a release run mid-flight can leave partial releases. Let every tag run complete.
-
----
 
 ## Caller Workflow: pr.yml
 
@@ -154,8 +145,6 @@ Include only the entries that apply to the project:
 
 The `paths:` filter on `main.yml` must match `pr.yml` exactly; the same changes that trigger a PR check should trigger a prerelease when merged.
 
----
-
 ## Caller Workflow: tag.yml
 
 Triggers on `v*.*.*` tags. Runs lint and test, then release. Release only runs after both
@@ -190,8 +179,6 @@ jobs:
 - `id-token: write` required when the release workflow signs artifacts with cosign.
 - `secrets: inherit` passes `GITHUB_TOKEN` to the release workflow.
 
----
-
 ## Caller Workflow: main.yml
 
 Triggers on pushes to `main`. Mirrors `tag.yml` but calls `prerelease.yml` instead of
@@ -210,8 +197,8 @@ on:
       # language-specific paths (same as pr.yml)
 
 concurrency:
-  group: prerelease
-  cancel-in-progress: true
+  group: main-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -227,8 +214,6 @@ jobs:
     needs: [lint, test]
     secrets: inherit
 ```
-
----
 
 ## Prerelease Workflow: prerelease.yml
 
@@ -253,7 +238,10 @@ jobs:
       # prepare artifacts (language-specific: build, download, etc.)
 
       - name: Delete existing dev release
-        run: gh release delete dev --yes --cleanup-tag || true
+        run: |
+          if gh release view "dev" > /dev/null 2>&1; then
+            gh release delete "dev" --yes --cleanup-tag
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -268,6 +256,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-- The `|| true` on the delete step is intentional; it prevents failure when no `dev` release exists yet (first run). The tag name is always the static string `dev`, so there is no ambiguity about which release is being deleted.
+- Delete the `dev` release using an explicit existence check, not `|| true`. Using `|| true` masks real deletion failures, which allows `gh release create` to find an existing release with stale assets and fail with `already_exists`. The `if gh release view` guard fails fast only on genuine errors.
 - Release notes contain only the commit SHA. Full changelog entries are for versioned
   releases only.

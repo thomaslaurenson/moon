@@ -9,8 +9,6 @@ Conventions for Dockerfile and Docker Compose files across all projects.
 - Keep images as close to the official base as possible; avoid unnecessary packages
 - Reproducibility over convenience; every build must produce the same result
 
----
-
 ## Images
 
 ### Pinning
@@ -56,8 +54,6 @@ grafana/grafana, bitnami/postgresql
 ```
 
 Never use unverified community images.
-
----
 
 ## Dockerfile
 
@@ -206,8 +202,6 @@ Package comments are the exception; every non-obvious package always gets a comm
 ### .dockerignore
 
 A `.dockerignore` file is required when the build context contains files that must not enter the image (secrets, credentials, large generated directories, or local configuration files). It is optional but encouraged for all other service directories.
-
----
 
 ## Docker Compose
 

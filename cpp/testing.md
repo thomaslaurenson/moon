@@ -11,8 +11,6 @@ Two testing layers are used in combination:
 
 Both layers must pass before a change is considered complete. All tests are written in C++; there is no Python test layer.
 
----
-
 ## Structure
 
 ```
@@ -37,8 +35,6 @@ extern/
 - One unit test file per source file, named `test_<source>.cpp`
 - Functional tests mirror CLI subcommands or user-facing behaviour, not internal source files
 - Fixtures live in `test/fixtures/`, one header per fixture
-
----
 
 ## Catch2 Setup
 
@@ -83,8 +79,6 @@ include(Catch)
 catch_discover_tests(myapp_unit_tests)
 catch_discover_tests(myapp_functional_tests)
 ```
-
----
 
 ## Unit Tests
 
@@ -137,8 +131,6 @@ A function gets a unit test if it can be called without:
 Pure logic functions (string manipulation, maths, parsing, pattern matching) always get unit tests. Functions tightly coupled to external libraries or the filesystem are covered by functional tests instead.
 
 Every bug fix must include a unit test that reproduces the bug before the fix.
-
----
 
 ## Functional Tests
 
@@ -304,8 +296,6 @@ Run a subset during development:
 ```bash
 ./build/bin/myapp_functional_tests [create]
 ```
-
----
 
 ## Makefile Targets
 

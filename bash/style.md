@@ -6,8 +6,6 @@ Style conventions for Bash scripts and sourced files.
 
 - Never use em dash (—)
 
----
-
 ## Shebang
 
 Executable scripts must start with:
@@ -19,8 +17,6 @@ Executable scripts must start with:
 Prefer `#!/usr/bin/env bash` over `#!/bin/bash` for portability; it resolves bash from the environment rather than assuming a fixed path, which is important on macOS where `/bin/bash` is 3.2.
 
 Sourced files (`.sh` libraries) do not require a shebang line.
-
----
 
 ## Shell Options
 
@@ -38,16 +34,12 @@ set -euo pipefail
 
 Do not set `set -euo pipefail` in sourced files. Sourced files run in the caller's shell environment and applying `set -e` can cause unexpected exits in the parent shell.
 
----
-
 ## Spelling
 
 Use British English spellings:
 
 - `Initialise` not `Initialize`
 - `Colour` not `Color`
-
----
 
 ## Formatting
 
@@ -117,8 +109,6 @@ case "$cmd" in
 esac
 ```
 
----
-
 ## Naming Conventions
 
 ### Functions
@@ -170,8 +160,6 @@ readonly DEFAULT_DATA_DIR="${HOME}/.myapp"
 
 Executable scripts use no extension or a `.sh` extension. Sourced library files use a `.sh` extension and must not be executable.
 
----
-
 ## Variables and Quoting
 
 Always quote variables to prevent word splitting and glob expansion. Prefer `"${var}"` over `"$var"` for all variables except single-character shell specials:
@@ -189,8 +177,6 @@ cp $source_file $dest_dir/
 ```
 
 Use `"$@"` to forward arguments. Never use `$*` unless you specifically need all arguments joined as a single string.
-
----
 
 ## Tests and Conditionals
 
@@ -229,8 +215,6 @@ if [ "$count" -gt 0 ]; then ...
 total=$(expr "$total" + 1)
 ```
 
----
-
 ## Command Substitution
 
 Always use `$(...)` over backticks. Backticks require escaping when nested and are harder to read:
@@ -243,8 +227,6 @@ nested="$(outer "$(inner)")"
 # Bad
 result="`some_command`"
 ```
-
----
 
 ## Arrays
 
@@ -274,8 +256,6 @@ find . -name "*.txt" | while IFS= read -r line; do
 done
 ```
 
----
-
 ## Output
 
 Use `printf` instead of `echo` for all output. `echo` behaviour varies across shells and platforms, particularly with escape sequences and flags:
@@ -294,8 +274,6 @@ All error messages go to stderr:
 ```bash
 printf 'error: %s\n' "$message" >&2
 ```
-
----
 
 ## Error Handling
 
@@ -319,8 +297,6 @@ if [[ ! -f "${config}" ]]; then
   exit 1
 fi
 ```
-
----
 
 ## Function Comments
 
@@ -346,8 +322,6 @@ _resolve_item() {
 }
 ```
 
----
-
 ## Inline Comments
 
 - Start with `#` followed by a single space.
@@ -367,15 +341,11 @@ find "$data_dir" -name "*.txt" \( -type f -o -type l \)
 # --- item resolution ---
 ```
 
----
-
 ## Comment Hygiene
 
 - Do not write step narration comments that describe the next line of code. Bad: `# Loop through entries`, `# Check if file exists`
 - Preserve comments that explain why something is done, not what. Good: `# Strip trailing CR - handles CRLF files transparently`
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
-
----
 
 ## main Function
 

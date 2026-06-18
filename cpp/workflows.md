@@ -2,8 +2,6 @@
 
 Supplements `github/actions.md`. Universal rules (runners, action versions, workflow structure, caller patterns, concurrency, permissions) apply unchanged. This file covers C++-specific workflow patterns only.
 
----
-
 ## Paths Filter
 
 Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
@@ -22,8 +20,6 @@ paths:
 ```
 
 Include `extern/**` only if the project uses git submodules for dependencies.
-
----
 
 ## Build Step in Caller Workflows
 
@@ -45,8 +41,6 @@ jobs:
     secrets: inherit
 ```
 
----
-
 ## Checkout
 
 Always check out with `submodules: true`. C++ projects use git submodules for all dependencies and the build will fail without them:
@@ -58,8 +52,6 @@ Always check out with `submodules: true`. C++ projects use git submodules for al
 ```
 
 Test workflows that only run a pre-built binary artifact do not need submodules; use `submodules: false` to keep checkout fast.
-
----
 
 ## Clang Tools
 
@@ -75,8 +67,6 @@ Install clang tools via the Makefile target before running any lint step:
 ```
 
 `install_clang_tools` installs `clang-format-18` and `clang-tidy-18` at the pinned version. CMake 3.21+ ships with `ubuntu-24.04` so no CMake install step is needed.
-
----
 
 ## Reusable Workflow Bodies
 
@@ -222,8 +212,6 @@ jobs:
       - run: make fmt_check
       - run: make lint_cpp
 ```
-
----
 
 ## Changelog Extraction
 

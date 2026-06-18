@@ -62,7 +62,7 @@ Adhere to the global Makefile structure established in `tools/makefile.md`. Use 
 - `install`: `go install -ldflags="..." .`
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `release_check`: `goreleaser check`
-- `get_changelog_entry`: extract release notes for a given tag from `CHANGELOG.md`, output to stdout (used by the release workflow via `make get_changelog_entry TAG=v1.0.0 > /tmp/release-notes.md`)
+- `get_changelog`: extract release notes for a given tag from `CHANGELOG.md`, output to stdout (used by the release workflow via `make get_changelog TAG=v1.0.0 > /tmp/release-notes.md`)
 - `clean`: `rm -rf bin/ dist/`
 - `ci`: `fmt_check mod_check vet test`
 

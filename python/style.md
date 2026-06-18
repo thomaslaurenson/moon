@@ -28,8 +28,6 @@ Use British English spellings:
 - `Initialise` not `Initialize`
 - `Colour` not `Color`
 
----
-
 ## Inline Comments
 
 - Start with `#` followed by a single space.

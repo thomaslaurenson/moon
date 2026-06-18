@@ -12,8 +12,6 @@ Three tools are used in combination, each covering a different layer:
 
 All three must pass before a change is considered complete.
 
----
-
 ## Syntax Check
 
 Run `bash -n` on every script and sourced file as the first lint step. It is fast and catches parse errors before any other tool runs:
@@ -25,8 +23,6 @@ lint:
 	  && printf 'ok\n' \
 	  || { printf 'fail\n'; exit 1; }
 ```
-
----
 
 ## ShellCheck
 
@@ -51,8 +47,6 @@ printf '%s\n' $varlist
 ```
 
 Never suppress `SC2086` (unquoted variables), `SC2046` (unquoted command substitution), or `SC2048` (unquoted array expansion) without a specific, documented reason.
-
----
 
 ## Bats
 
@@ -160,8 +154,6 @@ Run the full test suite via the Makefile:
 test: ## Run bats test suite
 	test/extern/bats/bin/bats test/
 ```
-
----
 
 ## What to Test
 

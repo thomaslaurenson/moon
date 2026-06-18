@@ -33,11 +33,11 @@ Use this table to find the relevant instruction file for your task.
 | Writing or reviewing Python tests | `python/testing.md` |
 | Python GitHub Actions workflows | `python/workflows.md` |
 | Writing or reviewing C++ code | `cpp/style.md` |
-| Scaffolding a new C++ project | `cpp/scaffolding.md` |
 | Writing or reviewing C++ tests | `cpp/testing.md` |
 | C++ GitHub Actions workflows | `cpp/workflows.md` |
 | Writing or reviewing Bash code | `bash/style.md` |
 | Writing or reviewing Bash tests | `bash/testing.md` |
+| Writing or reviewing PowerShell code | `powershell/style.md` |
 | GitHub Actions workflows (generic) | `github/actions.md` |
 | README badges | `github/badges.md` |
 | CHANGELOG entries | `github/changelog.md` |
@@ -45,6 +45,9 @@ Use this table to find the relevant instruction file for your task.
 | Commit messages, branch names, and PR titles | `github/conventions.md` |
 | Writing a Makefile | `tools/makefile.md` |
 | CMake build configuration | `tools/cmake.md` |
+| clang-format configuration | `tools/clang_format.md` |
+| clang-tidy configuration | `tools/clang_tidy.md` |
+| Markdown style | `tools/markdown.md` |
 | Dockerfile and Docker Compose | `tools/docker.md` |
 | Writing or reviewing WoW 1.12 vanilla addon code | `wow/lua/vanilla.md` |
 | Scaffolding a new WoW vanilla addon project | `wow/addon/project.md` |

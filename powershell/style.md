@@ -6,8 +6,6 @@ Style conventions for PowerShell scripts (`.ps1`) and sourced files.
 
 - Never use em dash (—)
 
----
-
 ## Script Header
 
 Every script must open with the generated-file header (if applicable), then the `#Requires` directive, then preferences, in that order:
@@ -30,16 +28,12 @@ $ProgressPreference    = 'SilentlyContinue'
 - `$ErrorActionPreference = 'Stop'` makes all terminating errors propagate immediately.
 - `$ProgressPreference = 'SilentlyContinue'` suppresses the download progress bar from `Invoke-WebRequest`, which dramatically speeds up downloads in non-interactive sessions.
 
----
-
 ## Spelling
 
 Use British English spellings:
 
 - `Initialise` not `Initialize`
 - `Colour` not `Color`
-
----
 
 ## Formatting
 
@@ -74,8 +68,6 @@ $downloadUrl     = "https://..."
 $checksumsUrl    = "https://..."
 $checksumsSigUrl = "https://..."
 ```
-
----
 
 ## Naming Conventions
 
@@ -112,8 +104,6 @@ function Install-Binary {
 
 There is no `readonly` equivalent in PowerShell. Treat script-scope variables set once at the top of the script as constants by convention and prefix them with `$script:`.
 
----
-
 ## Section Comments
 
 Use a single bare label comment to introduce a section. Never use decorative dividers such as `# ===`, `# ---`, or `# ***`:
@@ -127,8 +117,6 @@ Use a single bare label comment to introduce a section. Never use decorative div
 # OUTPUT HELPERS
 # ============================================================
 ```
-
----
 
 ## Function Comments
 
@@ -168,8 +156,6 @@ function Invoke-DownloadAssets {
 
 Use `Parameters:` (not `Arguments:`), to mirror PowerShell's own `param()` keyword.
 
----
-
 ## Inline Comments
 
 - Start with `#` followed by a single space.
@@ -192,15 +178,11 @@ $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
 # Also update the current session immediately.
 ```
 
----
-
 ## Comment Hygiene
 
 - Do not write step-narration comments that describe the next line of code. Bad: `# Loop through keys`, `# Check if path exists`.
 - Preserve comments that explain why something is done, not what. Good: `# $PSCommandPath is empty when piped. Direct user to run from elevated prompt`.
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
-
----
 
 ## Error Handling
 
@@ -226,8 +208,6 @@ if (-not (Test-Path $dir)) {
 
 For cases where multiple lines must be printed before exiting (e.g. non-interactive elevation fallback), inline `Write-Host` followed by `exit 1` is acceptable.
 
----
-
 ## Output Helpers
 
 Define `Write-Info`, `Write-Warn`, `Write-Step`, and `Exit-Error` helpers at the top of every installer script and use them consistently:
@@ -244,8 +224,6 @@ Respect `$env:NO_COLOR` when set:
 ```powershell
 $script:NoColor = ($null -ne $env:NO_COLOR)
 ```
-
----
 
 ## main Function
 

@@ -139,8 +139,6 @@ The mandatory behaviour is defined by earlier sections in this file:
 - Per-target `.PHONY` declarations
 - Section separators
 
----
-
 ## GET Section
 
 All project Makefiles must include a `# GET` section. GitHub Actions workflows call these targets instead of embedding raw bash or awk scripts in workflow files.

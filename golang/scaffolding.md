@@ -57,7 +57,7 @@ Adhere to the global Makefile structure established in `tools/makefile.md`. Use 
 - `test`: `go test -race -count=1 ./...`
 - `test_verbose`: `go test -race -count=1 -v ./...`
 - `test_coverage`: `go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...`
-- `build`: `go build -ldflags="..." -o bin/<binary> .`
+- `build`: `go build -ldflags="..." -o dist/<binary> .`
 - `build_snapshot`: `goreleaser build --snapshot --clean`
 - `install`: `go install -ldflags="..." .`
 - `snapshot`: `goreleaser release --snapshot --clean`
@@ -73,3 +73,47 @@ Tests always include `-race -count=1`, including coverage runs. The binary is bu
 - Use the latest stable Go version
 - No `replace` directives in committed code
 - Run `go mod tidy` before committing
+
+## Cobra CLI Structure
+
+### Root Command
+
+The root command is defined in `cmd/root.go`. Always set `SilenceErrors` and `SilenceUsage` to prevent cobra printing errors and usage automatically; the main entrypoint handles all error output. Set `Version` on the root command so that `<binary> --version` works:
+
+```go
+var rootCmd = &cobra.Command{
+    Use:           "<binary>",
+    Short:         "Short description",
+    SilenceErrors: true,
+    SilenceUsage:  true,
+    Version:       Version,
+}
+```
+
+### Version Command
+
+Every CLI project must include a `version` subcommand defined in `cmd/version.go`. The `Version` var is declared here with a fallback of `"dev"` and injected at build time via ldflags. This is the canonical location — do not declare `Version` in `internal/`:
+
+```go
+// Version is set at build time using:
+// -ldflags "-X github.com/<owner>/<repo>/cmd.Version=...".
+// It falls back to "dev" for local builds that do not inject a value.
+var Version = "dev"
+
+var versionCmd = &cobra.Command{
+    Use:   "version",
+    Short: "Print the <binary> version",
+    Args:  cobra.NoArgs,
+    Run: func(_ *cobra.Command, _ []string) {
+        fmt.Printf("<binary> version %s\n", Version)
+    },
+}
+```
+
+If the root command uses `PersistentPreRunE` (e.g. to load config on startup), override it on the version command so `<binary> version` never triggers that logic:
+
+```go
+PersistentPreRunE: func(_ *cobra.Command, _ []string) error { return nil },
+```
+
+The ldflags injection path must match where `Version` is declared. Because `Version` lives in `cmd/version.go`, the path is `-X <module>/cmd.Version={{.Version}}`. This is the template used in both `.goreleaser.yml` and `.goreleaser.prerelease.yml`.

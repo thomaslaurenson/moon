@@ -7,7 +7,8 @@ Style conventions for all Markdown files in this repo.
 - No em dash (`—`). Rewrite using a comma, parentheses, or two sentences.
 - No smart or curly quotes (`"` `"` `'` `'`). Always use straight ASCII quotes (`"` `'`).
 - No non-ASCII characters in prose, code, or headings. This includes Unicode arrows (`→`, `←`), tick marks (`✓`, `✗`), en dashes (`–`), and any other non-ASCII glyph. Use plain ASCII equivalents or rewrite the sentence.
-- Use British English spellings. `Initialise` not `Initialize`. `Colour` not `Color`.
+- Language & Spelling: Write all natural language prose, comments, and documentation in British English (e.g., use initialise, colour, optimise, centre).
+- Language & Spelling Technical Exceptions: Retain American English strictly for proper nouns, trademarks, brand names, and existing technical identifiers. This includes database schemas/entries (e.g., game client database fields), code variables, APIs, and third-party libraries where American spelling is already established.
 
 ## Paragraphs
 

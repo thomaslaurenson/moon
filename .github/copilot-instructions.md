@@ -13,7 +13,8 @@ These rules apply to every file, every language, every task without exception.
 - No step narration comments. Never write a comment that just describes the next line of code.
   Bad: `// Open the file`, `# Loop through results`
 - Preserve comments that explain the 'why' (business logic, architecture). Aggressively delete and refactor comments that narrate the 'what' (step-by-step code narration).
-- Use British English. `initialise` not `initialize`. `colour` not `color`.
+- Language & Spelling: Write all natural language prose, comments, and documentation in British English (e.g., use initialise, colour, optimise, centre).
+- Language & Spelling Technical Exceptions: Retain American English strictly for proper nouns, trademarks, brand names, and existing technical identifiers. This includes database schemas/entries (e.g., game client database fields), code variables, APIs, and third-party libraries where American spelling is already established.
 
 ## Navigation
 

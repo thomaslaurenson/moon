@@ -92,7 +92,7 @@ var rootCmd = &cobra.Command{
 
 ### Version Command
 
-Every CLI project must include a `version` subcommand defined in `cmd/version.go`. The `Version` var is declared here with a fallback of `"dev"` and injected at build time via ldflags. This is the canonical location — do not declare `Version` in `internal/`:
+Every CLI project must include a `version` subcommand defined in `cmd/version.go`. The `Version` var is declared here with a fallback of `"dev"` and injected at build time via ldflags. This is the canonical location, do not declare `Version` in `internal/`:
 
 ```go
 // Version is set at build time using:

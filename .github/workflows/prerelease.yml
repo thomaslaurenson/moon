@@ -28,24 +28,25 @@ jobs:
 
       - uses: thomaslaurenson/gpipe-action@v1
         with:
-          # Not a real release tag: the prerelease is a rolling "dev" release, so
-          # there is no github.ref_name to fall back on. gpipe only needs a valid
-          # semver string here, not one tied to the snapshot version baked into
-          # the binaries.
-          version: "0.0.0-dev"
+          # gpipe always validates in strict mode (no --dry-run passthrough) and
+          # rejects anything but a bare v?X.Y.Z with no suffix, so the rolling
+          # prerelease can't be tagged "dev" or "X.Y.Z-dev". VERSION is also
+          # baked into install.sh's download URL, so it must equal the actual
+          # release tag below, not just look like a version.
+          version: "v0.0.0"
           cosign_sign: true
 
       - name: Delete existing dev release
         run: |
-          if gh release view dev --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release delete dev --repo "${{ github.repository }}" --yes --cleanup-tag
+          if gh release view v0.0.0 --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release delete v0.0.0 --repo "${{ github.repository }}" --yes --cleanup-tag
           fi
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Create prerelease
         run: |
-          gh release create dev \
+          gh release create v0.0.0 \
             dist/moon-* \
             install.sh install.ps1 \
             checksums.txt checksums.txt.sigstore.json \

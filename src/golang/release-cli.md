@@ -30,7 +30,7 @@ builds:
       - -s -w -X <module>/cmd.Version={{.Version}}
 ```
 
-The prerelease config is identical plus `snapshot.version_template: "{{ incpatch .Version }}-dev"` and `git.ignore_tags: ["*-dev", "dev"]`. The binary naming template maps `amd64` to `x86_64` and `arm64` to `aarch64`; the `.gpipe.yml` platform paths must match exactly.
+The prerelease config is identical plus `snapshot.version_template: "{{ incpatch .Version }}-dev"` and `git.ignore_tags` set to the rolling prerelease's own tag (see below), so that leftover tag is never picked up as "the last tag" when computing `incpatch`. The binary naming template maps `amd64` to `x86_64` and `arm64` to `aarch64`; the `.gpipe.yml` platform paths must match exactly.
 
 ## CI wiring
 
@@ -38,4 +38,6 @@ Add `.goreleaser*.yml` to the `pr.yml`/`main.yml` paths filter alongside the sha
 
 Three-step release pattern: goreleaser builds binaries (`args: build --clean`, does not publish), `gpipe-action` generates install scripts + checksums + cosign bundle, `gh release create` publishes. `fetch-depth: 0` is required in `release.yml`. Always set `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` so goreleaser does not pick up a `-dev` tag at the same commit. `id-token: write` is required on the workflow and its caller for cosign OIDC signing.
 
-Prerelease uses `goreleaser build --snapshot` with `.goreleaser.prerelease.yml`; version comes from `snapshot.version_template`, so no `GORELEASER_CURRENT_TAG` is needed. Require `fetch-depth: 0` and `fetch-tags: true`. Delete the `dev` release by exact tag name with an existence check, never `|| true`.
+Prerelease uses `goreleaser build --snapshot` with `.goreleaser.prerelease.yml`; version comes from `snapshot.version_template`, so no `GORELEASER_CURRENT_TAG` is needed. Require `fetch-depth: 0` and `fetch-tags: true`. Delete the rolling prerelease by exact tag name with an existence check, never `|| true`.
+
+`gpipe-action` always validates in strict mode (there is no `--dry-run` passthrough) and only accepts a bare `v?X.Y.Z` with no suffix; it also bakes `version` directly into `install.sh`'s download URL, so whatever is passed must equal the actual release tag. That rules out tagging the rolling prerelease `dev` or `X.Y.Z-dev`: use a fixed placeholder tag instead (e.g. `v0.0.0`), with `--title dev` on `gh release create` for a human-readable label, and match it in `git.ignore_tags` above.

@@ -1,0 +1,7 @@
+# Bash project - a maintained repo of scripts with tests and CI (e.g. an installer).
+@include bash-script
+bash/testing.md
+tools/makefile.md
+github/conventions.md
+github/changelog.md
+github/dependabot.md

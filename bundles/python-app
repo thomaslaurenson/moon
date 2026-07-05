@@ -1,0 +1,14 @@
+# Python application - full project (code rules + scaffolding + tooling + CI + repo conventions).
+@include python-app-code
+python/testing-unit.md
+tools/makefile.md
+python/make.md
+python/tooling.md
+python/project-app.md
+github/actions.md
+python/workflows.md
+github/badges.md
+python/badges.md
+github/dependabot.md
+github/conventions.md
+github/changelog.md

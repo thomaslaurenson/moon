@@ -1,0 +1,7 @@
+# World of Warcraft 1.12 vanilla addon - full reference (Lua env + project + patterns + events + frames).
+_core.md
+wow/vanilla.md
+wow/project.md
+wow/patterns.md
+wow/events.md
+wow/frames.md

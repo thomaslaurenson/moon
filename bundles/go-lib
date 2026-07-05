@@ -1,0 +1,14 @@
+# Go library - full project (code + testing + scaffolding + CI). No release binary,
+# no goreleaser: a library's release is a tagged commit, not a compiled artifact.
+@include go-lib-code
+golang/tooling.md
+golang/testing.md
+tools/makefile.md
+golang/scaffolding-lib.md
+github/actions.md
+golang/workflows.md
+github/badges.md
+golang/badges.md
+github/dependabot.md
+github/conventions.md
+github/changelog.md

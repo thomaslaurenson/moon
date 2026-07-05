@@ -1,0 +1,42 @@
+# GitHub Actions Conventions
+
+Language-agnostic CI conventions. Per-language paths filters, setup steps, and reusable workflow bodies live in the relevant language workflow fragment.
+
+- Prefer official `actions/*` before third-party alternatives. Use the `gh` CLI for releases by default (`goreleaser-action` is the only exception, Go only).
+- Create a Makefile target for a workflow step when it is useful locally, appears in more than one workflow, or contains non-trivial logic. Version and changelog extraction must always go through Makefile targets.
+- Minimal permissions: `contents: read` by default; `contents: write` only in release and prerelease workflows. Test workflows never declare `contents: write`.
+- No `fetch-depth: 0` except in release workflows where changelog extraction requires it.
+
+Pin runners; never use `-latest`. Supported: `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-14`, `macos-15`, `windows-2022`, `windows-2025`.
+
+Pin action versions; never `@latest`:
+
+| Action | Version |
+|---|---|
+| `actions/checkout` | `v6` |
+| `actions/upload-artifact` | `v6` |
+| `actions/setup-go` | `v6` |
+| `actions/setup-python` | `v5` |
+| `astral-sh/setup-uv` | `v7` |
+| `astral-sh/ruff-action` | `v3` |
+| `goreleaser/goreleaser-action` | `v7` |
+| `sigstore/cosign-installer` | `v4.1.2` |
+| `thomaslaurenson/gpipe-action` | `v1` |
+
+Use reusable workflows (`workflow_call`) for all job logic; callers compose them:
+
+```
+.github/workflows/
+  lint.yml        # reusable
+  test.yml        # reusable
+  release.yml     # reusable
+  prerelease.yml  # reusable
+  pr.yml          # caller: lint + test on PRs
+  tag.yml         # caller: lint + test + release on v* tags
+  main.yml        # caller: lint + test + prerelease on push to main
+```
+
+- `pr.yml`: concurrency group `pr-${{ github.event.pull_request.number }}`, `cancel-in-progress: true`, with a `paths:` filter (language-specific).
+- `main.yml`: concurrency group `main-${{ github.ref }}`, `cancel-in-progress: false`; `paths:` must match `pr.yml` exactly.
+- `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally.
+- No `push.yml`. Languages with a compile step before lint/test add a `build.yml` reusable workflow and `needs: build` in callers.

@@ -16,6 +16,4 @@ builds:
 snapshot:
   version_template: "{{ incpatch .Version }}-dev"
 git:
-  # v0.0.0 is the rolling prerelease's own tag (see prerelease.yml); it must not
-  # be picked up as "the last tag" when computing incpatch above.
-  ignore_tags: ["v0.0.0"]
+  ignore_tags: ["*-dev", "dev"]

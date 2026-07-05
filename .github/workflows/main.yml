@@ -10,6 +10,7 @@ on:
       - go.sum
       - Makefile
       - ".goreleaser*.yml"
+      - .gpipe.yml
 
 concurrency:
   group: main-${{ github.ref }}
@@ -25,4 +26,3 @@ jobs:
     uses: ./.github/workflows/prerelease.yml
     permissions:
       contents: write
-      id-token: write

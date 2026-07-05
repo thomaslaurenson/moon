@@ -9,6 +9,7 @@ on:
       - go.sum
       - Makefile
       - ".goreleaser*.yml"
+      - .gpipe.yml
 
 concurrency:
   group: pr-${{ github.event.pull_request.number }}

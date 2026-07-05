@@ -1,0 +1,18 @@
+binary: moon
+
+platforms:
+  linux_amd64:
+    path: ./dist/moon-linux-x86_64
+    name: moon-linux-x86_64
+  linux_arm64:
+    path: ./dist/moon-linux-aarch64
+    name: moon-linux-aarch64
+  darwin_amd64:
+    path: ./dist/moon-darwin-x86_64
+    name: moon-darwin-x86_64
+  darwin_arm64:
+    path: ./dist/moon-darwin-aarch64
+    name: moon-darwin-aarch64
+  windows_amd64:
+    path: ./dist/moon-windows-x86_64.exe
+    name: moon-windows-x86_64.exe

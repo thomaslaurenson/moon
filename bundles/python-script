@@ -1,0 +1,4 @@
+# Python one-off / throwaway script.
+# House style only: no mandated type hints, docstrings, errors, tests, or tooling.
+_core.md
+python/style.md

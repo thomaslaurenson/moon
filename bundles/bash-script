@@ -1,0 +1,3 @@
+# Bash script. Bash is script-tier only; there is deliberately no bash-app or bash-lib.
+_core.md
+bash/style.md

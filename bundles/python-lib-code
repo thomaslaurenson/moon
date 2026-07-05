@@ -1,0 +1,9 @@
+# Python library - code-authoring rules.
+# Point an agent here when writing or reviewing library code in an existing repo.
+_core.md
+python/style.md
+python/types.md
+python/docstrings.md
+python/errors.md
+python/logging-stdlib.md
+python/typecheck.md

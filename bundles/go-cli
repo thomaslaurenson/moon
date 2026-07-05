@@ -1,0 +1,15 @@
+# Go CLI application - full project (code + testing + scaffolding + release + CI).
+# Go here is CLI-tier; go-lib is the library tier (no cmd/, no release binary).
+@include go-cli-code
+golang/tooling.md
+golang/testing.md
+tools/makefile.md
+golang/scaffolding-cli.md
+github/actions.md
+golang/workflows.md
+golang/release-cli.md
+github/badges.md
+golang/badges.md
+github/dependabot.md
+github/conventions.md
+github/changelog.md

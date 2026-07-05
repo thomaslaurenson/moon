@@ -1,0 +1,3 @@
+# WoW vanilla - just the Lua 5.0 environment rules. Point an agent here when editing a single .lua file.
+_core.md
+wow/vanilla.md

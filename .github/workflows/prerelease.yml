@@ -1,0 +1,56 @@
+name: Prerelease
+
+on:
+  workflow_call:
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build binaries
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: build --snapshot --clean --config .goreleaser.prerelease.yml
+
+      - uses: thomaslaurenson/gpipe-action@v1
+        with:
+          # Not a real release tag: the prerelease is a rolling "dev" release, so
+          # there is no github.ref_name to fall back on. gpipe only needs a valid
+          # semver string here, not one tied to the snapshot version baked into
+          # the binaries.
+          version: "0.0.0-dev"
+          cosign_sign: true
+
+      - name: Delete existing dev release
+        run: |
+          if gh release view dev --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release delete dev --repo "${{ github.repository }}" --yes --cleanup-tag
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create prerelease
+        run: |
+          gh release create dev \
+            dist/moon-* \
+            install.sh install.ps1 \
+            checksums.txt checksums.txt.sigstore.json \
+            --prerelease \
+            --title dev \
+            --notes "Latest development build from main."
+        env:
+          GH_TOKEN: ${{ github.token }}

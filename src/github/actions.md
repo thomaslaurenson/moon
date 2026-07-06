@@ -9,19 +9,21 @@ Language-agnostic CI conventions. Per-language paths filters, setup steps, and r
 
 Pin runners; never use `-latest`. Supported: `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-14`, `macos-15`, `windows-2022`, `windows-2025`.
 
-Pin action versions; never `@latest`:
+Canonical action per purpose:
 
-| Action | Version |
+| Purpose | Action |
 |---|---|
-| `actions/checkout` | `v6` |
-| `actions/upload-artifact` | `v6` |
-| `actions/setup-go` | `v6` |
-| `actions/setup-python` | `v5` |
-| `astral-sh/setup-uv` | `v7` |
-| `astral-sh/ruff-action` | `v3` |
-| `goreleaser/goreleaser-action` | `v7` |
-| `sigstore/cosign-installer` | `v4.1.2` |
-| `thomaslaurenson/gpipe-action` | `v1` |
+| Checkout | `actions/checkout` |
+| Upload artefacts | `actions/upload-artifact` |
+| Go setup | `actions/setup-go` |
+| Python setup | `actions/setup-python` |
+| uv setup | `astral-sh/setup-uv` |
+| Ruff | `astral-sh/ruff-action` |
+| GoReleaser (Go only) | `goreleaser/goreleaser-action` |
+| Artifact signing | `sigstore/cosign-installer` |
+| Release pipelines | `thomaslaurenson/gpipe-action` |
+
+Pin every action to a specific version, never `@latest`; use whichever version is current at the time of authoring. Do not treat any version number that has ever appeared in this doc as the target to match - a frozen version table goes stale faster than this spec gets updated. Dependabot (see below) keeps the pin current from there.
 
 Use reusable workflows (`workflow_call`) for all job logic; callers compose them:
 

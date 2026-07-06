@@ -1,0 +1,20 @@
+# Python library that also ships a CLI entry point and/or operational scripts
+# alongside the installable package (e.g. a console script + tasks/). Same tooling
+# as python-lib; logging is owned by the package itself via structlog.
+@include python-lib-cli-code
+python/packaging.md
+python/testing-unit.md
+python/testing-integration.md
+python/coverage.md
+tools/makefile.md
+python/make.md
+python/tooling.md
+python/project-lib.md
+python/docs.md
+github/actions.md
+python/workflows.md
+github/badges.md
+python/badges.md
+github/dependabot.md
+github/conventions.md
+github/changelog.md

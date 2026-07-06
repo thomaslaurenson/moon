@@ -8,6 +8,7 @@ Language-agnostic badge principles. The per-language badge block lives in the re
 - No click-through links except package-registry badges (PyPI, etc.).
 - Coverage is a static badge, updated manually on each release.
 - Both CI badges point to `tag.yml`, reflecting the last released build.
+- The dynamic shields.io badges below (`github/actions/workflow/status`, `github/v-release`, `github/downloads`) call GitHub's unauthenticated public API and will not render for a private repository. Private repos use static badges for CI, release version, and downloads instead, updated by hand alongside the coverage badge.
 
 The CI and release rows are identical for every project. Use them as the first two groups, then append the language/quality row from the language fragment:
 

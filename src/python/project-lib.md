@@ -19,6 +19,17 @@ README.md
 
 - No `src/` layout; the package sits at the repo root.
 
+## CLI entry points (optional)
+
+A library may also ship a console script:
+
+```toml
+[project.scripts]
+mycli = "<package>.cli.__main__:main"
+```
+
+CLI code lives inside the package (e.g. `<package>/cli/`), not in `tasks/`. `tasks/` is for standalone operational scripts that are not installed or importable by consumers.
+
 Optional dependencies:
 
 ```toml

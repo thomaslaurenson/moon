@@ -23,7 +23,7 @@ docs/
   _build/            # gitignored
 ```
 
-- Theme: `furo`. Extensions: autodoc, autosummary, napoleon, viewcode, intersphinx, sphinx-autodoc-typehints, sphinx-copybutton, myst-parser.
+- Theme: `furo`. Extensions: autodoc, autosummary, viewcode, intersphinx, sphinx-autodoc-typehints, sphinx-copybutton, myst-parser. No napoleon: docstrings are native rST (see `python/docstrings.md`), and napoleon exists only to convert Google/NumPy-style docstrings, so it would be dead configuration.
 - `autosummary_generate = True`; `autosummary_ignore_module_all = True`.
 - Read version from installed package metadata via `importlib.metadata.version()`; no pyproject fallback.
 - `autodoc_mock_imports` must remain empty. If a docs build fails on a missing import, add the dependency to the `docs` extra; never mock an import.

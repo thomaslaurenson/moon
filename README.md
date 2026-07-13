@@ -15,8 +15,8 @@ moon assembles **bundles** (named recipes in `bundles/`) from markdown **fragmen
 ## Install
 
 ```sh
-make build    # produces ./moon for the current platform
-make ci       # fmt check, vet, race tests
+make build    # produces dist/moon for the current platform
+make ci       # fmt check, mod tidy check, vet, race tests, recipe validation
 ```
 
 Cross-platform release binaries are built with GoReleaser.
@@ -33,4 +33,4 @@ Run `moon help` for the full command reference, including `build`, `recipe`, and
 
 ## Editing
 
-Edit fragments in `src/` and recipes in `bundles/`, then rebuild (`make build`) to pick up changes. Run `moon check` to validate every recipe.
+Edit fragments in `src/` and recipes in `bundles/`, then rebuild (`make build`) to pick up changes. Run `moon check` (or `make ci`, which includes it) to validate every recipe before committing.

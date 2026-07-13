@@ -1,4 +1,4 @@
-# Python Tooling
+# Python tooling
 
 | Tool | Purpose |
 |---|---|
@@ -11,17 +11,14 @@ Not used: `pip`, `poetry`, `black`, `isort`, `flake8`, or any overlapping tool. 
 ```toml
 [tool.ruff]
 line-length = 100
-target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "D", "B", "C4", "SIM", "UP", "PTH", "FA", "RET"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "pep257"
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D"]
+select = ["E", "W", "F", "I", "B", "C4", "SIM", "UP", "PTH", "FA", "RET"]
 ```
+
+Do not set `target-version`; ruff infers it from `requires-python`. Setting it duplicates a fact that already lives in one place and drifts from it.
+
+Docstring linting (the `D` rule family and its pydocstyle convention) is not in this shared baseline. It belongs only to tiers that mandate docstrings; the docstrings fragment adds it. Application and script tiers, which do not require docstrings, must not enable `D` or they will fail lint on docstrings their own conventions never asked for.
 
 ```toml
 [tool.pytest.ini_options]
@@ -32,4 +29,4 @@ markers = [
 ]
 ```
 
-Never add `--cov` to `addopts`; it slows every test run and coverage is a separate step. Never put `uv`, `build`, or `twine` in optional dependency groups.
+Never add `--cov` to `addopts`; it slows every test run and coverage is a separate step. Never put `uv`, `build`, or `twine` in dependency groups or optional dependencies.

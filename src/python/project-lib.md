@@ -1,4 +1,4 @@
-# Python Library Project
+# Python library project
 
 Installable library layout:
 
@@ -30,15 +30,27 @@ mycli = "<package>.cli.__main__:main"
 
 CLI code lives inside the package (e.g. `<package>/cli/`), not in `tasks/`. `tasks/` is for standalone operational scripts that are not installed or importable by consumers.
 
-Optional dependencies:
+## Dependencies
+
+A library distinguishes two kinds of non-runtime dependency, and they live in different tables:
+
+- User-facing optional integrations go in `[project.optional-dependencies]` (extras). These are published with the package; a consumer installs them with `pip install <package>[vault]`.
+- Development tooling (tests, linters, type checker, coverage) goes in PEP 735 `[dependency-groups]`. These are local-only and never published, so they never leak into a consumer's install.
 
 ```toml
 [project.optional-dependencies]
+# published extras: optional integrations a consumer can opt into
+vault = ["hvac>=..."]
+
+[dependency-groups]
 test = ["pytest>=...", "pytest-cov>=...", "coverage>=..."]
-dev  = ["<package>[test]", "ruff>=...", "pyright>=..."]
+docs = ["sphinx>=...", "furo>=..."]
+dev  = [{ include-group = "test" }, "ruff>=...", "pyright>=..."]
 ```
 
-Add further groups for optional integrations; each pulls in only what it needs.
+- `uv sync` installs the project plus the default `dev` group (which includes `test`), so a fresh clone can run tests and lints immediately.
+- `uv sync --all-extras` additionally installs the published extras, which tests that exercise optional integrations need.
+- Add further extras for each optional integration; each pulls in only what it needs.
 
 Badges: build state, release state, release version, release downloads, Python version (from `requires-python`), test coverage (static, updated per release).
 

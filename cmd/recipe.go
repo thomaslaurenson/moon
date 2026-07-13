@@ -36,6 +36,6 @@ func (a *App) recipe(out, errw io.Writer, name string) error {
 		fmt.Fprintln(errw, "(a single fragment, not a bundle)")
 		return nil
 	default:
-		return fmt.Errorf("%s: not a known bundle or fragment", name)
+		return fmt.Errorf("%s: not a known bundle or fragment (run moon list to see bundles)", name)
 	}
 }

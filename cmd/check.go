@@ -33,7 +33,10 @@ func (a *App) check(errw io.Writer) (ok bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	names, _ := a.e.List()
+	names, err := a.e.List()
+	if err != nil {
+		return false, err
+	}
 	for _, p := range problems {
 		fmt.Fprintf(errw, "  FAIL %s\n", p)
 	}

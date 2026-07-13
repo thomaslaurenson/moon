@@ -13,7 +13,7 @@ func (a *App) newBuildCmd() *cobra.Command {
 	var out string
 	c := &cobra.Command{
 		Use:   "build [name...]",
-		Short: "Write bundles/fragments to dist/ (default: all bundles)",
+		Short: "Write bundles/fragments to dist/bundles/ (default: all bundles)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			names := args
 			if len(names) == 0 {
@@ -25,7 +25,7 @@ func (a *App) newBuildCmd() *cobra.Command {
 			return a.writeItems(cmd.ErrOrStderr(), out, names)
 		},
 	}
-	c.Flags().StringVarP(&out, "output", "o", "dist", "output directory")
+	c.Flags().StringVarP(&out, "output", "o", "dist/bundles", "output directory")
 	return c
 }
 
@@ -56,7 +56,7 @@ func (a *App) writeItems(errw io.Writer, out string, names []string) error {
 			}
 			results = append(results, result{path: n, data: data})
 		default:
-			return fmt.Errorf("%s: not a known bundle or fragment", n)
+			return fmt.Errorf("%s: not a known bundle or fragment (run moon list to see bundles)", n)
 		}
 	}
 

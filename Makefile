@@ -54,17 +54,24 @@ test_coverage: ## Run tests with a coverage report (internal/ only; cmd/ is wiri
 	@go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...
 	@go tool cover -func=coverage.out | tail -1
 
+.PHONY: check
+check: ## Validate every recipe: missing fragments, include cycles, orphans
+	@go run . check
+
 # GET
 
 .PHONY: get_changelog
 get_changelog: ## Print release notes for a tag: make get_changelog TAG=v1.2.3
 	@[[ -n "$(TAG)" ]] || { printf 'Usage: make get_changelog TAG=v1.2.3\n' >&2; exit 1; }
 	@v="$${TAG#v}"; \
-	awk -v ver="$$v" ' \
+	notes="$$(awk -v ver="$$v" ' \
 		$$0 ~ "^## " ver "( |$$)" { found=1; next } \
 		found && /^## / { exit } \
 		found { print } \
-	' CHANGELOG.md
+	' CHANGELOG.md)"; \
+	[[ -n "$$(printf '%s' "$$notes" | tr -d '[:space:]')" ]] \
+		|| { printf 'no changelog entry for %s\n' "$$TAG" >&2; exit 1; }; \
+	printf '%s\n' "$$notes"
 
 .PHONY: get_version
 get_version: ## Print the version that would be baked into the binary
@@ -73,7 +80,7 @@ get_version: ## Print the version that would be baked into the binary
 # CI
 
 .PHONY: ci
-ci: fmt_check mod_check vet test ## Run all CI checks
+ci: fmt_check mod_check vet test check ## Run all CI checks
 
 .PHONY: clean
 clean: ## Remove the binary and generated bundles

@@ -1,8 +1,8 @@
-# Docker Conventions
+# Docker conventions
 
 Conventions for Dockerfile and Docker Compose files across all projects.
 
-## Design Principles
+## Design principles
 
 - Every service is built from a Dockerfile; never reference images directly in Compose
 - Images are always pinned to a specific version; never use `latest` or untagged images
@@ -37,7 +37,8 @@ Select the base image in this order:
 4. **Language-specific Alpine variants**: e.g. `python:3.12-alpine`, `golang:1.22-alpine` where the official image provides an Alpine base.
 
 ```dockerfile
-# Deviating from Alpine - numpy requires glibc which is incompatible with musl
+# Deviating from Alpine - a native dependency ships no musllinux wheel, so Alpine
+# would force a slow from-source build; use the glibc slim image instead
 FROM python:3.12-slim
 ```
 
@@ -159,6 +160,8 @@ Every Dockerfile must define a `HEALTHCHECK`. Use these standard defaults unless
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD <check command>
 ```
+
+This rule does not apply to `scratch`-based runtime images: there is no shell or userland for a check command to run in. A statically linked binary on `scratch` cannot host a `HEALTHCHECK`; rely on orchestrator-level probes (Kubernetes liveness/readiness, Compose `healthcheck` on a wrapping service) instead.
 
 Choose the check command appropriate to the service:
 

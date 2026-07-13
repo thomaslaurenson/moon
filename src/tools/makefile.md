@@ -1,4 +1,4 @@
-# Makefile Conventions
+# Makefile conventions
 
 Language-agnostic Makefile conventions. Language-specific targets live in the relevant language fragment.
 

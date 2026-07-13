@@ -1,4 +1,4 @@
-# Go Tooling
+# Go tooling
 
 No third-party linters or formatters. Do not use `golangci-lint` or `govulncheck` under any circumstances.
 

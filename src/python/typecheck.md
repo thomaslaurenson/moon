@@ -1,4 +1,4 @@
-# Python Type Checking
+# Python type checking
 
 All library projects include pyright.
 

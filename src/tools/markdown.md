@@ -1,4 +1,4 @@
-# Markdown Style
+# Markdown style
 
 Markdown-specific style for all `.md` files. Assumes the core conventions (characters, spelling, comment rules).
 

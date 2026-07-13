@@ -1,4 +1,4 @@
-# GitHub Actions Conventions
+# GitHub Actions conventions
 
 Language-agnostic CI conventions. Per-language paths filters, setup steps, and reusable workflow bodies live in the relevant language workflow fragment.
 

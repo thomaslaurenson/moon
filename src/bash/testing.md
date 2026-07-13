@@ -1,4 +1,4 @@
-# Bash Testing Standards
+# Bash testing standards
 
 Standards and conventions for testing Bash scripts and sourced files.
 
@@ -12,7 +12,7 @@ Three tools are used in combination, each covering a different layer:
 
 All three must pass before a change is considered complete.
 
-## Syntax Check
+## Syntax check
 
 Run `bash -n` on every script and sourced file as the first lint step. It is fast and catches parse errors before any other tool runs:
 
@@ -155,7 +155,7 @@ test: ## Run bats test suite
 	test/extern/bats/bin/bats test/
 ```
 
-## What to Test
+## What to test
 
 - Every subcommand or public function has at least one happy-path test
 - Every error path has a test that asserts the non-zero exit status and relevant error message content

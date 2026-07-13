@@ -1,4 +1,4 @@
-# Python Badge Row
+# Python badge row
 
 ```markdown
 ![Python Version](https://img.shields.io/pypi/pyversions/{package}?logo=python) ![Code Coverage](https://img.shields.io/badge/Coverage-XX%25-blue?logo=python)

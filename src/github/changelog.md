@@ -1,4 +1,4 @@
-# Changelog Format
+# Changelog format
 
 - Source content from the PR description and recent commits; do not invent entries.
 - One bullet per logical change; imperative voice ("Add support for X"), no trailing period, no inline code.

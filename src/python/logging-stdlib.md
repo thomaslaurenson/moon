@@ -1,4 +1,4 @@
-# Python Logging (library)
+# Python logging (library)
 
 Use the standard library `logging` module. Never use `print()`. Do not add `structlog` or any third-party logging library; a library must not force logging configuration on its consumers.
 

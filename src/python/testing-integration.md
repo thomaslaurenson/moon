@@ -1,4 +1,4 @@
-# Python Integration Testing
+# Python integration testing
 
 - Require a real environment: live files, credentials, or external services.
 - Always marked `@pytest.mark.integration`, applied at class or function level.

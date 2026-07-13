@@ -1,4 +1,4 @@
-# Go Testing
+# Go testing
 
 - Always run tests with `-race -count=1` (enforced via `make test`).
 - No third-party test frameworks; use the standard `testing` package only.

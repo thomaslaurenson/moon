@@ -1,4 +1,4 @@
-# Python Type Hints
+# Python type hints
 
 - All function and method signatures include type hints, parameters and return types.
 - Class attributes are annotated.

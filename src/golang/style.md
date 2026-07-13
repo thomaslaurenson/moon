@@ -1,4 +1,4 @@
-# Go Style
+# Go style
 
 Go-specific style. Assumes the core conventions.
 

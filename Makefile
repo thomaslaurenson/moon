@@ -5,7 +5,6 @@ VERSION := $(shell git describe --tags --always 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X github.com/thomaslaurenson/moon/cmd.Version=$(VERSION)
 
 # BUILD
-
 .PHONY: help
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -25,7 +24,6 @@ snapshot: ## Build a full local snapshot release with goreleaser (no publish)
 	@goreleaser release --snapshot --clean
 
 # LINT
-
 .PHONY: fmt
 fmt: ## Format all Go source
 	@gofmt -w .
@@ -44,7 +42,6 @@ vet: ## Run go vet
 	@go vet ./...
 
 # TEST
-
 .PHONY: test
 test: ## Run tests with the race detector
 	@go test -race -count=1 ./...
@@ -59,7 +56,6 @@ check: ## Validate every recipe: missing fragments, include cycles, orphans
 	@go run . check
 
 # GET
-
 .PHONY: get_changelog
 get_changelog: ## Print release notes for a tag: make get_changelog TAG=v1.2.3
 	@[[ -n "$(TAG)" ]] || { printf 'Usage: make get_changelog TAG=v1.2.3\n' >&2; exit 1; }
@@ -78,7 +74,6 @@ get_version: ## Print the version that would be baked into the binary
 	@echo "$(VERSION)"
 
 # CI
-
 .PHONY: ci
 ci: fmt_check mod_check vet test check ## Run all CI checks
 

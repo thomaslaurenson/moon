@@ -24,7 +24,7 @@ func (a *App) newInitCmd() *cobra.Command {
 			return a.runInit(cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], args[1:], dir, force, dryRun)
 		},
 	}
-	c.Flags().StringVarP(&dir, "C", "C", ".", "target directory")
+	c.Flags().StringVarP(&dir, "directory", "C", ".", "target directory")
 	c.Flags().BoolVar(&force, "force", false, "overwrite existing files")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "list files that would be written, without writing them")
 	return c
@@ -39,12 +39,27 @@ func (a *App) runInit(out, errw io.Writer, targetName string, bundleNames []stri
 		return fmt.Errorf("%s is not inside a git repository (no .git found); moon init requires one", root)
 	}
 
-	resolved, err := a.resolveInitBundles(root, targetName, bundleNames)
+	matches, err := a.resolveInitMatches(root, targetName, bundleNames)
 	if err != nil {
 		return err
 	}
 
-	files, err := target.Plan(targetName, resolved)
+	names := make([]string, len(matches))
+	bundles := make([]target.Bundle, len(matches))
+	for i, m := range matches {
+		data, err := a.e.Assemble(m.Bundle)
+		if err != nil {
+			return err
+		}
+		names[i] = m.Bundle
+		bundles[i] = target.Bundle{Name: m.Bundle, Content: data, Glob: m.Glob}
+	}
+	combined, err := a.e.AssembleMany(names)
+	if err != nil {
+		return err
+	}
+
+	files, err := target.Plan(targetName, bundles, combined)
 	if err != nil {
 		return err
 	}
@@ -82,37 +97,31 @@ func (a *App) runInit(out, errw io.Writer, targetName string, bundleNames []stri
 	return nil
 }
 
-// resolveInitBundles assembles the bundles an init run should use: explicit names
-// if given (skipping detection entirely), otherwise language detection against
-// the target directory's contents.
-func (a *App) resolveInitBundles(root, targetName string, bundleNames []string) ([]target.Bundle, error) {
-	var matches []detect.Match
+// resolveInitMatches determines which bundles an init run should use: explicit
+// names if given (skipping detection entirely), otherwise language detection against
+// the target directory's contents. It returns matches (bundle name + applyTo glob);
+// the caller assembles their content.
+func (a *App) resolveInitMatches(root, targetName string, bundleNames []string) ([]detect.Match, error) {
 	if len(bundleNames) > 0 {
+		matches := make([]detect.Match, 0, len(bundleNames))
 		for _, name := range bundleNames {
+			if !a.e.HasBundle(name) {
+				return nil, fmt.Errorf("%s: not a known bundle (run moon list to see bundles)", name)
+			}
 			matches = append(matches, detect.Match{Bundle: name, Glob: target.GlobForBundle(name)})
 		}
-	} else {
-		detected, err := detect.Detect(os.DirFS(root))
-		if err != nil {
-			return nil, fmt.Errorf("detecting project languages: %w", err)
-		}
-		if len(detected) == 0 {
-			return nil, fmt.Errorf(
-				"could not detect a language in %s; pass bundle names explicitly, e.g. moon init %s python-lib",
-				root, targetName)
-		}
-		matches = detected
+		return matches, nil
 	}
-
-	resolved := make([]target.Bundle, 0, len(matches))
-	for _, m := range matches {
-		data, err := a.e.Assemble(m.Bundle)
-		if err != nil {
-			return nil, err
-		}
-		resolved = append(resolved, target.Bundle{Name: m.Bundle, Content: data, Glob: m.Glob})
+	detected, err := detect.Detect(os.DirFS(root))
+	if err != nil {
+		return nil, fmt.Errorf("detecting project languages: %w", err)
 	}
-	return resolved, nil
+	if len(detected) == 0 {
+		return nil, fmt.Errorf(
+			"could not detect a language in %s; pass bundle names explicitly, e.g. moon init %s python-lib",
+			root, targetName)
+	}
+	return detected, nil
 }
 
 // insideGitRepo reports whether dir or one of its ancestors contains a .git

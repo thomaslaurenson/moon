@@ -19,9 +19,19 @@ func TestDetect(t *testing.T) {
 			wantBundles: []string{"go-cli"},
 		},
 		{
-			name:        "python project with pyproject prefers app tier over script",
-			fsys:        fstest.MapFS{"pyproject.toml": {}, "pkg/__init__.py": {}},
+			name:        "pyproject without build-system is an app (not installable)",
+			fsys:        fstest.MapFS{"pyproject.toml": {Data: []byte("[project]\nname = \"x\"\n")}, "tasks/run.py": {}},
 			wantBundles: []string{"python-app"},
+		},
+		{
+			name:        "pyproject with build-system is a library",
+			fsys:        fstest.MapFS{"pyproject.toml": {Data: []byte("[project]\nname = \"x\"\n\n[build-system]\nrequires = [\"hatchling\"]\n")}, "pkg/__init__.py": {}},
+			wantBundles: []string{"python-lib"},
+		},
+		{
+			name:        "pyproject with build-system and scripts is a lib-cli",
+			fsys:        fstest.MapFS{"pyproject.toml": {Data: []byte("[project]\nname = \"x\"\n\n[project.scripts]\nmycli = \"x:main\"\n\n[build-system]\nrequires = [\"hatchling\"]\n")}, "pkg/__init__.py": {}},
+			wantBundles: []string{"python-lib-cli"},
 		},
 		{
 			name:        "loose python script with no pyproject",

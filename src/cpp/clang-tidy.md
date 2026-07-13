@@ -1,8 +1,8 @@
-# clang-tidy Conventions
+# clang-tidy conventions
 
 Configuration and usage conventions for clang-tidy across all C++ projects.
 
-## Design Principles
+## Design principles
 
 - clang-tidy is a static analyser and naming enforcer, not a style formatter. Formatting is clang-format's job.
 - Every enabled check must earn its place: it should catch real issues in project code, not just fire on third-party headers

@@ -1,4 +1,4 @@
-# Python Sphinx Documentation
+# Python Sphinx documentation
 
 Any installable library package gets a `docs/` directory and Sphinx setup. Scripts-only projects do not require Sphinx.
 

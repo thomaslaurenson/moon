@@ -1,8 +1,6 @@
-# C++ Testing Standards
+# C++ testing standards
 
-Standards and conventions for testing C++ projects. Universal to both applications
-and libraries; the subprocess/functional testing layer that applications add on top
-lives in the testing-functional fragment.
+Standards and conventions for testing C++ projects. Universal to both applications and libraries; the subprocess/functional testing layer that applications add on top lives in the testing-functional fragment.
 
 ## Structure
 
@@ -20,7 +18,7 @@ extern/
 - One unit test file per source file, named `test_<source>.cpp`
 - Fixtures live in `test/fixtures/`, one header per fixture
 
-## Catch2 Setup
+## Catch2 setup
 
 Pin Catch2 as a git submodule under `extern/Catch2` so the version is controlled and no system install is required:
 
@@ -33,7 +31,7 @@ Catch2 v3 is not a single-header library; it is a compiled library with multiple
 
 The CMake wiring (the `BUILD_TESTING` option) is defined in the CMake fragment; the test executable's own definition (linking application source directly, or the library target) is defined in the cmake-app or cmake-lib fragment.
 
-## Unit Tests
+## Unit tests
 
 ### Test structure
 
@@ -85,7 +83,7 @@ Pure logic functions (string manipulation, maths, parsing, pattern matching) alw
 
 Every bug fix must include a unit test that reproduces the bug before the fix.
 
-## Makefile Targets
+## Makefile targets
 
 ```makefile
 .PHONY: test_unit

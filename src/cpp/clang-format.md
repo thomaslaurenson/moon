@@ -1,8 +1,8 @@
-# clang-format Conventions
+# clang-format conventions
 
 Configuration and usage conventions for clang-format across all C++ projects.
 
-## Design Principles
+## Design principles
 
 - clang-format is a formatter, not a style analyser. It enforces layout only; naming and code quality are clang-tidy's job.
 - The project `.clang-format` is the single source of truth; never override it with command-line flags
@@ -43,15 +43,15 @@ IncludeCategories:
 
 ### What each override does
 
-**`IndentWidth: 4`** -- LLVM default is `2`. Four spaces is more readable at the nesting depths typical in this codebase.
+**`IndentWidth: 4`**. The LLVM default is `2`. Four spaces is more readable at the nesting depths typical in this codebase.
 
-**`ColumnLimit: 100`** -- LLVM default is `80`. A hundred-column limit avoids wrapping long API call chains while still preventing runaway line lengths.
+**`ColumnLimit: 100`**. The LLVM default is `80`. A hundred-column limit avoids wrapping long API call chains while still preventing runaway line lengths.
 
-**`AccessModifierOffset: -4`** -- LLVM default is `-2`. Must equal `-IndentWidth` so that `public:` and `private:` labels sit flush with the enclosing class body, not indented relative to it.
+**`AccessModifierOffset: -4`**. The LLVM default is `-2`. Must equal `-IndentWidth` so that `public:` and `private:` labels sit flush with the enclosing class body, not indented relative to it.
 
-**`AllowShortFunctionsOnASingleLine: InlineOnly`** -- LLVM default is `All`. Restricts single-line functions to trivial getters defined inside the class body. Standalone function definitions always get their own line.
+**`AllowShortFunctionsOnASingleLine: InlineOnly`**. The LLVM default is `All`. Restricts single-line functions to trivial getters defined inside the class body. Standalone function definitions always get their own line.
 
-**`IncludeBlocks: Regroup`** -- LLVM default is `Preserve`. Enforces the three-tier include ordering defined below.
+**`IncludeBlocks: Regroup`**. The LLVM default is `Preserve`. Enforces the three-tier include ordering defined below.
 
 ### Settings that need no override
 
@@ -59,11 +59,11 @@ These are already the LLVM defaults and must not be added as overrides:
 
 | Setting | LLVM default |
 |---|---|
-| `PointerAlignment` | `Right` -- `int *p`, not `int* p` |
-| `BreakBeforeBraces` | `Attach` -- opening brace on same line |
-| `IndentCaseLabels` | `false` -- `case:` labels at switch level, not indented |
-| `Cpp11BracedListStyle` | `true` -- no spaces inside `{}` initialisers |
-| `DerivePointerAlignment` | `false` -- never auto-detect from existing code |
+| `PointerAlignment` | `Right`: `int *p`, not `int* p` |
+| `BreakBeforeBraces` | `Attach`: opening brace on same line |
+| `IndentCaseLabels` | `false`: `case:` labels at switch level, not indented |
+| `Cpp11BracedListStyle` | `true`: no spaces inside `{}` initialisers |
+| `DerivePointerAlignment` | `false`: never auto-detect from existing code |
 
 ## Include ordering
 

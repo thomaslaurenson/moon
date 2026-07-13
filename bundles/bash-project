@@ -2,6 +2,8 @@
 @include bash-script
 bash/testing.md
 tools/makefile.md
+github/actions.md
+bash/workflows.md
 github/conventions.md
 github/changelog.md
 github/dependabot.md

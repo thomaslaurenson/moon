@@ -2,10 +2,12 @@
 // marker files (go.mod, pyproject.toml, and so on). Detection only ever picks a
 // bundle's default tier; callers that want a different tier (or a bundle detect
 // can't infer) should pass bundle names explicitly instead of relying on this
-// package. Go and C++ additionally distinguish an application from a library
-// tier using a single cheap structural signal each (a main.go anywhere, or a
-// root-level include/ directory); this is a heuristic; when it's wrong, an
-// explicit bundle name always wins.
+// package. Go, C++, and Python each distinguish application from library tiers
+// using a single cheap structural signal: a main.go anywhere (Go binary), a
+// root-level include/ directory (C++ library), or a [build-system] table in
+// pyproject.toml (installable Python package, optionally with [project.scripts]
+// for a console script). These are heuristics; when one is wrong, an explicit
+// bundle name always wins.
 package detect
 
 import (
@@ -32,6 +34,8 @@ type presence struct {
 	goMod, cmakeLists, toc, ps1, pyproject, py, sh bool
 	mainGo                                         bool // a main.go anywhere suggests a Go binary, not a library
 	includeDir                                     bool // an include/ dir at the root is this repo's C++ library marker
+	pyBuildSystem                                  bool // pyproject.toml has [build-system] -> installable package (library)
+	pyScripts                                      bool // pyproject.toml has [project.scripts] -> ships a console script
 }
 
 // Detect walks fsys (rooted at a project directory) and returns the bundles
@@ -66,6 +70,7 @@ func Detect(fsys fs.FS) ([]Match, error) {
 			p.ps1 = true
 		case name == "pyproject.toml":
 			p.pyproject = true
+			readPyprojectTables(fsys, path, &p)
 		case strings.HasSuffix(name, ".py"):
 			p.py = true
 		case strings.HasSuffix(name, ".sh"):
@@ -108,7 +113,18 @@ func Detect(fsys fs.FS) ([]Match, error) {
 	}
 	switch {
 	case p.pyproject:
-		add("python-app")
+		// [build-system] means the project is an installable package (uv treats
+		// build-system presence as the package signal), i.e. a library. A library
+		// that also declares [project.scripts] ships a console script -> lib-cli.
+		// No build-system means a non-installable scripts project -> app.
+		switch {
+		case p.pyBuildSystem && p.pyScripts:
+			add("python-lib-cli")
+		case p.pyBuildSystem:
+			add("python-lib")
+		default:
+			add("python-app")
+		}
 	case p.py:
 		add("python-script")
 	}
@@ -116,4 +132,24 @@ func Detect(fsys fs.FS) ([]Match, error) {
 		add("bash-script")
 	}
 	return matches, nil
+}
+
+// readPyprojectTables reads a pyproject.toml and records whether it declares a
+// [build-system] table (installable package) and a [project.scripts] table
+// (console script). It scans for the literal table headers rather than parsing
+// TOML: a cheap structural signal, consistent with the rest of detection, and it
+// fails soft (an unreadable file simply leaves both flags false).
+func readPyprojectTables(fsys fs.FS, path string, p *presence) {
+	data, err := fs.ReadFile(fsys, path)
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		switch strings.TrimSpace(line) {
+		case "[build-system]":
+			p.pyBuildSystem = true
+		case "[project.scripts]":
+			p.pyScripts = true
+		}
+	}
 }

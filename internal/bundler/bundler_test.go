@@ -181,3 +181,74 @@ func TestFragment(t *testing.T) {
 		t.Errorf("Fragment(ghost) error = %v, want errors.Is(_, ErrMissingFragment)", err)
 	}
 }
+
+func TestAssembleManyDedup(t *testing.T) {
+	t.Parallel()
+	e := New(testFS())
+	// py-code -> _core.md, python/style.md ; py-app -> (via include) same base + python/types.md
+	out, err := e.AssembleMany([]string{"py-code", "py-app"})
+	if err != nil {
+		t.Fatalf("AssembleMany: %v", err)
+	}
+	s := string(out)
+	if n := strings.Count(s, "# Core"); n != 1 {
+		t.Errorf("_core.md emitted %d times, want 1 (dedup across bundles failed)", n)
+	}
+	if n := strings.Count(s, "# Types"); n != 1 {
+		t.Errorf("python/types.md emitted %d times, want 1", n)
+	}
+	if !strings.Contains(s, "bundles/py-code, py-app") {
+		t.Errorf("multi-bundle header missing both names:\n%s", s)
+	}
+}
+
+func TestAssembleEmitsBoundaryComments(t *testing.T) {
+	t.Parallel()
+	e := New(testFS())
+	out, err := e.Assemble("py-app")
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	s := string(out)
+	for _, want := range []string{"<!-- src/_core.md -->", "<!-- src/python/style.md -->", "<!-- src/python/types.md -->"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing provenance comment %q", want)
+		}
+	}
+	if strings.Contains(s, "\n\n\n") {
+		t.Errorf("assembled output has a blank-line run longer than one:\n%s", s)
+	}
+}
+
+func TestResolveRejectsUnknownDirective(t *testing.T) {
+	t.Parallel()
+	fsys := fstest.MapFS{
+		"src/_core.md": {Data: []byte("# Core\n")},
+		"bundles/typo": {Data: []byte("@includes _core.md\n")},
+	}
+	e := New(fsys)
+	if _, err := e.Recipe("typo"); err == nil || !strings.Contains(err.Error(), "unknown directive") {
+		t.Fatalf("Recipe(typo) error = %v, want an 'unknown directive' error", err)
+	}
+}
+
+func TestAssembleDedupDiamond(t *testing.T) {
+	t.Parallel()
+	fsys := fstest.MapFS{
+		"src/_core.md":    {Data: []byte("# Core\n")},
+		"src/a.md":        {Data: []byte("# A\n")},
+		"src/b.md":        {Data: []byte("# B\n")},
+		"bundles/base":    {Data: []byte("_core.md\n")},
+		"bundles/left":    {Data: []byte("@include base\na.md\n")},
+		"bundles/right":   {Data: []byte("@include base\nb.md\n")},
+		"bundles/diamond": {Data: []byte("@include left\n@include right\n")},
+	}
+	e := New(fsys)
+	out, err := e.Assemble("diamond")
+	if err != nil {
+		t.Fatalf("Assemble(diamond): %v", err)
+	}
+	if n := strings.Count(string(out), "# Core"); n != 1 {
+		t.Errorf("diamond include emitted _core.md %d times, want 1", n)
+	}
+}

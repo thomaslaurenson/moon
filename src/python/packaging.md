@@ -1,4 +1,4 @@
-# Python Packaging
+# Python packaging
 
 ## `__init__.py`
 

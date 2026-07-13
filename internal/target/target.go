@@ -30,31 +30,20 @@ func Names() []string {
 	return []string{"agents", "claude", "copilot"}
 }
 
-// Plan computes the files a target would write for the given bundles.
-func Plan(name string, bundles []Bundle) ([]PlannedFile, error) {
+// Plan computes the files a target would write. combined is the dedup-merged
+// content of all selected bundles (used by the single-file targets); bundles carries
+// per-bundle content and globs (used by copilot, whose files are scoped per bundle).
+func Plan(name string, bundles []Bundle, combined []byte) ([]PlannedFile, error) {
 	switch name {
 	case "claude":
-		return planSingleFile("CLAUDE.md", bundles), nil
+		return []PlannedFile{{Path: "CLAUDE.md", Content: combined}}, nil
 	case "agents":
-		return planSingleFile("AGENTS.md", bundles), nil
+		return []PlannedFile{{Path: "AGENTS.md", Content: combined}}, nil
 	case "copilot":
 		return planCopilot(bundles), nil
 	default:
 		return nil, fmt.Errorf("unknown init target: %s (known: %s)", name, strings.Join(Names(), ", "))
 	}
-}
-
-// planSingleFile concatenates every bundle into one always-on instructions file,
-// the convention used by CLAUDE.md and AGENTS.md.
-func planSingleFile(filename string, bundles []Bundle) []PlannedFile {
-	var buf bytes.Buffer
-	for i, b := range bundles {
-		if i > 0 {
-			buf.WriteByte('\n')
-		}
-		buf.Write(b.Content)
-	}
-	return []PlannedFile{{Path: filename, Content: buf.Bytes()}}
 }
 
 // planCopilot writes one path-specific instructions file per bundle under

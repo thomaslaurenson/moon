@@ -1,13 +1,14 @@
-# C++ Application Workflows
+# C++ application workflows
 
-Applies only to applications that ship a distributable binary. A library builds
-and tests in one plain job instead; see workflows-lib.md.
+Applies only to applications that ship a distributable binary. A library builds and tests in one plain job instead; see workflows-lib.md.
+
+`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
 
 ## Paths filter addition
 
 Add `Dockerfile*` to the shared paths filter (see cpp/workflows.md).
 
-## Build Step in Caller Workflows
+## Build step in caller workflows
 
 Applications add a `build.yml` reusable workflow that compiles release binaries before lint and test can run. Callers must add a `build` job and `needs: build` on `lint` and `test`:
 
@@ -24,10 +25,13 @@ jobs:
   release:                              # tag.yml only
     uses: ./.github/workflows/release.yml
     needs: [build, lint, test]
-    secrets: inherit
+    permissions:
+      contents: write
 ```
 
-## Reusable Workflow Bodies
+No `secrets: inherit`: every job here authenticates with the automatic `github.token`, so nothing needs to be forwarded. Add `secrets: inherit` only if a workflow genuinely reads a repository secret.
+
+## Reusable workflow bodies
 
 ### `build.yml`
 
@@ -67,7 +71,7 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@vN
         with:
           submodules: true
 
@@ -85,7 +89,7 @@ jobs:
           docker rm $CONTAINER_ID
 
       - name: Upload binary as artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@vN
         with:
           name: myapp-linux-${{ matrix.arch }}-${{ matrix.libc }}
           path: myapp-linux-${{ matrix.arch }}-${{ matrix.libc }}
@@ -94,7 +98,9 @@ jobs:
 
 ### `test.yml`
 
-Downloads the pre-built artifact and runs tests against it. Never rebuilds from source. Submodules are not needed.
+Runs the test suite against the release binary produced by `build.yml`. The application binary under test is the downloaded release artifact, not a fresh local build; the test binaries themselves are compiled on the runner, because the artifact contains only the shipped executable, not the Catch2 test executables.
+
+The functional tests spawn the release binary as a subprocess, so its path is injected at configure time via `MYAPP_BINARY_PATH_OVERRIDE` (see cmake-app.md). Check out with submodules: the test binaries link Catch2 and `subprocess.h`, which are submodules. Each amd64 variant runs on the amd64 runner (a static musl binary runs fine on a glibc host); arm64 variants run on the arm64 runner.
 
 ```yaml
 name: Test
@@ -125,21 +131,72 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@vN
         with:
-          submodules: false
+          submodules: true
 
-      - name: Download binary (${{ matrix.arch }} ${{ matrix.libc }})
-        uses: actions/download-artifact@v6
+      - name: Install clang tools
+        run: make install_clang_tools
+
+      - name: Download release binary (${{ matrix.arch }} ${{ matrix.libc }})
+        uses: actions/download-artifact@vN
         with:
           name: myapp-linux-${{ matrix.arch }}-${{ matrix.libc }}
-          path: build/bin
+          path: artifact
 
-      - name: Make binary executable
-        run: chmod +x build/bin/myapp-linux-${{ matrix.arch }}-${{ matrix.libc }}
+      - name: Stage downloaded binary
+        run: |
+          mv artifact/myapp-linux-${{ matrix.arch }}-${{ matrix.libc }} ./myapp-under-test
+          chmod +x ./myapp-under-test
 
-      - name: Rename binary
-        run: mv build/bin/myapp-linux-${{ matrix.arch }}-${{ matrix.libc }} build/bin/myapp
+      - name: Configure with the release binary as the functional-test target
+        run: make configure CMAKE_ARGS="-DMYAPP_BINARY_PATH_OVERRIDE=${{ github.workspace }}/myapp-under-test"
+
+      - name: Build test binaries
+        run: make build
 
       - run: make test
+```
+
+### `release.yml`
+
+Publishes a GitHub release: downloads every build artifact, generates checksums, and creates the release with changelog notes. Signing is intentionally not part of the C++ flow (the cosign/gpipe pipeline is Go-only per the GitHub Actions fragment); if artifact signing is later required, mirror the Go three-step release pattern.
+
+```yaml
+name: Release
+
+on:
+  workflow_call
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          fetch-depth: 0
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@vN
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: cd dist && sha256sum myapp-* > checksums.txt
+
+      - name: Extract release notes from CHANGELOG.md
+        run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
+
+      - name: Create release
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/myapp-* dist/checksums.txt \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file /tmp/release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
 ```

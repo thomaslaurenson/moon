@@ -1,4 +1,4 @@
-# PowerShell Style
+# PowerShell style
 
 PowerShell-specific style for `.ps1` scripts and sourced files. Assumes the core conventions.
 

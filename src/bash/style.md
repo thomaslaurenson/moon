@@ -1,4 +1,4 @@
-# Bash Style
+# Bash style
 
 Bash-specific style. Assumes the core conventions.
 

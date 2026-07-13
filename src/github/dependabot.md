@@ -1,6 +1,6 @@
 # Dependabot
 
-File `.github/dependabot.yml`. Replace `<username>` with the repo owner and `<ecosystem>` with the language ecosystem (`gomod` for Go, `pip` for Python).
+File `.github/dependabot.yml`. Replace `<username>` with the repo owner and `<ecosystem>` with the language ecosystem (`gomod` for Go, `uv` for a uv-managed Python project).
 
 ```yaml
 version: 2
@@ -26,6 +26,7 @@ updates:
 ```
 
 - GitHub Actions: weekly bumps. Language packages: weekly, dev dependencies grouped into a single PR.
+- For Python, use `uv`, not `pip`: the `uv` ecosystem reads both `pyproject.toml` and `uv.lock`, so bumps regenerate the lockfile and CI stays green. The `pip` ecosystem updates `pyproject.toml` but leaves `uv.lock` stale. Use `pip` only for a legacy non-uv Python project.
 
 ## Security-only alternative
 

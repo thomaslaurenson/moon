@@ -67,6 +67,6 @@ func (a *App) resolveContent(name string) ([]byte, error) {
 	case a.e.HasFragment(name):
 		return a.e.Fragment(name)
 	default:
-		return nil, fmt.Errorf("%s: not a known bundle or fragment", name)
+		return nil, fmt.Errorf("%s: not a known bundle or fragment (run moon list to see bundles)", name)
 	}
 }

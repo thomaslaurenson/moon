@@ -1,12 +1,14 @@
-# Core Conventions
+# Core conventions
 
 These rules apply to every file, every language, every task.
 
+These instructions are assembled from general fragments followed by more specific ones. Where a later, more specific section conflicts with an earlier, general one, the later section wins. For example, a language fragment that narrows or overrides a general CI or tooling rule takes precedence over the shared rule it refines.
+
 ## Characters
 
-- No em dash (`-`). Rewrite using a comma, parentheses, or two sentences.
+- No em dash (U+2014) or en dash (U+2013). Rewrite using a comma, parentheses, or two sentences. A plain ASCII hyphen-minus is fine.
 - No smart or curly quotes. Always use straight ASCII quotes (`"` `'`).
-- No non-ASCII characters in code, comments, or prose. This includes Unicode arrows (use `->` and `<-`), tick and cross marks (use `yes`/`no`), en dashes, and decorative glyphs. Use plain ASCII or rewrite the sentence.
+- No non-ASCII characters in code, comments, or prose. This includes Unicode arrows (use `->` and `<-`), tick and cross marks (use `yes`/`no`), en dashes, and decorative glyphs. Use plain ASCII or rewrite the sentence. Exception: user-facing localised string values (translations shown to end users) use the target language's correct characters; the ban is on non-ASCII in the code and prose around them, not on the translated text itself.
 - No decorative dividers in code or comments (`// ---`, `// ===`, `# ---`, `# ===`, or similar). Delete them.
 
 ## Comments

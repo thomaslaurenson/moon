@@ -1,4 +1,4 @@
-# Go CLI Release Process
+# Go CLI release process
 
 How a CLI project builds and publishes release binaries. Applies only to projects that ship a compiled binary; a pure library has no equivalent (see the library scaffolding fragment).
 

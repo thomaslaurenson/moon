@@ -12,12 +12,17 @@ func TestGlobForBundle(t *testing.T) {
 		want   string
 	}{
 		{"python-script", "**/*.py"},
-		{"python-lib", "**/*.py"},
-		{"go-cli", "**/*.go"},
-		{"cpp-app", "**/*.{cpp,cc,h,hpp}"},
+		{"python-lib-code", "**/*.py"},
+		{"python-lib", "**"},
+		{"go-cli", "**"},
+		{"go-lib-code", "**/*.go"},
+		{"cpp-app", "**"},
+		{"cpp-app-code", "**/*.{cpp,cc,h,hpp}"},
 		{"bash-script", "**/*.sh"},
+		{"bash-project", "**"},
 		{"powershell-script", "**/*.ps1"},
-		{"wow-addon", "**/*.lua"},
+		{"wow-addon", "**"},
+		{"wow-lua", "**/*.lua"},
 		{"markdown", "**/*.md"},
 		{"docker", "**/{Dockerfile,docker-compose.yml,docker-compose.yaml}"},
 		{"totally-unknown-bundle", "**"},
@@ -34,10 +39,11 @@ func TestGlobForBundle(t *testing.T) {
 
 func TestPlanClaude(t *testing.T) {
 	t.Parallel()
+	combined := []byte("# Python\n\n# Bash\n")
 	files, err := Plan("claude", []Bundle{
 		{Name: "python-script", Content: []byte("# Python\n")},
 		{Name: "bash-script", Content: []byte("# Bash\n")},
-	})
+	}, combined)
 	if err != nil {
 		t.Fatalf("Plan: %v", err)
 	}
@@ -52,7 +58,7 @@ func TestPlanClaude(t *testing.T) {
 
 func TestPlanAgents(t *testing.T) {
 	t.Parallel()
-	files, err := Plan("agents", []Bundle{{Name: "go-cli", Content: []byte("# Go\n")}})
+	files, err := Plan("agents", []Bundle{{Name: "go-cli", Content: []byte("# Go\n")}}, []byte("# Go\n"))
 	if err != nil {
 		t.Fatalf("Plan: %v", err)
 	}
@@ -66,7 +72,7 @@ func TestPlanCopilot(t *testing.T) {
 	files, err := Plan("copilot", []Bundle{
 		{Name: "python-script", Content: []byte("# Python\n"), Glob: "**/*.py"},
 		{Name: "go-cli", Content: []byte("# Go\n"), Glob: "**/*.go"},
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("Plan: %v", err)
 	}
@@ -89,7 +95,7 @@ func TestPlanCopilot(t *testing.T) {
 
 func TestPlanUnknownTarget(t *testing.T) {
 	t.Parallel()
-	if _, err := Plan("nope", nil); err == nil {
+	if _, err := Plan("nope", nil, nil); err == nil {
 		t.Fatal("expected an error for an unknown target")
 	}
 }

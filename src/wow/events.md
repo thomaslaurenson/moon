@@ -1,6 +1,6 @@
-# WoW Vanilla Event System
+# WoW vanilla event system
 
-## Core Pattern
+## Core pattern
 
 ```lua
 local frame = CreateFrame("Frame", "MyAddonFrame", UIParent)
@@ -19,15 +19,15 @@ end)
 
 Always guard with `event ==` before checking `arg1`. Checking `arg1` alone is unreliable when multiple events are registered on the same frame.
 
-## Addon Lifecycle Events
+## Addon lifecycle events
 
 | Event | `arg1` | When |
 |---|---|---|
-| `VARIABLES_LOADED` | -- | SavedVariables loaded from disk |
+| `VARIABLES_LOADED` | none | SavedVariables loaded from disk |
 | `ADDON_LOADED` | addon name | A specific addon finished loading |
-| `PLAYER_LOGIN` | -- | Player enters the world for the first time |
-| `PLAYER_ENTERING_WORLD` | -- | Player loads into any zone or instance |
-| `PLAYER_LOGOUT` | -- | Player is logging out |
+| `PLAYER_LOGIN` | none | Player enters the world for the first time |
+| `PLAYER_ENTERING_WORLD` | none | Player loads into any zone or instance |
+| `PLAYER_LOGOUT` | none | Player is logging out |
 
 Use `ADDON_LOADED` with a name check for initialisation. SavedVariables are guaranteed available:
 
@@ -40,7 +40,7 @@ frame:SetScript("OnEvent", function()
 end)
 ```
 
-## Player and Unit Events
+## Player and unit events
 
 | Event | Key args | Notes |
 |---|---|---|
@@ -48,12 +48,12 @@ end)
 | `UNIT_HEALTH` | `arg1` = unitID | Fires for any tracked unit |
 | `UNIT_MANA` | `arg1` = unitID | Power change (mana/rage/energy) |
 | `UNIT_MAXHEALTH` | `arg1` = unitID | |
-| `PLAYER_TARGET_CHANGED` | -- | Use `UnitExists("target")` to check |
-| `PLAYER_ENTER_COMBAT` | -- | |
-| `PLAYER_LEAVE_COMBAT` | -- | |
+| `PLAYER_TARGET_CHANGED` | none | Use `UnitExists("target")` to check |
+| `PLAYER_ENTER_COMBAT` | none | |
+| `PLAYER_LEAVE_COMBAT` | none | |
 | `UNIT_FLAGS` | `arg1` = unitID | Faction, PvP status changed |
 
-## Combat Log Events
+## Combat log events
 
 Vanilla uses `CHAT_MSG_*` events for all combat information. Each event delivers a pre-formatted message string in `arg1` that must be parsed with `string.find`. There is no `COMBAT_LOG_EVENT_UNFILTERED` in vanilla.
 
@@ -65,17 +65,17 @@ Vanilla uses `CHAT_MSG_*` events for all combat information. Each event delivers
 | `CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE` | DoT tick messages |
 | `CHAT_MSG_COMBAT_CREATURE_VS_SELF_HITS` | `"Ragnaros hits you for 2345 damage."` |
 
-## Bag and UI Events
+## Bag and UI events
 
 | Event | Key args | Notes |
 |---|---|---|
 | `BAG_UPDATE` | `arg1` = bagID | A bag's contents changed |
-| `BANKFRAME_OPENED` | -- | |
-| `ITEM_LOCK_CHANGED` | -- | |
-| `MINIMAP_ZONE_CHANGED` | -- | |
-| `WORLD_MAP_UPDATE` | -- | |
+| `BANKFRAME_OPENED` | none | |
+| `ITEM_LOCK_CHANGED` | none | |
+| `MINIMAP_ZONE_CHANGED` | none | |
+| `WORLD_MAP_UPDATE` | none | |
 
-## Group Events
+## Group events
 
 | Event | Notes |
 |---|---|
@@ -83,7 +83,7 @@ Vanilla uses `CHAT_MSG_*` events for all combat information. Each event delivers
 | `RAID_ROSTER_UPDATE` | Raid roster changed |
 | `UNIT_PET` | A unit's pet changed |
 
-## Chat Events
+## Chat events
 
 | Event | `arg1` | `arg2` | Notes |
 |---|---|---|---|
@@ -108,26 +108,26 @@ frame:SetScript("OnUpdate", function()
 end)
 ```
 
-## Script Handlers
+## Script handlers
 
 | Handler | `arg1` | Notes |
 |---|---|---|
-| `OnShow` | -- | Frame became visible |
-| `OnHide` | -- | Frame was hidden |
+| `OnShow` | none | Frame became visible |
+| `OnHide` | none | Frame was hidden |
 | `OnClick` | button name | `"LeftButton"`, `"RightButton"` |
 | `OnMouseDown` | button name | |
 | `OnMouseUp` | button name | |
 | `OnMouseWheel` | 1 or -1 | Scroll direction |
-| `OnEnter` | -- | Mouse entered frame |
-| `OnLeave` | -- | Mouse left frame |
+| `OnEnter` | none | Mouse entered frame |
+| `OnLeave` | none | Mouse left frame |
 | `OnValueChanged` | new value | Slider or StatusBar |
-| `OnTextChanged` | -- | EditBox text changed |
-| `OnEscapePressed` | -- | Escape key in EditBox |
+| `OnTextChanged` | none | EditBox text changed |
+| `OnEscapePressed` | none | Escape key in EditBox |
 | `OnDragStart` | button | |
-| `OnDragStop` | -- | |
-| `OnReceiveDrag` | -- | Item dropped on frame |
+| `OnDragStop` | none | |
+| `OnReceiveDrag` | none | Item dropped on frame |
 
-## Registering and Unregistering
+## Registering and unregistering
 
 ```lua
 frame:UnregisterEvent("UNIT_HEALTH")
@@ -135,7 +135,7 @@ frame:UnregisterAllEvents()
 frame:RegisterEvent("UNIT_HEALTH")
 ```
 
-## Addon Messaging (Cross-Client)
+## Addon messaging (Cross-Client)
 
 Use `SendAddonMessage` for network communication between clients. There is no custom event dispatcher for within-client addon communication. Call functions directly.
 
@@ -162,7 +162,7 @@ end
 
 `SendAddonMessage(prefix, message, channel)`: `channel` is `"PARTY"`, `"RAID"`, `"GUILD"`, `"BATTLEGROUND"`, or `"WHISPER"`. Max message length is 255 bytes. Messages are received by all clients in the channel including the sender. Throttle to at most once per 0.5 s.
 
-## Buff and Debuff API
+## Buff and debuff API
 
 Vanilla uses a slot-based buff API, not the 2.0+ `UnitAura`. `GetPlayerBuff` only works for the player; use `UnitBuff`/`UnitDebuff` for any unit.
 
@@ -184,7 +184,7 @@ local texture, count = UnitDebuff(unit, index)
 
 `GetPlayerBuff(slotIndex, filter)` accepts `"HELPFUL"` (buffs) or `"HARMFUL"` (debuffs). Slots are not necessarily contiguous; iterate all 32 and stop when the return is `< 0`.
 
-## Unit Queries
+## Unit queries
 
 `UnitClass(unit)` returns two values. Use the second (the class token) for colour lookups, not the first (localised name):
 

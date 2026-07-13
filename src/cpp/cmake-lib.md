@@ -1,13 +1,10 @@
-# CMake: Library
+# CMake: library
 
-Library-specific CMake conventions. Assumes the universal CMake conventions.
-Consumers use this library via git submodule and `add_subdirectory`, never
-`find_package`, so there is no `install()`/`export()` CMake package config here.
+Library-specific CMake conventions. Assumes the universal CMake conventions. Consumers use this library via git submodule and `add_subdirectory`, never `find_package`, so there is no `install()`/`export()` CMake package config here.
 
 ## Repository layout additions
 
-A library separates its public API from its implementation, which an application
-doesn't need to:
+A library separates its public API from its implementation, which an application doesn't need to:
 
 ```
 include/<lib>/         # public headers - this is the API consumers see
@@ -16,8 +13,7 @@ src/                    # implementation (.cpp, and any private headers)
 
 ## Target
 
-`src/CMakeLists.txt` defines the library with `add_library`, defaulting to `STATIC`
-unless there's a specific reason to build shared:
+`src/CMakeLists.txt` defines the library with `add_library`, defaulting to `STATIC` unless there's a specific reason to build shared:
 
 ```cmake
 add_library(mylib STATIC

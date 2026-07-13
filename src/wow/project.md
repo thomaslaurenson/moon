@@ -1,6 +1,6 @@
-# WoW Addon Project Structure
+# WoW addon project structure
 
-## TOC File
+## TOC file
 
 Every addon requires a `.toc` file at the root of the addon folder.
 
@@ -21,7 +21,7 @@ modules\config.lua
 modules\ui.lua
 ```
 
-## Header Fields
+## Header fields
 
 | Field | Required | Notes |
 |---|---|---|
@@ -30,7 +30,7 @@ modules\ui.lua
 | `## Author:` | no | Displayed in addon list |
 | `## Notes:` | no | Tooltip in addon list |
 | `## Notes-deDE:` | no | Localised notes (deDE, frFR, ruRU, koKR, zhCN, zhTW, esES, ptBR) |
-| `## Version:` | no | Accessible via `GetAddOnMetadata` |
+| `## Version:` | no | Metadata only; `GetAddOnMetadata` does not exist in 1.12, so store the version in your namespace (see Runtime Addon Introspection) |
 | `## SavedVariables:` | no | Global variables saved per-account |
 | `## SavedVariablesPerCharacter:` | no | Variables saved per character |
 | `## OptionalDeps:` | no | Addons to load before this one when present |
@@ -39,14 +39,14 @@ modules\ui.lua
 | `## DefaultState: disabled` | no | Disabled in new installs |
 | `## X-Website:` | no | Custom metadata (use `X-` prefix) |
 
-## File Loading Rules
+## File loading rules
 
 - Files are listed one per line, relative to the addon folder
 - Path separator is backslash `\` (a WoW engine requirement even on Linux/macOS)
 - Files execute in the exact order listed; load dependencies before the files that use them
 - Lines beginning with `#` (single hash, not `##`) are comments
 
-## XML Include Files
+## XML include files
 
 For addons with many files, XML manifests replace listing each file in the TOC:
 
@@ -68,9 +68,9 @@ XML paths also use backslashes. Relative paths are from the XML file's own direc
 
 Prefer pure Lua frame creation over XML. It avoids parsing ambiguity and is easier to maintain.
 
-## Project Structure Patterns
+## Project structure patterns
 
-### Pattern 1: Single-File Addon
+### Pattern 1: single-file addon
 
 ```
 MyAddon/
@@ -80,7 +80,7 @@ MyAddon/
 
 Suitable for simple utilities and single-purpose tools.
 
-### Pattern 2: Small Multi-File Addon
+### Pattern 2: small multi-file addon
 
 ```
 MyAddon/
@@ -94,7 +94,7 @@ MyAddon/
   MyAddon.lua
 ```
 
-### Pattern 3: Medium Addon with XML Loading
+### Pattern 3: medium addon with XML loading
 
 ```
 MyAddon/
@@ -110,7 +110,7 @@ MyAddon/
   slashcmd.lua
 ```
 
-### Pattern 4: Large Framework
+### Pattern 4: large framework
 
 ```
 MyFramework/
@@ -135,7 +135,7 @@ MyFramework/
     minimap.lua
 ```
 
-### Pattern 5: Split-Module TOC
+### Pattern 5: split-module TOC
 
 Each module is its own LoadOnDemand addon with its own `.toc`:
 
@@ -154,7 +154,7 @@ DPSMate/
 
 Suitable for large combat meters where users load only the modules they need.
 
-## Runtime Addon Introspection
+## Runtime addon introspection
 
 `GetAddOnInfo(name)` queries another addon's status at runtime. Use it to detect optional dependencies or to read the current addon's own name:
 
@@ -173,10 +173,4 @@ end
 MyAddon.version = "1.2.0"
 ```
 
-To detect the current addon's folder name dynamically (needed when the user may have renamed the folder):
-
-```lua
--- The TOC file name must match the folder name.
--- GetAddOnInfo(n) iterates by index; self-identify by matching the title field
--- against your known title string, or simply hardcode the folder name.
-```
+Do not try to detect your own folder name dynamically. A TOC file's name must match its folder name, so the name is fixed at author time: hardcode it as a constant in your namespace. The `ADDON_LOADED` handler already receives the loading addon's name in `arg1`, which is the reliable way to know when your own addon has finished loading.

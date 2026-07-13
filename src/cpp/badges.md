@@ -1,4 +1,4 @@
-# C++ Badge Row
+# C++ badge row
 
 ```markdown
 ![C++ Version](https://img.shields.io/badge/Version-XX-blue?logo=cplusplus) ![Code Coverage](https://img.shields.io/badge/Coverage-XX%25-blue?logo=cplusplus)

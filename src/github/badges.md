@@ -1,4 +1,4 @@
-# Badge Conventions
+# Badge conventions
 
 Language-agnostic badge principles. The per-language badge block lives in the relevant language fragment.
 

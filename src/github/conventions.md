@@ -1,4 +1,4 @@
-# Git Conventions
+# Git conventions
 
 Branch names, commit messages, and PR titles.
 

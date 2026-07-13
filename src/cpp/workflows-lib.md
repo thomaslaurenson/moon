@@ -1,8 +1,9 @@
-# C++ Library Workflows
+# C++ library workflows
 
-Applies to libraries. A library isn't distributed as a prebuilt binary (consumers
-pull it in as a git submodule and compile it themselves), so CI is a single plain
-build-and-test job: no Docker, no libc/arch matrix, no separate build.yml.
+Applies to libraries. A library isn't distributed as a prebuilt binary (consumers pull it in as a git submodule and compile it themselves), so CI is a single plain build-and-test job: no Docker, no libc/arch matrix, no separate build.yml.
+
+
+`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
 
 ## `test.yml`
 
@@ -19,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@vN
         with:
           submodules: true
 
@@ -47,7 +48,7 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@vN
         with:
           fetch-depth: 0
 

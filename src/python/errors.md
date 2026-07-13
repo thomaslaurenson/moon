@@ -1,4 +1,4 @@
-# Python Exceptions
+# Python exceptions
 
 Every library defines a clear exception hierarchy so consumers can catch errors at the right level.
 

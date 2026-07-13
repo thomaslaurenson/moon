@@ -3,7 +3,6 @@
 python/packaging.md
 python/testing-unit.md
 python/testing-integration.md
-python/coverage.md
 tools/makefile.md
 python/make.md
 python/tooling.md
@@ -11,6 +10,7 @@ python/project-lib.md
 python/docs.md
 github/actions.md
 python/workflows.md
+python/release-lib.md
 github/badges.md
 python/badges.md
 github/dependabot.md

@@ -1,4 +1,4 @@
-# Go Badge Row
+# Go badge row
 
 ```markdown
 ![Go Version](https://img.shields.io/github/go-mod/go-version/{owner}/{repo}?logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-XX%25-blue?logo=go)

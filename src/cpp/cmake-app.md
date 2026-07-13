@@ -1,4 +1,4 @@
-# CMake: Application (CLI Binary)
+# CMake: application (CLI binary)
 
 Application-specific CMake conventions. Assumes the universal CMake conventions.
 
@@ -30,7 +30,7 @@ build/
   compile_commands.json
 ```
 
-## Baking Paths into Test Binaries
+## Baking paths into test binaries
 
 Functional tests need to know where the compiled binary lives at runtime. Rather than discovering it at runtime, bake the path in at CMake configure time using `target_compile_definitions`. This eliminates a whole class of path-resolution bugs and makes the test binary fully self-contained:
 
@@ -41,6 +41,14 @@ if(WIN32)
     set(MYAPP_BINARY_PATH "${CMAKE_BINARY_DIR}/bin/myapp.exe")
 else()
     set(MYAPP_BINARY_PATH "${CMAKE_BINARY_DIR}/bin/myapp")
+endif()
+
+# CI runs functional tests against a downloaded release binary rather than the
+# one just built. MYAPP_BINARY_PATH_OVERRIDE lets the workflow point the tests at
+# that artifact at configure time; locally it is unset and the build-tree path
+# above is used.
+if(MYAPP_BINARY_PATH_OVERRIDE)
+    set(MYAPP_BINARY_PATH "${MYAPP_BINARY_PATH_OVERRIDE}")
 endif()
 
 target_compile_definitions(myapp_functional_tests PRIVATE
@@ -58,7 +66,7 @@ auto result = run(MYAPP_BINARY_PATH, {"create", "--version", "1", input_dir});
 REQUIRE(result.returncode_ == 0);
 ```
 
-## Two-Binary Test Pattern
+## Two-Binary test pattern
 
 An application with both unit and functional tests defines two separate binaries. They have different dependencies and must not be mixed:
 
@@ -77,8 +85,14 @@ add_executable(myapp_functional_tests
     functional/test_create.cpp
     functional/test_list.cpp
 )
+# Project-owned test headers use PRIVATE without SYSTEM.
 target_include_directories(myapp_functional_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+)
+# extern/subprocess.h is the submodule directory (the repo is literally named
+# "subprocess.h"); mark it SYSTEM so clang-tidy and the compiler ignore it, and
+# keep it in its own call - never combine SYSTEM and non-SYSTEM paths.
+target_include_directories(myapp_functional_tests SYSTEM PRIVATE
     "${CMAKE_SOURCE_DIR}/extern/subprocess.h"
 )
 target_link_libraries(myapp_functional_tests PRIVATE Catch2::Catch2WithMain)

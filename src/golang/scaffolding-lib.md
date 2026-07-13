@@ -1,4 +1,4 @@
-# Go Library Project Scaffolding
+# Go library project scaffolding
 
 Library layout (no `cmd/`, no binary, nothing to release):
 
@@ -51,7 +51,7 @@ Every import of the package elsewhere in the module (and by consumers) must incl
 Follow the shared Makefile conventions.
 
 - `fmt`: `gofmt -w .`
-- `fmt_check`: `gofmt -l . && git diff --exit-code`
+- `fmt_check`: capture `gofmt -l .` and fail if non-empty (`out="$(gofmt -l .)"; test -z "$out"`). Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and always exits 0, so that form can never fail.
 - `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...`
 - `test`: `go test -race -count=1 ./...`

@@ -1,11 +1,8 @@
-# C++ Workflow Conventions
+# C++ workflow conventions
 
-Supplements the GitHub Actions fragment. Universal rules (runners, action
-versions, workflow structure, caller patterns, concurrency, permissions) apply
-unchanged. This file covers what's common to any C++ project's CI; the build and
-release pattern itself differs by tier (see workflows-app or workflows-lib).
+Supplements the GitHub Actions fragment. Universal rules (runners, action versions, workflow structure, caller patterns, concurrency, permissions) apply unchanged. This file covers what's common to any C++ project's CI; the build and release pattern itself differs by tier (see workflows-app or workflows-lib).
 
-## Paths Filter
+## Paths filter
 
 Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
 
@@ -27,18 +24,20 @@ Include `extern/**` only if the project uses git submodules for dependencies. An
 
 Always check out with `submodules: true`. C++ projects use git submodules for all dependencies and the build will fail without them:
 
+`@vN` means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
+
 ```yaml
-- uses: actions/checkout@v6
+- uses: actions/checkout@vN
   with:
     submodules: true
 ```
 
-## Clang Tools
+## Clang tools
 
 Install clang tools via the Makefile target before running any lint step:
 
 ```yaml
-- uses: actions/checkout@v6
+- uses: actions/checkout@vN
   with:
     submodules: true
 
@@ -65,7 +64,7 @@ jobs:
   lint_cpp:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@vN
         with:
           submodules: true
 
@@ -77,7 +76,7 @@ jobs:
       - run: make lint_cpp
 ```
 
-## Changelog Extraction
+## Changelog extraction
 
 Never extract the changelog with inline awk or bash in a workflow step. Use the `get_changelog` Makefile target instead. Pass the tag explicitly; the target writes the matching entry to stdout:
 

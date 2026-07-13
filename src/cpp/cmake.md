@@ -1,20 +1,17 @@
-# CMake Conventions
+# CMake conventions
 
-Conventions for CMake-based C++ projects. Universal to both applications and
-libraries; tier-specific target definitions (`add_executable` vs `add_library`,
-and the test layers each implies) live in the cmake-app or cmake-lib fragment.
+Conventions for CMake-based C++ projects. Universal to both applications and libraries; tier-specific target definitions (`add_executable` vs `add_library`, and the test layers each implies) live in the cmake-app or cmake-lib fragment.
 
-## Design Principles
+## Design principles
 
 - CMake is the build system for all C++ projects; never use raw compiler invocations
 - The Makefile is a task runner that wraps CMake; CI calls `make <target>`, never raw `cmake` commands
 - One `build/` directory for everything; no separate lint or release build directories
 - Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
 
-## Repository Layout
+## Repository layout
 
-Every C++ project contains at least these at the root; a project-tier fragment
-(cmake-app or cmake-lib) adds the rest (release Dockerfiles, `include/`, and so on):
+Every C++ project contains at least these at the root; a project-tier fragment (cmake-app or cmake-lib) adds the rest (release Dockerfiles, `include/`, and so on):
 
 ```
 .clang-format
@@ -33,7 +30,7 @@ test/                 # see cpp/testing.md for internal structure
 
 - `extern/` contains only git submodules; never manually copied headers or installed libraries
 
-## Minimum Version
+## Minimum version
 
 All projects must declare a minimum CMake version of 3.21:
 
@@ -43,7 +40,7 @@ cmake_minimum_required(VERSION 3.21)
 
 CMake 3.21 is the oldest version found on any supported build environment. Never use `cmake_minimum_required(VERSION 3.10)` or other outdated minimums; they unlock legacy behaviour that conflicts with modern CMake practices.
 
-## C++ Standard
+## C++ standard
 
 All projects must set a minimum C++ standard of 17. New projects should prefer 20:
 
@@ -56,7 +53,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 - `CMAKE_CXX_STANDARD_REQUIRED ON`: fails the build if the compiler does not support the requested standard, rather than silently falling back
 - `CMAKE_CXX_EXTENSIONS OFF`: disables compiler-specific extensions such as GNU extensions, ensuring the code is portable standard C++
 
-## Required Project Settings
+## Required project settings
 
 Every root `CMakeLists.txt` must set these options immediately after `project()`:
 
@@ -83,7 +80,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
 - `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in `build/bin/` regardless of how many targets the project defines
 
-## Build Directory
+## Build directory
 
 All projects use a single `build/` directory:
 
@@ -94,7 +91,7 @@ cmake --build build
 
 Never create separate build directories for lint, release, or test builds. The default `Debug` build type produces a `compile_commands.json` that covers all use cases.
 
-## CMakeLists.txt Structure
+## CMakeLists.txt structure
 
 Every directory that produces a target or manages a distinct concern has its own `CMakeLists.txt`. The root never defines targets directly; it orchestrates.
 
@@ -124,7 +121,7 @@ extern/
 - `target_link_libraries`
 - `configure_file` for generated headers
 
-## Testing Option
+## Testing option
 
 Every project must declare the `BUILD_TESTING` option in the root `CMakeLists.txt`. This allows tests to be disabled when building on a system without test dependencies, or (for a library) when a consumer adds it as a subdirectory and doesn't want its tests built too:
 
@@ -147,7 +144,7 @@ extern/
   Catch2/
 ```
 
-Always pin to a specific commit hash, never a branch name. Branch names move; commit hashes do not:
+Always pin to an immutable reference: a release tag or a commit hash, never a moving branch name. Branch names move; a release tag or hash does not:
 
 ```bash
 cd extern/Catch2 && git checkout v3.6.0
@@ -190,7 +187,7 @@ target_include_directories(mytarget PRIVATE
 - clang-tidy excludes system headers from all analysis by default; without `SYSTEM`, third-party headers generate thousands of suppressed warnings that inflate output and slow analysis
 - Never combine `extern/` and project-owned paths in one `target_include_directories` call; they require different keywords
 
-## Clang Tooling
+## Clang tooling
 
 Clang tools are pinned to version 18 across all projects for reproducibility. Never use the unversioned `clang-format` or `clang-tidy` binaries as the system default may differ between machines and CI runners.
 
@@ -213,7 +210,8 @@ Use the versioned binaries explicitly in all targets:
 configure: ## Configure the cmake build
 	cmake -B build \
 	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+	  $(CMAKE_ARGS)
 
 .PHONY: build
 build: ## Build the project
@@ -230,17 +228,19 @@ fmt_check: ## Check formatting without modifying files
 .PHONY: lint_cpp
 lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
 	clang-tidy-18 --quiet -p build \
-	--header-filter="$(CURDIR)/src/.*" src/*.cpp 2>&1 \
+	--header-filter="$(CURDIR)/src/.*" $$(find src -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
 ```
 
 - `--quiet` suppresses the "Suppressed N warnings" summary and hint lines
+- `$(find src -name "*.cpp")` covers every implementation file under `src/`, including nested subdirectories; a bare `src/*.cpp` glob would miss anything below the top level
 - `--header-filter="$(CURDIR)/src/.*"` limits diagnostic output to project source headers; extern/ headers are already excluded as system headers (see Including extern/ headers in this file) but this provides belt-and-suspenders coverage
 - `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe
 - `make configure` must be run before `make lint_cpp`; clang-tidy reads `build/compile_commands.json` to resolve include paths
+- `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure
 
-Note: `fmt` and `fmt_check` include the `test/` directory; test code is subject to the same formatting standards as application code.
+Note: `fmt` and `fmt_check` include the `test/` directory; test code is held to the same formatting standard as application code. `lint_cpp` deliberately does not run clang-tidy over `test/`: test files use Catch2 macros and fixture patterns that trip naming and readability checks written for production code. Format tests, but do not tidy them.
 
 ### Configuration files
 

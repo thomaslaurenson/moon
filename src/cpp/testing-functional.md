@@ -1,8 +1,6 @@
-# C++ Functional Testing (Applications)
+# C++ functional testing (applications)
 
-The subprocess/functional testing layer, which spawns the compiled binary and
-verifies its CLI behaviour end-to-end. Assumes cpp/testing.md and cpp/cmake-app.md.
-Only applies to applications; a library has no compiled binary to spawn.
+The subprocess/functional testing layer, which spawns the compiled binary and verifies its CLI behaviour end-to-end. Assumes cpp/testing.md and cpp/cmake-app.md. Only applies to applications; a library has no compiled binary to spawn.
 
 ## Structure addition
 
@@ -47,7 +45,7 @@ git submodule add https://github.com/sheredom/subprocess.h.git extern/subprocess
 cd extern/subprocess.h && git checkout <commit-hash>
 ```
 
-Always pin to a specific commit hash, never a branch name.
+Always pin to an immutable reference: a release tag or a commit hash, never a moving branch name.
 
 ## Fixtures
 

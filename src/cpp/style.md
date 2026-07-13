@@ -1,10 +1,12 @@
-# C++ Style
+# C++ style
 
-C++-specific style. Assumes the core conventions. Formatting is enforced by clang-format and naming by clang-tidy (see the clang-format and clang-tidy fragments).
+C++-specific style. Assumes the core conventions. Where the project includes the clang tooling, formatting is enforced by clang-format and naming by clang-tidy (see the clang-format and clang-tidy fragments); the rules below define the intended style and apply whether or not that tooling is wired up.
 
 ## Formatting
 
 Enforced by clang-format; `make fmt` reformats all source. Deviations from LLVM defaults: `IndentWidth: 4`, `ColumnLimit: 100`, `AccessModifierOffset: -4`, `AllowShortFunctionsOnASingleLine: InlineOnly`, `IncludeBlocks: Regroup`. All other settings inherit from LLVM.
+
+## Suppressing clang-format
 
 `// clang-format off`/`on` is permitted only where manual alignment aids readability (lookup tables); keep the block short and comment why. Never use it for personal preference.
 

@@ -1,6 +1,6 @@
-# WoW Addon Code Patterns
+# WoW addon code patterns
 
-## Namespace Pattern 1: Globals Only
+## Namespace pattern 1: globals only
 
 Suitable for very small single-purpose addons (under ~200 lines).
 
@@ -18,7 +18,7 @@ end)
 
 Prefix every global with `MyAddon_` to prevent collisions. SavedVariable names follow the same convention.
 
-## Namespace Pattern 2: Namespace Table
+## Namespace pattern 2: namespace table
 
 Suitable for medium addons with multiple files. Recommended default.
 
@@ -61,7 +61,7 @@ function MyAddon:InitConfig() ... end
 function MyAddon:BuildUI() ... end
 ```
 
-## Namespace Pattern 3: Environment Sandboxing
+## Namespace pattern 3: environment sandboxing
 
 Suitable for large frameworks where many module files need to share private state. Do not use this pattern for simple addons.
 
@@ -109,20 +109,22 @@ Declare in the TOC:
 
 `SavedVariables` are shared across all characters on the account. `SavedVariablesPerCharacter` stores one copy per character and realm. SavedVariables are guaranteed populated by the time `ADDON_LOADED` fires. Do not assume they are available at file parse time.
 
+Apply defaults with an explicit `== nil` check, never `x = x or default`. For a boolean field a saved `false` is falsy, so `x = x or true` silently resets the user's choice to `true` on every login. The `== nil` form only fills a field that was never set.
+
 ```lua
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function()
   if event == "ADDON_LOADED" and arg1 == "MyAddon" then
-    MyAddon_config          = MyAddon_config or {}
-    MyAddon_config.volume   = MyAddon_config.volume   or 1.0
-    MyAddon_config.showUI   = MyAddon_config.showUI   or true
-    MyAddon_config.fontsize = MyAddon_config.fontsize or 12
+    MyAddon_config = MyAddon_config or {}
+    if MyAddon_config.volume   == nil then MyAddon_config.volume   = 1.0 end
+    if MyAddon_config.showUI   == nil then MyAddon_config.showUI   = true end
+    if MyAddon_config.fontsize == nil then MyAddon_config.fontsize = 12  end
   end
 end)
 ```
 
-## Defaults Pattern
+## Defaults pattern
 
 Apply a default table recursively over the loaded data:
 
@@ -153,7 +155,7 @@ end
 MyAddon_config = MyAddon:ApplyDefaults(MyAddon_config, defaults)
 ```
 
-## Per-Character Variables
+## Per-Character variables
 
 ```lua
 -- TOC: ## SavedVariablesPerCharacter: MyAddon_charConfig
@@ -167,7 +169,7 @@ frame:SetScript("OnEvent", function()
 end)
 ```
 
-## Saving and Restoring Frame Position
+## Saving and restoring frame position
 
 ```lua
 frame:SetScript("OnMouseUp", function()
@@ -195,14 +197,14 @@ function MyAddon:RestorePosition(frame, saved)
 end
 ```
 
-## SavedVariables Constraints
+## SavedVariables constraints
 
 - Only serialisable types can be saved: tables, strings, numbers, booleans
 - Functions, frames, and userdata cannot be saved
 - Variables set to `nil` are removed from the saved file on next logout
 - `ReloadUI()` forces a re-save and reload of all addons
 
-## Profile System
+## Profile system
 
 For settings that differ per character, key a profile table by character and realm:
 
@@ -215,7 +217,7 @@ function MyAddon:GetProfile()
 end
 ```
 
-## Slash Commands
+## Slash commands
 
 Register slash commands at file parse time (not inside an event handler):
 
@@ -255,7 +257,7 @@ Naming rules: `SLASH_<KEY><N>` must match `SlashCmdList["KEY"]` exactly. `N` sta
 
 Do not re-register reserved commands: `/reload`, `/cast`, `/use`, `/target`, `/w`, `/run`.
 
-## Localization
+## Localisation
 
 Use a global locale table populated by locale-specific files, loaded before the main addon files.
 
@@ -274,7 +276,7 @@ end
 local L = MyAddon_Locale
 if GetLocale() == "deDE" then
   L["Settings"]          = "Einstellungen"
-  L["Reset to defaults"] = "Auf Standard zuruecksetzen"
+  L["Reset to defaults"] = "Auf Standard zurücksetzen"
 end
 
 -- MyAddon.lua
@@ -286,7 +288,7 @@ The enUS file uses `not next(L)` as a fallback so English loads if no other loca
 
 `GetLocale()` returns: `"enUS"`, `"enGB"`, `"deDE"`, `"frFR"`, `"esES"`, `"ptBR"`, `"ruRU"`, `"koKR"`, `"zhCN"`, `"zhTW"`.
 
-## Colour Escape Codes
+## Colour escape codes
 
 WoW uses inline colour sequences in display strings. Format: `|c` + 8-digit hex (alpha then RGB) + text + `|r` to reset.
 
@@ -320,7 +322,7 @@ end
 
 Valid vanilla class tokens: `"WARRIOR"`, `"PALADIN"`, `"HUNTER"`, `"ROGUE"`, `"PRIEST"`, `"SHAMAN"`, `"MAGE"`, `"WARLOCK"`, `"DRUID"`. There is no `"DEATHKNIGHT"` in 1.12.
 
-## String Utilities
+## String utilities
 
 Vanilla provides no `strsplit` or `table.wipe`. Implement them locally when needed.
 
@@ -366,7 +368,7 @@ local function CopyTable(src)
 end
 ```
 
-## Money Formatting
+## Money formatting
 
 `GetMoney()` returns the player's total copper as an integer. Split it into denominations with `math.mod`:
 
@@ -401,7 +403,7 @@ local function CreateGoldString(money)
 end
 ```
 
-## Deferred Execution (QueueFunction)
+## Deferred execution (QueueFunction)
 
 Use a FIFO queue with an `OnUpdate` driver when you need to spread initialisation work across frames rather than blocking on a single `ADDON_LOADED` handler:
 

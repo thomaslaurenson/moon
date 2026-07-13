@@ -1,4 +1,4 @@
-# WoW Vanilla Frame API
+# WoW vanilla frame API
 
 ## CreateFrame
 
@@ -8,7 +8,7 @@ local frame = CreateFrame(frameType, frameName, parent)
 
 `frameName` is optional. Pass `nil` for anonymous frames. Named frames are accessible as globals via `_G["name"]`. Use `UIParent` as the parent for top-level frames.
 
-## Frame Types
+## Frame types
 
 | Type | Purpose |
 |---|---|
@@ -24,7 +24,7 @@ local frame = CreateFrame(frameType, frameName, parent)
 
 `"Cooldown"` is not a valid vanilla `CreateFrame` type. Use `"Model"` instead.
 
-## SetPoint (Anchors)
+## SetPoint (anchors)
 
 ```lua
 frame:SetPoint(point, relativeTo, relativePoint, offsetX, offsetY)
@@ -47,7 +47,7 @@ frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 frame:SetPoint("TOPLEFT", parent, "BOTTOMRIGHT", 5, -10)
 ```
 
-A frame can have up to two anchors simultaneously.
+A frame can hold several `SetPoint` anchors at once. A single anchor positions the frame; anchoring two opposing points (for example `TOPLEFT` and `BOTTOMRIGHT`) also stretches it to size. There is no API to alter an existing anchor, so call `ClearAllPoints()` before re-anchoring; `GetNumPoints()` and `GetPoint(n)` (both added in 1.10) read back the current anchors.
 
 ## Size
 
@@ -67,7 +67,7 @@ frame:IsShown()     -- own visibility only
 frame:IsVisible()   -- accounts for parent visibility
 ```
 
-## Strata and Frame Level
+## Strata and frame level
 
 Valid strata (back to front): `BACKGROUND`, `LOW`, `MEDIUM`, `HIGH`, `DIALOG`, `FULLSCREEN`, `FULLSCREEN_DIALOG`, `TOOLTIP`.
 
@@ -91,7 +91,7 @@ frame:SetBackdropColor(0, 0, 0, 0.75)
 frame:SetBackdropBorderColor(0.1, 0.1, 0.1, 1)
 ```
 
-## Font Strings
+## Font strings
 
 ```lua
 local text = frame:CreateFontString(nil, "OVERLAY", "GameFontWhite")
@@ -150,7 +150,7 @@ btn:SetScript("OnClick", function()
 end)
 ```
 
-## Movable Frames
+## Movable frames
 
 `RegisterForDrag` is required for the drag scripts to fire. Without it, `OnDragStart` never triggers.
 
@@ -168,7 +168,7 @@ frame:SetScript("OnDragStop", function()
 end)
 ```
 
-## Querying Frame Properties
+## Querying frame properties
 
 ```lua
 frame:GetWidth()
@@ -194,7 +194,7 @@ local f = _G["MyAddonFrame"]
 frame:SetHitRectInsets(-4, -4, -4, -4)   -- 4px expansion on all sides
 ```
 
-## Mouse Wheel
+## Mouse wheel
 
 ```lua
 frame:EnableMouseWheel(true)

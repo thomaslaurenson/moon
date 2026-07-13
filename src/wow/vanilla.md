@@ -1,8 +1,8 @@
-# WoW 1.12 Vanilla Lua Environment
+# WoW 1.12 vanilla Lua environment
 
 The vanilla 1.12 client embeds Lua 5.0. Many Lua features an LLM produces by default are 5.1+ and will not work.
 
-## Non-Negotiable Rules
+## Non-Negotiable rules
 
 - `## Interface: 11200` is the only valid interface version
 - Path separators in TOC and XML files must be backslash `\` (written `\\` in Lua strings)
@@ -18,7 +18,7 @@ The vanilla 1.12 client embeds Lua 5.0. Many Lua features an LLM produces by def
 - Do not use `GetItemInfoInstant`. Use `GetItemInfo` with a link
 - Do not use `RegisterUnitWatch` or secure frame templates (`SecureActionButtonTemplate`, etc.)
 
-## Lua 5.0 Incompatibilities
+## Lua 5.0 incompatibilities
 
 | Correct (Lua 5.0) | Wrong (Lua 5.1+) |
 |---|---|
@@ -46,18 +46,18 @@ local _, _, cap = string.find(s, "(pattern)")
 return unpack(myTable)
 ```
 
-## Compatibility Polyfills
+## Compatibility polyfills
 
-When writing code that must run on both 1.12 and later private server clients, declare these at the top of the first file:
+When writing code that must run on both 1.12 and later private server clients, declare these as file-local aliases at the top of each file that needs them:
 
 ```lua
-gfind = string.gmatch or string.gfind
-mod   = math.mod or mod
+local gfind = string.gmatch or string.gfind
+local mod   = math.mod or math.fmod
 ```
 
-This lets the rest of the file use `gfind` and `mod` without per-call version checks. Do not add these to vanilla-only addons where `string.gfind` and `math.mod` always exist.
+This lets the rest of the file use `gfind` and `mod` without per-call version checks. Keep them `local`: bare `gfind = ...` would leak into the shared global namespace and collide with other addons, the same risk the manual-hook section warns about. Do not add these to vanilla-only addons where `string.gfind` and `math.mod` always exist.
 
-## Event Callback Globals
+## Event callback globals
 
 Inside every `SetScript` callback these implicit globals are set by the engine:
 
@@ -91,7 +91,7 @@ frame:SetScript("OnUpdate", function()
 end)
 ```
 
-## WoW Globals
+## WoW globals
 
 These WoW-provided globals replace removed stdlib functions:
 
@@ -101,7 +101,7 @@ These WoW-provided globals replace removed stdlib functions:
 | `date("%H:%M:%S")` | `os.date()`, strftime-style |
 | `strtrim(s)` | no Lua 5.0 equivalent |
 
-## Client Version Detection
+## Client version detection
 
 `GetBuildInfo()` returns the build version as a number. Use it to branch between vanilla and later clients when the same addon targets multiple server types:
 
@@ -118,7 +118,7 @@ end
 
 The fourth return value is the full build number (`11200` for patch 1.12). Only use this when the addon must support multiple private server versions; do not add it to vanilla-only addons.
 
-## Performance: Local Caching
+## Performance: local caching
 
 Cache frequently called globals as locals at the top of files used in hot paths (OnUpdate, combat events):
 
@@ -132,7 +132,7 @@ local _format = string.format
 local _getn   = table.getn
 ```
 
-## Manual Function Hooks
+## Manual function hooks
 
 Vanilla has no `hooksecurefunc`. To wrap a function defined elsewhere, save the original and replace it:
 

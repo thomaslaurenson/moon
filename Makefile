@@ -11,7 +11,7 @@ help: ## Show this help message
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
 
 .PHONY: build
-build: ## Build the moon binary into dist/ (embeds src/ and bundles/)
+build: ## Build the moon binary into dist/ (embeds src/fragments and src/bundles)
 	@go build -ldflags="$(LDFLAGS)" -o dist/$(BINARY) .
 	@printf '[*] built dist/%s (version %s)\n' "$(BINARY)" "$(VERSION)"
 
@@ -52,7 +52,7 @@ test_coverage: ## Run tests with a coverage report (internal/ only; cmd/ is wiri
 	@go tool cover -func=coverage.out | tail -1
 
 .PHONY: check
-check: ## Validate every recipe: missing fragments, include cycles, orphans
+check: ## Validate every bundle: missing fragments, include cycles, orphans
 	@go run . check
 
 # GET

@@ -1,8 +1,9 @@
-// Package bundler resolves recipes and assembles instruction bundles from a fragment tree.
+// Package bundler resolves bundle definitions and assembles instruction bundles
+// from a fragment tree.
 //
-// A recipe (bundles/<name>) is an ordered list of fragment paths relative to src/.
-// Blank lines and content after '#' are ignored. A line "@include <recipe>" expands
-// another recipe in place, so bundles share a common base.
+// A bundle definition (src/bundles/<name>) is an ordered list of fragment paths
+// relative to src/fragments. Blank lines and content after '#' are ignored. A line
+// "@include <bundle>" expands another bundle in place, so bundles share a common base.
 package bundler
 
 import (
@@ -15,22 +16,22 @@ import (
 )
 
 const (
-	srcDir     = "src"
-	bundlesDir = "bundles"
+	fragmentsDir = "src/fragments"
+	bundlesDir   = "src/bundles"
 )
 
 // Sentinel errors, so callers can distinguish failure kinds with errors.Is rather
 // than matching on message text.
 var (
-	// ErrUnknownBundle means the named recipe does not exist in bundles/.
+	// ErrUnknownBundle means the named bundle does not exist in src/bundles.
 	ErrUnknownBundle = errors.New("unknown bundle")
-	// ErrIncludeCycle means a recipe's @include chain refers back to itself.
+	// ErrIncludeCycle means a bundle's @include chain refers back to itself.
 	ErrIncludeCycle = errors.New("include cycle detected")
-	// ErrMissingFragment means a recipe references a fragment absent from src/.
+	// ErrMissingFragment means a bundle references a fragment absent from src/fragments.
 	ErrMissingFragment = errors.New("missing fragment")
 )
 
-// Engine assembles bundles from a filesystem containing src/ and bundles/.
+// Engine assembles bundles from a filesystem containing src/fragments and src/bundles.
 type Engine struct {
 	fsys fs.FS
 }
@@ -57,10 +58,32 @@ func (e *Engine) List() ([]string, error) {
 	return names, nil
 }
 
-// Description returns a bundle's leading comment block (the '#' lines at the top
-// of its recipe, before the first real entry), joined into one string. Every
-// bundle in this repo's convention starts with one; an empty string means the
-// recipe has none, not that it's invalid.
+// ListFragments returns every fragment path under src/fragments, sorted. Paths are
+// relative to src/fragments (the same strings Expand prints and a bundle definition
+// references), so a caller can feed one straight back to Fragment or Show.
+func (e *Engine) ListFragments() ([]string, error) {
+	var paths []string
+	err := fs.WalkDir(e.fsys, fragmentsDir, func(p string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !strings.HasSuffix(p, ".md") {
+			return nil
+		}
+		paths = append(paths, strings.TrimPrefix(p, fragmentsDir+"/"))
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("walking %s: %w", fragmentsDir, err)
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
+// Description returns a bundle's leading comment block (the '#' lines at the top of
+// its definition, before the first real entry), joined into one string. Every bundle
+// in this repo's convention starts with one; an empty string means the definition has
+// none, not that it's invalid.
 func (e *Engine) Description(name string) (string, error) {
 	data, err := fs.ReadFile(e.fsys, bundlesDir+"/"+name)
 	if err != nil {
@@ -83,19 +106,19 @@ func (e *Engine) Description(name string) (string, error) {
 	return strings.Join(lines, " "), nil
 }
 
-// Recipe returns the ordered fragment paths a bundle expands to, resolving @include.
-func (e *Engine) Recipe(name string) ([]string, error) {
+// Expand returns the ordered fragment paths a bundle expands to, resolving @include.
+func (e *Engine) Expand(name string) ([]string, error) {
 	return e.resolve(name, nil)
 }
 
-// HasBundle reports whether a bundle recipe with this name exists.
+// HasBundle reports whether a bundle definition with this name exists.
 func (e *Engine) HasBundle(name string) bool {
 	return e.isFile(bundlesDir + "/" + name)
 }
 
-// HasFragment reports whether a fragment exists at this path under src/.
+// HasFragment reports whether a fragment exists at this path under src/fragments.
 func (e *Engine) HasFragment(path string) bool {
-	return e.isFile(srcDir + "/" + path)
+	return e.isFile(fragmentsDir + "/" + path)
 }
 
 func (e *Engine) isFile(p string) bool {
@@ -104,31 +127,31 @@ func (e *Engine) isFile(p string) bool {
 }
 
 // Fragment returns the raw content of a single fragment, prefixed with a minimal
-// header identifying where it came from. Unlike Assemble, it performs no recipe
-// resolution: the path must be an exact fragment path relative to src/ (the same
-// strings Recipe or the "recipe" command print).
+// header identifying where it came from. Unlike Assemble, it performs no bundle
+// resolution: the path must be an exact fragment path relative to src/fragments (the
+// same strings Expand or ListFragments print).
 func (e *Engine) Fragment(path string) ([]byte, error) {
-	data, err := fs.ReadFile(e.fsys, srcDir+"/"+path)
+	data, err := fs.ReadFile(e.fsys, fragmentsDir+"/"+path)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, ErrMissingFragment)
 	}
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "<!-- Fragment: %s/%s -->\n\n", srcDir, path)
+	fmt.Fprintf(&buf, "<!-- Fragment: %s/%s -->\n\n", fragmentsDir, path)
 	buf.Write(data)
 	return buf.Bytes(), nil
 }
 
-func (e *Engine) resolve(recipe string, seen []string) ([]string, error) {
-	data, err := fs.ReadFile(e.fsys, bundlesDir+"/"+recipe)
+func (e *Engine) resolve(bundle string, seen []string) ([]string, error) {
+	data, err := fs.ReadFile(e.fsys, bundlesDir+"/"+bundle)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", recipe, ErrUnknownBundle)
+		return nil, fmt.Errorf("%s: %w", bundle, ErrUnknownBundle)
 	}
 	for _, s := range seen {
-		if s == recipe {
-			return nil, fmt.Errorf("%s: %w", recipe, ErrIncludeCycle)
+		if s == bundle {
+			return nil, fmt.Errorf("%s: %w", bundle, ErrIncludeCycle)
 		}
 	}
-	seen = append(seen, recipe)
+	seen = append(seen, bundle)
 
 	var frags []string
 	for _, line := range strings.Split(string(data), "\n") {
@@ -142,7 +165,7 @@ func (e *Engine) resolve(recipe string, seen []string) ([]string, error) {
 		if line == "@include" || strings.HasPrefix(line, "@include ") || strings.HasPrefix(line, "@include\t") {
 			target := strings.TrimSpace(strings.TrimPrefix(line, "@include"))
 			if target == "" {
-				return nil, fmt.Errorf("%s: @include needs a target bundle", recipe)
+				return nil, fmt.Errorf("%s: @include needs a target bundle", bundle)
 			}
 			sub, err := e.resolve(target, seen)
 			if err != nil {
@@ -152,7 +175,7 @@ func (e *Engine) resolve(recipe string, seen []string) ([]string, error) {
 			continue
 		}
 		if strings.HasPrefix(line, "@") {
-			return nil, fmt.Errorf("%s: unknown directive %q (only @include is recognised)", recipe, line)
+			return nil, fmt.Errorf("%s: unknown directive %q (only @include is recognised)", bundle, line)
 		}
 		frags = append(frags, line)
 	}
@@ -160,14 +183,14 @@ func (e *Engine) resolve(recipe string, seen []string) ([]string, error) {
 }
 
 // Assemble returns the full assembled content for a bundle. It validates that every
-// fragment exists before emitting, so a broken recipe never produces partial output.
+// fragment exists before emitting, so a broken bundle never produces partial output.
 // Duplicate fragments (from a diamond @include) are emitted once, at first occurrence.
 func (e *Engine) Assemble(name string) ([]byte, error) {
 	frags, err := e.resolve(name, nil)
 	if err != nil {
 		return nil, err
 	}
-	header := fmt.Sprintf("<!-- Generated by moon from bundles/%s. Do not edit; edit src/ and rerun. -->", name)
+	header := fmt.Sprintf("<!-- Generated by moon from src/bundles/%s. Do not edit; edit src/fragments and rerun. -->", name)
 	return e.emit(header, frags, name)
 }
 
@@ -184,15 +207,15 @@ func (e *Engine) AssembleMany(names []string) ([]byte, error) {
 		}
 		all = append(all, frags...)
 	}
-	header := fmt.Sprintf("<!-- Generated by moon from bundles/%s. Do not edit; edit src/ and rerun. -->", strings.Join(names, ", "))
+	header := fmt.Sprintf("<!-- Generated by moon from src/bundles/%s. Do not edit; edit src/fragments and rerun. -->", strings.Join(names, ", "))
 	return e.emit(header, all, strings.Join(names, ", "))
 }
 
 // emit validates and writes the given fragments under a header. It deduplicates
 // (first occurrence wins), separates fragments with exactly one blank line, and
 // prefixes each with a provenance comment so a reader (or a debugging maintainer)
-// can see which src/ file a passage came from. Validation happens up front, so a
-// missing fragment never yields partial output. The origin string names the
+// can see which src/fragments file a passage came from. Validation happens up front,
+// so a missing fragment never yields partial output. The origin string names the
 // bundle(s) for error messages.
 func (e *Engine) emit(header string, frags []string, origin string) ([]byte, error) {
 	seen := make(map[string]bool, len(frags))
@@ -205,19 +228,19 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 		ordered = append(ordered, f)
 	}
 	for _, f := range ordered {
-		if _, err := fs.Stat(e.fsys, srcDir+"/"+f); err != nil {
-			return nil, fmt.Errorf("%s/%s (in bundle %s): %w", srcDir, f, origin, ErrMissingFragment)
+		if _, err := fs.Stat(e.fsys, fragmentsDir+"/"+f); err != nil {
+			return nil, fmt.Errorf("%s/%s (in bundle %s): %w", fragmentsDir, f, origin, ErrMissingFragment)
 		}
 	}
 	var buf bytes.Buffer
 	buf.WriteString(header)
 	buf.WriteString("\n\n")
 	for _, f := range ordered {
-		data, err := fs.ReadFile(e.fsys, srcDir+"/"+f)
+		data, err := fs.ReadFile(e.fsys, fragmentsDir+"/"+f)
 		if err != nil {
 			return nil, fmt.Errorf("reading fragment %s: %w", f, err)
 		}
-		fmt.Fprintf(&buf, "<!-- %s/%s -->\n\n", srcDir, f)
+		fmt.Fprintf(&buf, "<!-- %s/%s -->\n\n", fragmentsDir, f)
 		buf.Write(bytes.TrimRight(data, "\n"))
 		buf.WriteString("\n\n")
 	}
@@ -226,10 +249,10 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 	return out, nil
 }
 
-// Check validates every recipe. It returns problems (missing fragments or include
-// cycles) and orphans (fragments present in src/ but referenced by no bundle). The
-// returned strings are for human display; callers that need to branch on failure
-// kind should call Recipe or Assemble directly and use errors.Is instead.
+// Check validates every bundle. It returns problems (missing fragments or include
+// cycles) and orphans (fragments present in src/fragments but referenced by no
+// bundle). The returned strings are for human display; callers that need to branch on
+// failure kind should call Expand or Assemble directly and use errors.Is instead.
 func (e *Engine) Check() (problems, orphans []string, err error) {
 	names, err := e.List()
 	if err != nil {
@@ -244,19 +267,19 @@ func (e *Engine) Check() (problems, orphans []string, err error) {
 		}
 		for _, f := range frags {
 			referenced[f] = true
-			if _, serr := fs.Stat(e.fsys, srcDir+"/"+f); serr != nil {
+			if _, serr := fs.Stat(e.fsys, fragmentsDir+"/"+f); serr != nil {
 				problems = append(problems, fmt.Sprintf("%s: missing fragment %s", name, f))
 			}
 		}
 	}
-	err = fs.WalkDir(e.fsys, srcDir, func(p string, d fs.DirEntry, walkErr error) error {
+	err = fs.WalkDir(e.fsys, fragmentsDir, func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if d.IsDir() || !strings.HasSuffix(p, ".md") {
 			return nil
 		}
-		if rel := strings.TrimPrefix(p, srcDir+"/"); !referenced[rel] {
+		if rel := strings.TrimPrefix(p, fragmentsDir+"/"); !referenced[rel] {
 			orphans = append(orphans, rel)
 		}
 		return nil

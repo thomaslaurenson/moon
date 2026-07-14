@@ -4,7 +4,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 
@@ -15,10 +14,14 @@ import (
 
 const rootLong = `moon composes agent-instruction bundles from markdown fragments.
 
+A fragment is a single markdown file (src/fragments). A bundle is a named
+composition of fragments (src/bundles). Use "moon fragment" to work with the
+individual files, and "moon bundle" to compose them.
+
 New here? Run this sequence:
-  moon list --long          see every bundle with a one-line description
-  moon recipe <name>        see the exact fragments a bundle expands to
-  moon show <name>          print it (or a single fragment path) to stdout`
+  moon bundle list --long     see every bundle with a one-line description
+  moon bundle show <name> -l  see the exact fragments a bundle expands to
+  moon bundle show <name>     print the assembled bundle to stdout`
 
 // ErrSilent signals that a command already printed everything the user needs to
 // see; the entry point should exit non-zero without adding its own error line.
@@ -46,27 +49,11 @@ func NewRootCmd(fsys fs.FS, out, errw io.Writer) *cobra.Command {
 	root.SetErr(errw)
 
 	root.AddCommand(
-		a.newListCmd(),
-		a.newShowCmd(),
-		a.newBuildCmd(),
-		a.newRecipeCmd(),
+		a.newFragmentCmd(),
+		a.newBundleCmd(),
 		a.newCheckCmd(),
 		a.newInitCmd(),
 		newVersionCmd(),
 	)
 	return root
-}
-
-// resolveContent returns the assembled content for a bundle name, or the raw
-// content of a fragment path if no bundle matches. Bundles are checked first so
-// existing bundle names never change meaning.
-func (a *App) resolveContent(name string) ([]byte, error) {
-	switch {
-	case a.e.HasBundle(name):
-		return a.e.Assemble(name)
-	case a.e.HasFragment(name):
-		return a.e.Fragment(name)
-	default:
-		return nil, fmt.Errorf("%s: not a known bundle or fragment (run moon list to see bundles)", name)
-	}
 }

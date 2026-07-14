@@ -10,7 +10,7 @@ import (
 func (a *App) newCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
-		Short: "Validate every recipe: missing fragments, include cycles, orphans",
+		Short: "Validate every bundle: missing fragments, include cycles, orphans",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ok, err := a.check(cmd.ErrOrStderr())
@@ -25,7 +25,7 @@ func (a *App) newCheckCmd() *cobra.Command {
 	}
 }
 
-// check validates every recipe, printing FAIL/WARN lines and a summary to errw.
+// check validates every bundle, printing FAIL/WARN lines and a summary to errw.
 // It reports ok=false (rather than an error) when validation itself succeeded
 // but found problems, since that's a normal check-failed outcome, not a fault.
 func (a *App) check(errw io.Writer) (ok bool, err error) {

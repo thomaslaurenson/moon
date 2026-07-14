@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0 - 2026-07-14
+
+### Added
+
+- Add fragment list and fragment show commands for discovering and printing individual fragments
+- Add shell completion for bundle and fragment names via the completion command
+
+### Changed
+
+- Restructure the CLI around two nouns, fragment and bundle, each with list and show subcommands
+- Rename list to bundle list, and show to bundle show
+- Fold the recipe command into bundle show --list
+- Move fragments to src/fragments and bundle definitions to src/bundles
+
+### Removed
+
+- Remove the build command
+
 ## 0.1.2 - 2026-07-13
 
 ### Added

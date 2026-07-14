@@ -10,27 +10,41 @@ To the moon! A self-contained binary that composes AI agent instructions from ma
 
 ## What
 
-moon assembles **bundles** (named recipes in `bundles/`) from markdown **fragments** (files in `src/`). The whole `src/` and `bundles/` tree is embedded into the binary at build time, so the compiled `moon` needs no files alongside it at runtime.
+A **fragment** is a single markdown file (`src/fragments`). A **bundle** is a named composition of fragments (`src/bundles`). moon assembles bundles from fragments. The whole `src/` tree is embedded into the binary at build time, so the compiled `moon` needs no files alongside it at runtime.
 
-## Install
+## Installation
+
+Download a pre-built binary from the [releases page](https://github.com/thomaslaurenson/moon/releases). For easier install, use the bash installer script:
 
 ```sh
-make build    # produces dist/moon for the current platform
-make ci       # fmt check, mod tidy check, vet, race tests, recipe validation
+curl -fsSL https://github.com/thomaslaurenson/moon/releases/latest/download/install.sh | bash
 ```
 
-Cross-platform release binaries are built with GoReleaser.
+Or the PowerShell installer script if on Windows:
+
+```ps
+irm https://github.com/thomaslaurenson/moon/releases/latest/download/install.ps1 | iex
+```
+
+Install from source:
+
+```sh
+go install github.com/thomaslaurenson/moon@latest
+```
 
 ## Usage
 
 ```sh
-moon list --long             # see every bundle with a one-line description
-moon show <bundle>           # print an assembled bundle to stdout
-moon init <target> <bundle>  # populate a repo for claude, agents, or copilot
+moon bundle list --long        # see every bundle with a one-line description
+moon bundle show <name>        # print an assembled bundle to stdout
+moon bundle show <name> -l     # list the fragments a bundle expands to
+moon fragment list [filter]    # list fragment paths (optionally filtered)
+moon fragment show <path>      # print a single fragment to stdout
+moon init <target> [bundle...] # populate a repo for claude, agents, or copilot
 ```
 
-Run `moon help` for the full command reference, including `build`, `recipe`, and `check`.
+Run `moon help` for the full command reference, including `check`. Shell completion for bundle and fragment names is available via `moon completion <shell>` (bash, zsh, fish, powershell).
 
 ## Editing
 
-Edit fragments in `src/` and recipes in `bundles/`, then rebuild (`make build`) to pick up changes. Run `moon check` (or `make ci`, which includes it) to validate every recipe before committing.
+Edit fragments in `src/fragments` and bundle definitions in `src/bundles`, then rebuild (`make build`) to pick up changes. Run `moon check` (or `make ci`, which includes it) to validate every bundle before committing.

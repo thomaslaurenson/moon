@@ -10,10 +10,11 @@ import (
 	"github.com/thomaslaurenson/moon/cmd"
 )
 
-// content embeds the fragment tree (src/) and recipes (bundles/) into the binary.
-// The all: prefix is required so files beginning with '_' (such as _core.md) are included.
+// content embeds the fragment tree (src/fragments) and bundle definitions
+// (src/bundles) into the binary. The all: prefix is required so files beginning
+// with '_' (such as _core.md) are included.
 //
-//go:embed all:src all:bundles
+//go:embed all:src
 var content embed.FS
 
 func main() {

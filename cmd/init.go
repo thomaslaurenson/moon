@@ -17,9 +17,10 @@ func (a *App) newInitCmd() *cobra.Command {
 	var dir string
 	var force, dryRun bool
 	c := &cobra.Command{
-		Use:   fmt.Sprintf("init <%s> [bundle...]", strings.Join(target.Names(), "|")),
-		Short: "Populate a repo for a tool (claude, agents, copilot)",
-		Args:  cobra.MinimumNArgs(1),
+		Use:               fmt.Sprintf("init <%s> [bundle...]", strings.Join(target.Names(), "|")),
+		Short:             "Populate a repo for a tool (claude, agents, copilot)",
+		Args:              cobra.MinimumNArgs(1),
+		ValidArgsFunction: a.completeInit,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runInit(cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], args[1:], dir, force, dryRun)
 		},
@@ -106,7 +107,7 @@ func (a *App) resolveInitMatches(root, targetName string, bundleNames []string) 
 		matches := make([]detect.Match, 0, len(bundleNames))
 		for _, name := range bundleNames {
 			if !a.e.HasBundle(name) {
-				return nil, fmt.Errorf("%s: not a known bundle (run moon list to see bundles)", name)
+				return nil, fmt.Errorf("%s: not a known bundle (run moon bundle list to see bundles)", name)
 			}
 			matches = append(matches, detect.Match{Bundle: name, Glob: target.GlobForBundle(name)})
 		}

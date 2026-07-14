@@ -6,17 +6,17 @@ import (
 )
 
 // repoFS returns an fs.FS rooted at the repository root (two levels up from this
-// package), so the test exercises the real src/ and bundles/ trees rather than a
-// synthetic fixture. This is the check that guards against a recipe referencing a
-// fragment that does not exist, or a fragment being left in no bundle.
+// package), so the test exercises the real src/fragments and src/bundles trees
+// rather than a synthetic fixture. This is the check that guards against a bundle
+// referencing a fragment that does not exist, or a fragment being left in no bundle.
 func repoFS(t *testing.T) *Engine {
 	t.Helper()
 	return New(os.DirFS("../.."))
 }
 
-// TestRealContentHasNoProblems fails if any shipped recipe references a missing
+// TestRealContentHasNoProblems fails if any shipped bundle references a missing
 // fragment or forms an include cycle. It is the regression test for the class of
-// bug where a fragment is renamed or removed but a recipe still points at it.
+// bug where a fragment is renamed or removed but a bundle still points at it.
 func TestRealContentHasNoProblems(t *testing.T) {
 	t.Parallel()
 	problems, _, err := repoFS(t).Check()
@@ -31,10 +31,10 @@ func TestRealContentHasNoProblems(t *testing.T) {
 	}
 }
 
-// TestRealContentHasNoOrphans fails if a fragment under src/ is referenced by no
-// bundle. Orphans are not broken output, but in this repo every fragment is meant
-// to belong to at least one bundle, so an orphan signals either a dropped recipe
-// line or a fragment that should be deleted.
+// TestRealContentHasNoOrphans fails if a fragment under src/fragments is referenced
+// by no bundle. Orphans are not broken output, but in this repo every fragment is
+// meant to belong to at least one bundle, so an orphan signals either a dropped
+// bundle line or a fragment that should be deleted.
 func TestRealContentHasNoOrphans(t *testing.T) {
 	t.Parallel()
 	_, orphans, err := repoFS(t).Check()

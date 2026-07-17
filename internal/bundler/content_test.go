@@ -31,20 +31,56 @@ func TestRealContentHasNoProblems(t *testing.T) {
 	}
 }
 
+// standaloneFragments are fragments deliberately left out of every bundle, read
+// on demand via "moon fragment show" instead. They are the exception: a fragment
+// belongs in a bundle unless the task it covers is one a human does by hand, so
+// that shipping it to an agent would only spend context.
+var standaloneFragments = map[string]bool{
+	// Branches are created manually, never by an agent working in a bundled repo.
+	"github/branches.md": true,
+}
+
 // TestRealContentHasNoOrphans fails if a fragment under src/fragments is referenced
-// by no bundle. Orphans are not broken output, but in this repo every fragment is
-// meant to belong to at least one bundle, so an orphan signals either a dropped
-// bundle line or a fragment that should be deleted.
+// by no bundle and is not declared standalone above. Orphans are not broken output,
+// but in this repo a fragment is meant to belong to at least one bundle, so an
+// undeclared orphan signals either a dropped bundle line or a fragment that should
+// be deleted.
 func TestRealContentHasNoOrphans(t *testing.T) {
 	t.Parallel()
 	_, orphans, err := repoFS(t).Check()
 	if err != nil {
 		t.Fatalf("Check on real content: %v", err)
 	}
-	if len(orphans) > 0 {
-		t.Errorf("real content has %d orphan fragment(s):", len(orphans))
-		for _, o := range orphans {
+	var unexpected []string
+	for _, o := range orphans {
+		if !standaloneFragments[o] {
+			unexpected = append(unexpected, o)
+		}
+	}
+	if len(unexpected) > 0 {
+		t.Errorf("real content has %d orphan fragment(s):", len(unexpected))
+		for _, o := range unexpected {
 			t.Errorf("  %s", o)
+		}
+	}
+}
+
+// TestStandaloneFragmentsExist fails if a fragment declared standalone above has
+// been renamed or deleted, which would otherwise leave a stale entry silently
+// excusing a future orphan of the same name.
+func TestStandaloneFragmentsExist(t *testing.T) {
+	t.Parallel()
+	frags, err := repoFS(t).ListFragments()
+	if err != nil {
+		t.Fatalf("ListFragments: %v", err)
+	}
+	present := make(map[string]bool, len(frags))
+	for _, f := range frags {
+		present[f] = true
+	}
+	for name := range standaloneFragments {
+		if !present[name] {
+			t.Errorf("standaloneFragments names %q, which does not exist", name)
 		}
 	}
 }

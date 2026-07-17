@@ -1,6 +1,8 @@
-# C++ functional testing (applications)
+# C++ functional testing
 
-The subprocess/functional testing layer, which spawns the compiled binary and verifies its CLI behaviour end-to-end. Assumes cpp/testing.md and cpp/cmake-app.md. Only applies to applications; a library has no compiled binary to spawn.
+The subprocess/functional testing layer, which spawns the compiled binary and verifies its CLI behaviour end-to-end. Assumes cpp/testing.md and the tier fragment.
+
+Applies to any tier that ships a binary: an application, or a library with a bundled CLI. A plain library has no compiled binary to spawn and stops at the unit and integration layers.
 
 ## Structure addition
 
@@ -9,13 +11,22 @@ test/
   functional/             # Catch2 functional tests against the compiled binary
     test_create.cpp       # mirrors the create subcommand
     test_list.cpp         # mirrors the list subcommand
-  subprocess_helper.h      # cross-platform subprocess runner
+  subprocess_helper.h     # cross-platform subprocess runner
   subprocess_helper.cpp
 extern/
   subprocess.h/           # submodule - pinned to a specific commit
 ```
 
 - Functional tests mirror CLI subcommands or user-facing behaviour, not internal source files
+
+Register the target with a `functional` label, and with `SKIP_RETURN_CODE` so an optional-data skip is not reported as a failure:
+
+```cmake
+catch_discover_tests(myapp_functional_tests
+    PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
+```
+
+See cpp/testing.md for why the label rather than `-R`, and why the skip code matters.
 
 ## Subprocess helper
 
@@ -34,7 +45,7 @@ TEST_CASE("create: target does not exist", "[create]") {
 }
 ```
 
-The binary path is baked in at CMake configure time via `target_compile_definitions`; see the cmake-app fragment for the pattern.
+The binary path is baked in at CMake configure time via `target_compile_definitions`; see the tier fragment for the pattern.
 
 ### subprocess.h dependency
 
@@ -47,11 +58,11 @@ cd extern/subprocess.h && git checkout <commit-hash>
 
 Always pin to an immutable reference: a release tag or a commit hash, never a moving branch name.
 
-## Fixtures
+## The test environment fixture
 
-Fixtures are plain C++ structs that set up and tear down state for tests. They are function-scoped; constructed at the start of each test and destroyed at the end. Each fixture lives in its own header in `test/fixtures/`.
+The general fixture conventions live in cpp/testing.md and apply here unchanged; `test/fixtures/` is shared by every layer.
 
-`test_environment.h` is the one exception: it is a singleton that holds the CMake-baked paths (`MYAPP_BINARY_PATH`, `MYAPP_TEST_DIR`). It provides a single access point for values that are constant across the entire test run and do not vary per test:
+`test_environment.h` is the one fixture that is not function-scoped: it is a singleton holding the CMake-baked paths (`MYAPP_BINARY_PATH`, `MYAPP_TEST_DIR`). A singleton is right here and nowhere else, because these values are constant for the whole run and cannot vary per test:
 
 ```cpp
 // test/fixtures/test_environment.h
@@ -76,7 +87,7 @@ private:
 };
 ```
 
-All other fixtures (e.g. `TestFiles`) are function-scoped structs that include `test_environment.h` when they need the binary or test directory paths.
+All other fixtures (for example `TestFiles`) are ordinary function-scoped structs that include `test_environment.h` when they need the binary or test directory paths.
 
 ```cpp
 // test/fixtures/test_files.h
@@ -163,6 +174,8 @@ TEST_CASE("verify signature", "[verify]") {
 }
 ```
 
+This is why the target sets `SKIP_RETURN_CODE 4`: `SKIP()` exits the binary with code 4, and without that property CTest reports the skip as a failure.
+
 ## Tags
 
 Tag each functional `TEST_CASE` with the subcommand or feature under test:
@@ -178,15 +191,34 @@ Run a subset during development:
 ./build/bin/myapp_functional_tests [create]
 ```
 
+## Asserting on the CLI contract
+
+The functional layer owns the exit-code contract, because it is the only layer that can see it. Assert the code, not just the output:
+
+```cpp
+TEST_CASE("create: target does not exist", "[create]") {
+    auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
+    REQUIRE(result.returncode_ == 1);
+    REQUIRE_THAT(result.stderr_output_, Catch::Matchers::ContainsSubstring("does not exist"));
+}
+```
+
+An expected failure the user can act on exits 1 and explains itself on stderr; an unexpected one exits 2. See the error handling fragment for where those codes come from. A test asserting only that the command failed would pass if the binary crashed instead.
+
 ## Makefile targets
 
 ```makefile
-.PHONY: test
-test: test_unit test_functional ## Run all tests
-
 .PHONY: test_functional
-test_functional: ## Run Catch2 functional tests
-	cmake --build build && cd build && ctest --output-on-failure -R functional
+test_functional: build ## Run Catch2 functional tests against the built binary
+	ctest --test-dir build --output-on-failure --parallel $(JOBS) -L functional
 ```
 
-This replaces cpp/testing.md's standalone `test_unit`-only target with a combined `test` target that runs both layers.
+`test_functional` depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result.
+
+This layer does not change cpp/testing.md's `test` target, which stays the unit layer alone and remains the everyday command. A project that wants both in one go adds:
+
+```makefile
+.PHONY: test_all
+test_all: ## Run every test layer built into the current configure
+	ctest --test-dir build --output-on-failure --parallel $(JOBS)
+```

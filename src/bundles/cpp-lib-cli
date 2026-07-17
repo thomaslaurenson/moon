@@ -1,0 +1,25 @@
+# C++ library with a bundled CLI - full project. A reusable static library (public API
+# under include/) plus a thin app/ binary that links it. Combines the library tier's API
+# split with the application tier's release machinery: because it ships a distributable
+# binary it keeps the functional test layer, the Docker release matrix and workflows-app,
+# which cpp-lib does not have. All three test layers apply. Use cpp-lib when there is no
+# binary to ship, cpp-app when there is no reusable library behind a public API.
+@include cpp-lib-cli-code
+cpp/cmake.md
+cpp/cmake-lib-cli.md
+cpp/clang-format.md
+cpp/clang-tidy.md
+cpp/testing.md
+cpp/testing-integration.md
+cpp/testing-functional.md
+cpp/testing-fuzz.md
+tools/makefile.md
+tools/docker.md
+github/actions.md
+cpp/workflows.md
+cpp/workflows-app.md
+github/badges.md
+cpp/badges.md
+github/dependabot.md
+github/commits.md
+github/changelog.md

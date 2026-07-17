@@ -1,13 +1,17 @@
 # C++ compiled application - full project (code + testing + build + tooling + release + CI).
-# cpp-app is application-tier; cpp-lib is the library tier (no Docker release, no
-# subprocess/functional test layer, no cmd-equivalent binary).
+# A thin app/ binary over an internal core library in src/, with no public API: nothing
+# outside the repo links it, so there is no include/ and no alias. Ships a binary, so it
+# keeps the functional test layer and the Docker release matrix. Use cpp-lib when there is
+# no binary to ship, cpp-lib-cli when the core is also a reusable library behind include/.
 @include cpp-app-code
 cpp/cmake.md
 cpp/cmake-app.md
 cpp/clang-format.md
 cpp/clang-tidy.md
 cpp/testing.md
+cpp/testing-integration.md
 cpp/testing-functional.md
+cpp/testing-fuzz.md
 tools/makefile.md
 tools/docker.md
 github/actions.md
@@ -16,5 +20,5 @@ cpp/workflows-app.md
 github/badges.md
 cpp/badges.md
 github/dependabot.md
-github/conventions.md
+github/commits.md
 github/changelog.md

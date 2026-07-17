@@ -1,0 +1,8 @@
+# C++ library-with-CLI - code-authoring rules. Point an agent here when writing or
+# reviewing code for a library that also ships a CLI binary. Same rules as cpp-lib-code:
+# the library half carries the public API, and the errors fragment covers both sides of
+# the library/app boundary that the CLI layer sits on.
+_core.md
+cpp/style.md
+cpp/doxygen.md
+cpp/errors.md

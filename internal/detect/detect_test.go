@@ -39,8 +39,13 @@ func TestDetect(t *testing.T) {
 			wantBundles: []string{"python-script"},
 		},
 		{
-			name:        "cpp project",
+			name:        "cpp project with main() still in src/ is an application",
 			fsys:        fstest.MapFS{"CMakeLists.txt": {}, "src/main.cpp": {}},
+			wantBundles: []string{"cpp-app"},
+		},
+		{
+			name:        "cpp project with an app/ dir and no include/ is an application",
+			fsys:        fstest.MapFS{"CMakeLists.txt": {}, "app/main.cpp": {}, "src/parser.cpp": {}},
 			wantBundles: []string{"cpp-app"},
 		},
 		{
@@ -51,6 +56,34 @@ func TestDetect(t *testing.T) {
 		{
 			name:        "cpp project with a root include/ dir is a library",
 			fsys:        fstest.MapFS{"CMakeLists.txt": {}, "include/mylib/parser.h": {}, "src/parser.cpp": {}},
+			wantBundles: []string{"cpp-lib"},
+		},
+		{
+			// examples/ is a demo built on request, not a shipped binary, so a
+			// library that has one is still a library (see cpp/cmake-lib.md).
+			name: "cpp library with examples/ but no app/ is still a library",
+			fsys: fstest.MapFS{
+				"CMakeLists.txt": {}, "include/gale/auth.h": {},
+				"src/auth/auth.cpp": {}, "examples/gale_auth/main.cpp": {},
+			},
+			wantBundles: []string{"cpp-lib"},
+		},
+		{
+			name: "cpp project with both include/ and app/ is a lib-cli",
+			fsys: fstest.MapFS{
+				"CMakeLists.txt": {}, "include/mylib/parser.h": {},
+				"src/parser.cpp": {}, "app/main.cpp": {},
+			},
+			wantBundles: []string{"cpp-lib-cli"},
+		},
+		{
+			// Only a root-level app/ marks a shipped binary; the walk must not be
+			// fooled by the name appearing deeper in the tree.
+			name: "cpp library with a nested app dir is not a lib-cli",
+			fsys: fstest.MapFS{
+				"CMakeLists.txt": {}, "include/mylib/parser.h": {},
+				"src/app/dispatch.cpp": {},
+			},
 			wantBundles: []string{"cpp-lib"},
 		},
 		{

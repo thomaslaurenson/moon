@@ -6,6 +6,7 @@ Language-agnostic CI conventions. Per-language paths filters, setup steps, and r
 - Create a Makefile target for a workflow step when it is useful locally, appears in more than one workflow, or contains non-trivial logic. Version and changelog extraction must always go through Makefile targets.
 - Minimal permissions: `contents: read` by default; `contents: write` only in release and prerelease workflows. Test workflows never declare `contents: write`.
 - No `fetch-depth: 0` except in release workflows where changelog extraction requires it.
+- Never let a failed `gh` call stand in for a negative answer. An existence check has three outcomes, not two: it is there, it is not there, or the API could not say. Match the not-found message explicitly and fail the job on anything else. Both `|| true` and a bare `if gh view ...; then` collapse a rate limit, an auth failure or a flaky API into "it does not exist", and the step then does the wrong thing confidently.
 
 Pin runners; never use `-latest`. Supported: `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-14`, `macos-15`, `windows-2022`, `windows-2025`.
 

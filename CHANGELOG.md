@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.1 - 2026-07-17
+
+### Added
+
+- Add the cpp-lib-cli and cpp-lib-cli-code bundles for a library that ships a CLI binary
+- Add cpp fragments for error handling, Doxygen, integration testing, and fuzz testing
+
+### Changed
+
+- Restructure the cpp tiers around a public API in include and a shipped binary in app
+- Move main into app so src always builds a library target that tests link
+- Restructure cpp testing around unit, integration, functional, and fuzz layers
+- Give the cpp code bundles per-tier rules, matching the Python tiers
+- Add warning, sanitizer, and multi-module library conventions to the cpp cmake fragments
+- Split the git conventions fragment into separate commits and branches fragments
+
+### Fixed
+
+- Fix path, variable scope, testing option, and target naming issues across the cpp cmake fragments
+- Fix ctest layer selection and skip handling in the cpp testing fragments
+- Harden the Go dev prerelease delete against a flaky GitHub API
+
 ## 0.2.0 - 2026-07-14
 
 ### Added

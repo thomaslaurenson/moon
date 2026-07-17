@@ -1,3 +1,7 @@
 # C++ library - code-authoring rules. Point an agent here when writing or reviewing library code.
+# Adds the public-API concerns an application does not have: Doxygen as a consumer
+# contract, and an exception hierarchy consumers can catch at the root.
 _core.md
 cpp/style.md
+cpp/doxygen.md
+cpp/errors.md

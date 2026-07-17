@@ -10,7 +10,9 @@ Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
 paths:
   - ".github/workflows/**"
   - "Makefile"
+  - "include/**"
   - "src/**"
+  - "app/**"
   - "test/**"
   - ".clang-format"
   - ".clang-tidy"
@@ -18,7 +20,7 @@ paths:
   - "extern/**"
 ```
 
-Include `extern/**` only if the project uses git submodules for dependencies. An application adds `Dockerfile*` to this list; see workflows-app.md.
+Include `extern/**` only if the project uses git submodules for dependencies. Drop `include/**` in an application and `app/**` in a library; a path filter naming a directory the tier does not have is dead configuration that outlives the reason it was copied. A tier that ships a binary adds `Dockerfile*` to this list; see workflows-app.md.
 
 ## Checkout
 

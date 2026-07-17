@@ -1,3 +1,6 @@
-# C++ - code-authoring rules. Point an agent here when writing or reviewing C++ code.
+# C++ application - code-authoring rules. Point an agent here when writing or reviewing app code.
+# No Doxygen fragment: an application has no public API, so its headers are internal and
+# documented where they are not self-evident rather than as a contract to strangers.
 _core.md
 cpp/style.md
+cpp/errors.md

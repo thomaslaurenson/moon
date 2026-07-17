@@ -42,4 +42,36 @@ Three-step release pattern: goreleaser builds binaries (`args: build --clean`, d
 
 The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums, or cosign signing (those are release-only, via `gpipe-action`). `id-token: write` is not needed for `prerelease.yml`, only `contents: write`.
 
-`dev` is a real git tag that moves: delete any existing `dev` release first (`gh release view`/`gh release delete dev --yes --cleanup-tag`, existence-checked, never `|| true`), then force the tag to the current commit and push it (`git tag -f dev` and `git push origin dev --force`, after setting a bot `user.name`/`user.email`), then run `goreleaser build --snapshot` with `.goreleaser.prerelease.yml` (version comes from `snapshot.version_template`, so no `GORELEASER_CURRENT_TAG` is needed), then `gh release create dev --prerelease dist/<name>-*`. Require `fetch-depth: 0` and `fetch-tags: true` on checkout so the existing `dev` tag is visible to `git tag -f`.
+`dev` is a real git tag that moves. `prerelease.yml` runs four steps in order:
+
+1. Delete any existing `dev` release, existence-checked; see below.
+2. Force the tag to the current commit and push it: `git tag -f dev` then `git push origin dev --force`, after setting a bot `user.name`/`user.email`.
+3. Build: `goreleaser build --snapshot` with `.goreleaser.prerelease.yml`. The version comes from `snapshot.version_template`, so no `GORELEASER_CURRENT_TAG` is needed.
+4. Publish: `gh release create dev --prerelease dist/<name>-*`.
+
+Require `fetch-depth: 0` and `fetch-tags: true` on checkout so the existing `dev` tag is visible to `git tag -f`.
+
+### Deleting the existing dev release
+
+The delete is existence-checked, and the check separates "there is no release" from "the API could not tell me":
+
+```yaml
+- name: Delete any existing dev release
+  run: |
+    if err=$(gh release view "dev" 2>&1 >/dev/null); then
+      gh release delete "dev" --yes --cleanup-tag
+    elif grep -qi "release not found" <<<"$err"; then
+      echo "No existing dev release"
+    else
+      echo "::error::could not determine whether a dev release exists: ${err}"
+      exit 1
+    fi
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Three outcomes, three behaviours: the release exists, so delete it; `gh` reports it missing, so carry on; `gh` failed for any other reason, so stop. That third branch is the point of the whole step. A rate limit, an expired token or a flaky API all fail the `view`, and treating that as "no release exists" means the job skips the delete and then publishes on top of a release whose state it never established.
+
+`2>&1 >/dev/null` captures stderr while discarding stdout, and the order matters. Redirections apply left to right, so this points stderr at the still-open capture and only then sends stdout to `/dev/null`. Writing `>/dev/null 2>&1` sends both to `/dev/null`, leaves `err` empty, and the not-found branch can never match.
+
+Never write this as `gh release delete dev --yes --cleanup-tag || true`. That collapses all three outcomes into one and continues regardless. `--cleanup-tag` deletes the git tag along with the release, which step 2 then recreates at the new commit.

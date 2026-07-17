@@ -2,12 +2,12 @@
 // marker files (go.mod, pyproject.toml, and so on). Detection only ever picks a
 // bundle's default tier; callers that want a different tier (or a bundle detect
 // can't infer) should pass bundle names explicitly instead of relying on this
-// package. Go, C++, and Python each distinguish application from library tiers
-// using a single cheap structural signal: a main.go anywhere (Go binary), a
-// root-level include/ directory (C++ library), or a [build-system] table in
-// pyproject.toml (installable Python package, optionally with [project.scripts]
-// for a console script). These are heuristics; when one is wrong, an explicit
-// bundle name always wins.
+// package. Go, C++, and Python each distinguish their tiers using cheap
+// structural signals: a main.go anywhere (Go binary), root-level include/ and
+// app/ directories (a C++ public API and a C++ shipped binary respectively), or
+// a [build-system] table in pyproject.toml (installable Python package,
+// optionally with [project.scripts] for a console script). These are heuristics;
+// when one is wrong, an explicit bundle name always wins.
 package detect
 
 import (
@@ -33,7 +33,8 @@ var skipDirs = map[string]bool{
 type presence struct {
 	goMod, cmakeLists, toc, ps1, pyproject, py, sh bool
 	mainGo                                         bool // a main.go anywhere suggests a Go binary, not a library
-	includeDir                                     bool // an include/ dir at the root is this repo's C++ library marker
+	includeDir                                     bool // a root include/ dir is this repo's C++ public-API marker
+	appDir                                         bool // a root app/ dir is this repo's C++ shipped-binary marker
 	pyBuildSystem                                  bool // pyproject.toml has [build-system] -> installable package (library)
 	pyScripts                                      bool // pyproject.toml has [project.scripts] -> ships a console script
 }
@@ -51,8 +52,11 @@ func Detect(fsys fs.FS) ([]Match, error) {
 			if path != "." && skipDirs[d.Name()] {
 				return fs.SkipDir
 			}
-			if path == "include" {
+			switch path {
+			case "include":
 				p.includeDir = true
+			case "app":
+				p.appDir = true
 			}
 			return nil
 		}
@@ -97,11 +101,19 @@ func Detect(fsys fs.FS) ([]Match, error) {
 		}
 	}
 	if p.cmakeLists {
-		// include/ is this repo's own convention for a library's public API
-		// surface (see cpp/cmake-lib.md); its presence is a reliable signal.
-		if p.includeDir {
+		// The C++ tiers turn on two independent questions, each answered by a
+		// root-level directory (see cpp/cmake.md): include/ means a public API
+		// consumers link against, app/ means a binary the project ships. A
+		// library demonstrating itself with examples/ has no app/ and stays
+		// cpp-lib, which is the distinction that fragment draws.
+		switch {
+		case p.includeDir && p.appDir:
+			add("cpp-lib-cli")
+		case p.includeDir:
 			add("cpp-lib")
-		} else {
+		default:
+			// No include/ means nothing outside the repo links this code, so it
+			// is an application whether or not it has split main() into app/ yet.
 			add("cpp-app")
 		}
 	}

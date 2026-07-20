@@ -1,6 +1,6 @@
 # Python library that also ships a CLI entry point and/or operational scripts
 # alongside the installable package (e.g. a console script + tasks/). Same tooling
-# as python-lib; logging is owned by the package itself via structlog.
+# as python-lib; the package configures stdlib logging at its entry point.
 @include python-lib-cli-code
 python/packaging.md
 python/testing-unit.md

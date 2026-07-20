@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2 - 2026-07-20
+
+### Changed
+
+- Rename the python-app bundle to python-tools and restructure it around domain-named script directories
+- Use standard-library logging across all Python tiers
+
+### Removed
+
+- Remove the Python structlog logging fragment
+
 ## 0.2.1 - 2026-07-17
 
 ### Added

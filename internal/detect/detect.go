@@ -128,14 +128,14 @@ func Detect(fsys fs.FS) ([]Match, error) {
 		// [build-system] means the project is an installable package (uv treats
 		// build-system presence as the package signal), i.e. a library. A library
 		// that also declares [project.scripts] ships a console script -> lib-cli.
-		// No build-system means a non-installable scripts project -> app.
+		// No build-system means a non-installable managed scripts project -> tools.
 		switch {
 		case p.pyBuildSystem && p.pyScripts:
 			add("python-lib-cli")
 		case p.pyBuildSystem:
 			add("python-lib")
 		default:
-			add("python-app")
+			add("python-tools")
 		}
 	case p.py:
 		add("python-script")

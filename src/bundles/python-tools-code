@@ -1,0 +1,8 @@
+# Python tools project - code-authoring rules.
+# Point an agent here when writing or reviewing operational-script code in an existing
+# repo. No logging fragment: tools are run interactively and print to stdout; they do
+# not configure a logging stack. No errors/typecheck rules either - a tools project is
+# managed but not a distributed package.
+_core.md
+python/style.md
+python/types.md

@@ -17,7 +17,7 @@ Include an empty `py.typed` marker in the package root. Without it, pyright and 
 
 ## Optional dependencies
 
-Import optional packages inside the function that uses them, never at module top-level. Each optional integration is its own dep group in `pyproject.toml`, and the import error message names the extra to install.
+Import optional packages inside the function that uses them, never at module top-level. Each optional integration is its own extra in `[project.optional-dependencies]` (a published, user-facing install, distinct from the local-only `[dependency-groups]` used for dev tooling; see `python/project-lib.md`), and the import error message names the extra to install.
 
 ```python
 def create_session(self) -> None:

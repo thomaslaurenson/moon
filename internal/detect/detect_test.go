@@ -19,9 +19,9 @@ func TestDetect(t *testing.T) {
 			wantBundles: []string{"go-cli"},
 		},
 		{
-			name:        "pyproject without build-system is an app (not installable)",
-			fsys:        fstest.MapFS{"pyproject.toml": {Data: []byte("[project]\nname = \"x\"\n")}, "tasks/run.py": {}},
-			wantBundles: []string{"python-app"},
+			name:        "pyproject without build-system is a tools project (not installable)",
+			fsys:        fstest.MapFS{"pyproject.toml": {Data: []byte("[project]\nname = \"x\"\n")}, "client/run.py": {}},
+			wantBundles: []string{"python-tools"},
 		},
 		{
 			name:        "pyproject with build-system is a library",

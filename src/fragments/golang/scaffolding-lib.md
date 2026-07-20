@@ -55,9 +55,9 @@ Follow the shared Makefile conventions.
 - `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...`
 - `test`: `go test -race -count=1 ./...`
-- `test_coverage`: `go test -race -count=1 -coverprofile=coverage.out ./...`
+- `test_coverage`: run `go test -race -count=1 -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
 - `ci`: `fmt_check mod_check vet test`
 
 No `build` or `snapshot` target: there is nothing to compile into a release artifact. Release is a tagged commit; see the workflows fragment.
 
-Coverage runs over `./...`; unlike a CLI project there is no `cmd/` wiring layer to exclude.
+Coverage runs over `./...`; unlike a CLI project there is no `cmd/` wiring layer to exclude. The aggregate figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.

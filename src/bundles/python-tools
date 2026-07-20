@@ -1,0 +1,19 @@
+# Python tools project - full project (a managed set of operational scripts that
+# consume a library; code rules + scaffolding + tooling + CI + repo conventions).
+# Not an installable package: no build-system, no console entry point. Scripts live
+# in domain-named directories and print to stdout. Use python-lib-cli when the project
+# is an installable package that ships a console command; python-script for loose,
+# unmanaged one-offs.
+@include python-tools-code
+python/testing-unit.md
+tools/makefile.md
+python/make.md
+python/tooling.md
+python/project-tools.md
+github/actions.md
+python/workflows.md
+github/badges.md
+python/badges.md
+github/dependabot.md
+github/commits.md
+github/changelog.md

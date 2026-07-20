@@ -49,7 +49,8 @@ test: ## Run tests with the race detector
 .PHONY: test_coverage
 test_coverage: ## Run tests with a coverage report (internal/ only; cmd/ is wiring)
 	@go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...
-	@go tool cover -func=coverage.out | tail -1
+	@go tool cover -func=coverage.out
+	@rm coverage.out
 
 .PHONY: check
 check: ## Validate every bundle: missing fragments, include cycles, orphans

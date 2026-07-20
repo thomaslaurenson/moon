@@ -1,6 +1,0 @@
-# Python application - code-authoring rules.
-# Point an agent here when writing or reviewing app code in an existing repo.
-_core.md
-python/style.md
-python/types.md
-python/logging-structlog.md

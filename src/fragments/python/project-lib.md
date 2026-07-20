@@ -45,10 +45,10 @@ vault = ["hvac>=..."]
 [dependency-groups]
 test = ["pytest>=...", "pytest-cov>=...", "coverage>=..."]
 docs = ["sphinx>=...", "furo>=..."]
-dev  = [{ include-group = "test" }, "ruff>=...", "pyright>=..."]
+dev  = [{ include-group = "test" }, { include-group = "docs" }, "ruff>=...", "pyright>=..."]
 ```
 
-- `uv sync` installs the project plus the default `dev` group (which includes `test`), so a fresh clone can run tests and lints immediately.
+- `uv sync` installs the project plus the default `dev` group (which includes `test` and `docs`), so a fresh clone can run tests, lints, and the docs build immediately.
 - `uv sync --all-extras` additionally installs the published extras, which tests that exercise optional integrations need.
 - Add further extras for each optional integration; each pulls in only what it needs.
 

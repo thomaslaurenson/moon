@@ -1,10 +1,11 @@
 # Python library with an owned CLI/app layer - code-authoring rules.
-# Use when the library configures its own logging (e.g. via a console-script entry
-# point) instead of leaving stack configuration to the consumer.
+# Use when the library configures logging at its console-script entry point instead of
+# leaving stack configuration to the consumer. Same rules as python-lib-code; the
+# logging fragment covers the entry-point-configures / modules-only-log split.
 _core.md
 python/style.md
 python/types.md
 python/docstrings.md
 python/errors.md
-python/logging-structlog.md
+python/logging-stdlib.md
 python/typecheck.md

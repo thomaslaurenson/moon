@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.2 - 2026-07-20
+
+### Added
+
+- Add a get_changelog target and document the v-prefixed tag versus bare changelog header
+- Make PyPI publishing optional over a GitHub-release baseline for Python libraries
+- Default the Python version badge to a static requires-python badge
+- Clarify dependency groups versus extras across the Python fragments
+
+### Changed
+
+- Rename the python-app bundle to python-tools and restructure it around domain-named script directories
+- Use standard-library logging across all Python tiers
+- Make PyPI publishing optional over a GitHub-release baseline for Python libraries
+- Default the Python version badge to a static requires-python badge
+- Clarify dependency groups versus extras across the Python fragments
+- Print the full coverage table in test_coverage and document the total line as the badge source
+
+### Removed
+
+- Remove the Python structlog logging fragment
+
 ## 0.2.1 - 2026-07-17
 
 ### Added

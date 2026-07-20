@@ -1,16 +1,12 @@
 # Python library release
 
-How an installable library publishes a release. A library's release is a git tag; on that tag, CI builds the distribution and publishes it to PyPI, then creates a GitHub release with changelog notes. Scripts-only application projects do not publish and have no equivalent.
+How an installable library publishes a release. A library's release is a git tag; on that tag, CI builds the distribution, then creates a GitHub release with the changelog notes and the built artifacts attached. Publishing to PyPI is an optional add-on layered on top of this baseline (see the optional section below), not a requirement. Scripts-only application projects do not release and have no equivalent.
 
 `@vN` in the examples below means pin the current major of the action at authoring time (for example `@v6`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
 
-## Trusted publishing
+## `release.yml` (baseline: GitHub release)
 
-Publish with PyPI trusted publishing (OIDC), never a long-lived API token in a secret. The workflow needs `id-token: write`; register the repository and workflow as a trusted publisher in the PyPI project settings first.
-
-## `release.yml`
-
-Reusable, called from `tag.yml` after lint and test pass. Two jobs: build the distribution, then publish and create the GitHub release.
+Reusable, called from `tag.yml` after lint and test pass. A single job builds the distribution and creates the GitHub release, using the changelog section for the tag as the release notes and attaching the build output.
 
 ```yaml
 name: Release
@@ -19,34 +15,18 @@ on:
   workflow_call
 
 jobs:
-  build:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@vN
-      - uses: astral-sh/setup-uv@vN
-      - run: uv build
-      - uses: actions/upload-artifact@vN
-        with:
-          name: dist
-          path: dist/
-
-  publish:
-    needs: build
+  release:
     runs-on: ubuntu-24.04
     permissions:
       contents: write        # create the GitHub release
-      id-token: write        # PyPI trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@vN
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@vN
-        with:
-          name: dist
-          path: dist/
+      - uses: astral-sh/setup-uv@vN
 
-      - uses: pypa/gh-action-pypi-publish@vN
+      - run: uv build
 
       - name: Extract release notes from CHANGELOG.md
         run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
@@ -61,11 +41,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 ```
 
-`fetch-depth: 0` is required so `get_changelog` can read the tagged history. The version comes from the tag via the build backend's tag-based versioning, or from `[project]` in `pyproject.toml`; either way, never inject it by hand.
+`fetch-depth: 0` is required so `get_changelog` can read the tagged history. `get_changelog` strips the leading `v` from the tag before matching the bare changelog header (see `python/make.md` and `github/changelog.md`). The version comes from the tag via the build backend's tag-based versioning, or from `[project]` in `pyproject.toml`; either way, never inject it by hand.
 
 ## Caller wiring
 
-`tag.yml` adds the release job after lint and test:
+`tag.yml` adds the release job after lint and test. The baseline needs only `contents: write`:
 
 ```yaml
 jobs:
@@ -78,7 +58,15 @@ jobs:
     uses: ./.github/workflows/release.yml
     permissions:
       contents: write
-      id-token: write
 ```
 
-If the project is deliberately not published to PyPI, drop the `build`/`publish` split and the `id-token` permission, and make `release.yml` a GitHub-release-only workflow that attaches `uv build` output and changelog notes, mirroring the C++ library pattern. In that case also remove the release-downloads and PyPI-derived version badges from the badge row.
+## Optional: publish to PyPI (trusted publishing)
+
+Publishing to PyPI is opt-in. A library consumed only from git or a private index does not need it, and by default the badge row uses the static Python badge (see `python/badges.md`) rather than any PyPI-derived badge.
+
+To publish, first register the repository and workflow as a trusted publisher in the PyPI project settings, then use PyPI trusted publishing (OIDC) never a long-lived API token in a secret. Restructure `release.yml` into two jobs:
+
+- `build`: run `uv build`, then upload `dist/` with `actions/upload-artifact@vN`.
+- `publish` (`needs: build`): download the artifact with `actions/download-artifact@vN` into `dist/`, run `pypa/gh-action-pypi-publish@vN`, then the same checkout (`fetch-depth: 0`), `get_changelog`, and `gh release create dist/*` steps as the baseline job. Grant this job `id-token: write` alongside `contents: write`.
+
+The caller (`tag.yml`) must then also grant `id-token: write` on the `release` job. When publishing to PyPI, you may switch the Python-version badge to the live PyPI badge (see `python/badges.md`).

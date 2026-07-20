@@ -45,11 +45,11 @@ Follow the shared Makefile conventions. Standard targets:
 - `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...`
 - `test`: `go test -race -count=1 ./...`
-- `test_coverage`: `go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...`
+- `test_coverage`: run `go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
 - `build`: `go build -ldflags="..." -o dist/<binary> .`
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `get_changelog`: extract release notes for a tag from `CHANGELOG.md` to stdout (strip the `v` prefix; git tags use `v1.0.0`, CHANGELOG uses `1.0.0`). Fail non-zero when no entry matches, so a release never publishes empty notes.
 - `check`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a plain Go project with nothing embedded.
 - `ci`: `fmt_check mod_check vet test`
 
-Tests always include `-race -count=1`, including coverage. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only.
+Tests always include `-race -count=1`, including coverage. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.

@@ -87,4 +87,4 @@ Never extract the changelog with inline awk or bash in a workflow step. Use the 
   run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
 ```
 
-The target exits non-zero if TAG is empty or no matching entry is found, failing the release before it can publish with an empty changelog.
+The target exits non-zero if TAG is empty or no matching entry is found, failing the release before it can publish with an empty changelog. `TAG` is `${GITHUB_REF_NAME}`, a `v`-prefixed tag (`v1.2.3`), but changelog headers are bare (`## 1.2.3 - ...`, see `github/changelog.md`), so the target strips the leading `v` from `TAG` before matching.

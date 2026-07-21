@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3 - 2026-07-21
+
+### Changed
+
+- Made CPP testing generic
+
 ## 0.2.2 - 2026-07-20
 
 ### Added

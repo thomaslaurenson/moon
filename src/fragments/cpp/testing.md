@@ -7,11 +7,11 @@ Standards and conventions for testing C++ projects, and the unit layer in full. 
 Every test in a C++ project belongs to exactly one of four layers. All four live under `test/`; a test binary is never built anywhere else.
 
 - **unit** - tests logic. Links the library target. Free to use fixtures, temporary files, synthetic data and loopback sockets: the test creates whatever it needs. Always built, always run.
-- **integration** - tests against real data the machine must already have: a game client install, a live server, a real API. Links the library target. Opt-in, and skips cleanly when the data is absent. See testing-integration.md.
+- **integration** - tests against real data the machine must already have: a real dataset install, a live server, a real API. Links the library target. Opt-in, and skips cleanly when the data is absent. See testing-integration.md.
 - **functional** - tests the compiled binary, spawned as a subprocess and driven through its CLI. Links neither the library nor the binary. See testing-functional.md.
 - **fuzz** - libFuzzer harnesses driving a parser with hostile input. Links the library target. Built on demand, Clang only. See testing-fuzz.md.
 
-The dividing line between unit and integration is **not** whether a test touches the filesystem. A unit test that writes a synthetic archive to a temp directory and reads it back is still a unit test: it tests logic, and it brought its own data. What makes a test an integration test is depending on an environment it cannot construct: a real 1.12.1 client, a running server, a populated API. That is also what makes it opt-in, since CI has none of those things.
+The dividing line between unit and integration is **not** whether a test touches the filesystem. A unit test that writes a synthetic archive to a temp directory and reads it back is still a unit test: it tests logic, and it brought its own data. What makes a test an integration test is depending on an environment it cannot construct: a real dataset install, a running server, a populated API. That is also what makes it opt-in, since CI has none of those things.
 
 Deciding where a test goes:
 
@@ -34,17 +34,17 @@ test/
     synthetic_archive.h
     temp_dir.h
   unit/                   # tests logic; mirrors src/
-    mpq/
-      test_archive.cpp    # mirrors src/mpq/archive.cpp
+    archive/
+      test_archive.cpp    # mirrors src/archive/archive.cpp
       test_crypto.cpp
-    dbc/
-      test_dbc_reader.cpp
+    record/
+      test_reader.cpp
   integration/            # tests against real data; opt-in
-    test_mpq_client.cpp
+    test_archive_reader.cpp
   functional/             # tests the compiled binary; only where one ships
     test_create.cpp
   fuzz/                   # libFuzzer harnesses; built on demand
-    fuzz_mpq.cpp
+    fuzz_archive.cpp
 extern/
   Catch2/                 # submodule - pinned to v3.x
 ```
@@ -132,7 +132,7 @@ Run a subset during development:
 
 A function gets a unit test if its behaviour can be provoked from data the test itself can build. That covers far more than pure logic: a parser gets a unit test driven by a synthetic file written to a temp directory, a socket layer gets one driven over loopback, an archive reader gets one against an archive the fixture assembled in memory. Reach for a fixture rather than reaching for the integration layer.
 
-A function only escapes to the integration layer when the input cannot be synthesised: when the test is meaningful precisely because the data is real (an actual 1.12.1 client archive, a live server's handshake).
+A function only escapes to the integration layer when the input cannot be synthesised: when the test is meaningful precisely because the data is real (an actual production dataset, a live server's handshake).
 
 Every bug fix must include a test that reproduces the bug before the fix, in whichever layer the bug lives.
 
@@ -188,4 +188,4 @@ test_verbose: ## Run unit tests with verbose Catch2 output
 	ctest --test-dir build --verbose -L unit
 ```
 
-`test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no client data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.
+`test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.

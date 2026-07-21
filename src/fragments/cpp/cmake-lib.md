@@ -10,56 +10,56 @@ A library separates its public API from its implementation, and organises both b
 
 ```
 include/<lib>/          # public headers - this is the API consumers see
-  mpq/
+  archive/
     archive.h
-  dbc/
+  record/
     reader.h
 src/                    # implementation (.cpp, and any private headers)
   common/
     CMakeLists.txt
-  mpq/
-    CMakeLists.txt      # add_library(mylib_mpq ...)
-  dbc/
+  archive/
+    CMakeLists.txt      # add_library(mylib_archive ...)
+  record/
     CMakeLists.txt
 examples/               # optional; see below
 ```
 
-`include/` mirrors `src/`, so `src/mpq/archive.cpp` implements `include/<lib>/mpq/archive.h` and a consumer writes `#include <mylib/mpq/archive.h>`.
+`include/` mirrors `src/`, so `src/archive/archive.cpp` implements `include/<lib>/archive/archive.h` and a consumer writes `#include <mylib/archive/archive.h>`.
 
 ## Module targets
 
 Each directory under `src/` builds one library target, defaulting to `STATIC`. The target is named `<project>_<module>` and aliased into the project's namespace:
 
 ```cmake
-# src/mpq/CMakeLists.txt
+# src/archive/CMakeLists.txt
 
-add_library(mylib_mpq STATIC
+add_library(mylib_archive STATIC
     archive.cpp
     crypto.cpp
 )
 
-target_include_directories(mylib_mpq
+target_include_directories(mylib_archive
     PUBLIC  "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/src"
 )
 
-target_link_libraries(mylib_mpq PUBLIC ZLIB::ZLIB mylib_common)
+target_link_libraries(mylib_archive PUBLIC ZLIB::ZLIB mylib_common)
 
-target_compile_features(mylib_mpq PUBLIC cxx_std_20)
-target_compile_options(mylib_mpq PRIVATE -Wall -Wextra)
+target_compile_features(mylib_archive PUBLIC cxx_std_20)
+target_compile_options(mylib_archive PRIVATE -Wall -Wextra)
 
 if(MYLIB_WERROR)
-    target_compile_options(mylib_mpq PRIVATE -Werror)
+    target_compile_options(mylib_archive PRIVATE -Werror)
 endif()
 
-add_library(mylib::mpq ALIAS mylib_mpq)
+add_library(mylib::archive ALIAS mylib_archive)
 ```
 
-- Source files are named relative to the directory holding the `CMakeLists.txt`. This file lives in `src/mpq/`, so the entry is `archive.cpp`, never `src/mpq/archive.cpp`, which would resolve to `src/mpq/src/mpq/archive.cpp` and fail to configure.
+- Source files are named relative to the directory holding the `CMakeLists.txt`. This file lives in `src/archive/`, so the entry is `archive.cpp`, never `src/archive/archive.cpp`, which would resolve to `src/archive/src/archive/archive.cpp` and fail to configure.
 - `PUBLIC` on `include/` propagates that path to anything linking the module, so neither a sibling module nor an outside consumer needs an include path of its own.
 - `PRIVATE` on `src/` lets modules include each other's private headers while keeping them off a consumer's include path entirely.
 - `PROJECT_SOURCE_DIR`, never `CMAKE_SOURCE_DIR`: under the `add_subdirectory` consumption model this library is built for, the latter resolves to the consumer's root. See the universal fragment.
-- The `mylib_` prefix is not decoration. Target names are global to the whole CMake build, and a module called `crypto`, `common` or `world` will collide the first time this library and another land in the same superbuild. See the universal fragment.
+- The `mylib_` prefix is not decoration. Target names are global to the whole CMake build, and a module called `crypto`, `common` or `config` will collide the first time this library and another land in the same superbuild. See the universal fragment.
 - A module never calls `find_package`. The root resolves external dependencies and the module consumes the resulting imported targets.
 
 A library small enough to have no modules defines one target in `src/CMakeLists.txt` the same way, named plainly after the project. Modules are the shape a library grows into, not a ceremony to start with; the aggregate below is worth adding as soon as there are two.
@@ -74,16 +74,16 @@ The root defines an `INTERFACE` target that links every module and carries the p
 add_library(mylib INTERFACE)
 target_link_libraries(mylib INTERFACE
     mylib_common
-    mylib_mpq
-    mylib_dbc
+    mylib_archive
+    mylib_record
 )
 target_include_directories(mylib INTERFACE "${PROJECT_SOURCE_DIR}/include")
 add_library(mylib::mylib ALIAS mylib)
 ```
 
-A consumer then writes `target_link_libraries(theirs PRIVATE mylib::mylib)` and gets every module, the public headers, and any transitive dependency. Without the aggregate they have to know the module map and list `mylib_mpq mylib_dbc mylib_common` themselves, which turns every internal reorganisation into a breaking change.
+A consumer then writes `target_link_libraries(theirs PRIVATE mylib::mylib)` and gets every module, the public headers, and any transitive dependency. Without the aggregate they have to know the module map and list `mylib_archive mylib_record mylib_common` themselves, which turns every internal reorganisation into a breaking change.
 
-Use an alias in every `target_link_libraries`, never the bare target name, so nothing at the call site changes if the linking mechanism does. A consumer wanting one module only can still link `mylib::mpq` directly.
+Use an alias in every `target_link_libraries`, never the bare target name, so nothing at the call site changes if the linking mechanism does. A consumer wanting one module only can still link `mylib::archive` directly.
 
 ## Examples
 
@@ -136,9 +136,9 @@ The unit layer therefore carries the whole load, and it is meant to. A unit test
 # test/CMakeLists.txt
 
 add_executable(mylib_unit_tests
-    unit/mpq/test_archive.cpp
-    unit/mpq/test_crypto.cpp
-    unit/dbc/test_reader.cpp
+    unit/archive/test_archive.cpp
+    unit/archive/test_crypto.cpp
+    unit/record/test_reader.cpp
 )
 
 target_include_directories(mylib_unit_tests PRIVATE

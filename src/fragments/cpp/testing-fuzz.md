@@ -16,10 +16,10 @@ One harness per parser entry point. Do not write a harness for pure logic with n
 test/
   fuzz/
     CMakeLists.txt
-    fuzz_mpq.cpp        # drives the MPQ archive reader
-    fuzz_dbc.cpp        # drives the DBC reader
+    fuzz_archive.cpp    # drives the archive reader
+    fuzz_record.cpp     # drives the record reader
     corpus/             # optional seed inputs, one directory per harness
-      mpq/
+      archive/
 ```
 
 ## Option
@@ -59,8 +59,8 @@ function(add_fuzzer name)
     target_link_options(${name} PRIVATE ${FUZZ_FLAGS})
 endfunction()
 
-add_fuzzer(fuzz_mpq)
-add_fuzzer(fuzz_dbc)
+add_fuzzer(fuzz_archive)
+add_fuzzer(fuzz_record)
 ```
 
 A harness is not registered with `catch_discover_tests`: it runs forever by design and is not a pass/fail test case. It is driven from the Makefile instead.
@@ -70,15 +70,15 @@ A harness is not registered with `catch_discover_tests`: it runs forever by desi
 `LLVMFuzzerTestOneInput` takes a buffer and hands it to the parser. The body must not assert on the result: any input is legal input to a parser, and returning an error is a correct outcome. The only failures a harness reports are the ones the sanitizers and the runtime detect for it: a segfault, a leak, a read past the end, a hang.
 
 ```cpp
-// test/fuzz/fuzz_mpq.cpp
+// test/fuzz/fuzz_archive.cpp
 #include <cstddef>
 #include <cstdint>
 #include <mylib/errors.h>
-#include <mylib/mpq/archive.h>
+#include <mylib/archive/archive.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     try {
-        auto archive = mylib::mpq::Archive::FromMemory(data, size);
+        auto archive = mylib::archive::Archive::FromMemory(data, size);
         for (const auto &entry : archive.Entries()) {
             (void)archive.Read(entry);
         }
@@ -117,8 +117,8 @@ build_fuzz: configure_fuzz ## Configure and build the fuzz harnesses
 	cmake --build build-fuzz --parallel $(JOBS)
 
 .PHONY: fuzz
-fuzz: ## Run one harness for FUZZ_TIME seconds (requires: NAME=fuzz_mpq)
-	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=fuzz_mpq" >&2; exit 1; fi
+fuzz: ## Run one harness for FUZZ_TIME seconds (requires: NAME=fuzz_archive)
+	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=fuzz_archive" >&2; exit 1; fi
 	./build-fuzz/bin/$(NAME) -max_total_time=$(FUZZ_TIME) test/fuzz/corpus/$(subst fuzz_,,$(NAME))
 ```
 

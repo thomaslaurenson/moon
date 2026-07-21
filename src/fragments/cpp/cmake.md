@@ -199,7 +199,7 @@ add_library(mylib::crypto ALIAS mylib_crypto)
 add_library(crypto STATIC ...)
 ```
 
-Unprefixed module names like `crypto`, `common`, `world`, `packets` or `mpq` are the ones most likely to collide, because they are the names every project reaches for. The collision does not appear while the project is built directly. It appears the first time two of them are pulled into the same superbuild, as a duplicate-target configure error in somebody else's build, naming a target neither of them wrote.
+Unprefixed module names like `crypto`, `common`, `config`, `net` or `parser` are the ones most likely to collide, because they are the names every project reaches for. The collision does not appear while the project is built directly. It appears the first time two of them are pulled into the same superbuild, as a duplicate-target configure error in somebody else's build, naming a target neither of them wrote.
 
 Consumers link the alias, never the raw name, so the prefix costs nothing at the call site.
 

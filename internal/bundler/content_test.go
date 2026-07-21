@@ -35,10 +35,7 @@ func TestRealContentHasNoProblems(t *testing.T) {
 // on demand via "moon fragment show" instead. They are the exception: a fragment
 // belongs in a bundle unless the task it covers is one a human does by hand, so
 // that shipping it to an agent would only spend context.
-var standaloneFragments = map[string]bool{
-	// Branches are created manually, never by an agent working in a bundled repo.
-	"github/branches.md": true,
-}
+var standaloneFragments = map[string]bool{}
 
 // TestRealContentHasNoOrphans fails if a fragment under src/fragments is referenced
 // by no bundle and is not declared standalone above. Orphans are not broken output,

@@ -22,7 +22,7 @@ Feature/add install script (#13)
 Fix/local deployment (#44)
 ```
 
-The type is the same set used for branch names, capitalised:
+The type is one of:
 
 | Type | When |
 |---|---|
@@ -30,7 +30,5 @@ The type is the same set used for branch names, capitalised:
 | `Refactor/` | Internal restructuring, no behaviour change |
 | `Fix/` | Bug fixes |
 | `Update/` | Dependency bumps or toolchain upgrades |
-
-A PR title is the branch name rewritten for a human: `feature/add-install-script` becomes `Feature/add install script (#13)`. Take the type and description from the branch rather than inventing new ones, so the two stay recognisably the same change.
 
 Commit messages use past tense; changelog entries use imperative. They are different audiences; see the changelog fragment.

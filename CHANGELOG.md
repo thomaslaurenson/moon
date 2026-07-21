@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.4 - 2026-07-22
+
+### Added
+
+- Add a non-ASCII character check to the check command
+
+### Changed
+
+- Make the third-party include example in the cpp fragments generic
+
+### Removed
+
+- Remove the branches fragment
+
 ## 0.2.3 - 2026-07-21
 
 ### Changed

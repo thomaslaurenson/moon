@@ -81,7 +81,7 @@ For projects with a large third-party dependency that needs its own tier, split 
 
 ```yaml
 IncludeCategories:
-  - Regex:    '^<(StormLib|CLI)/'   # Tier 2: named third-party (higher priority number = lower tier)
+  - Regex:    '^<(catch2|CLI)/'     # Tier 2: named third-party (higher priority number = lower tier)
     Priority: 2
   - Regex:    '^<'                  # Tier 1: stdlib
     Priority: 1

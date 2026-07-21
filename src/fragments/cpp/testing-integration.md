@@ -101,7 +101,7 @@ inline std::optional<fs::path> IntegrationDataPath() {
 
 Two sources rather than one because they serve different people: the CMake define suits a developer who configures once and forgets, the environment variable suits a machine where the path is already exported. Never hardcode a path, and never guess at a default install location.
 
-`fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable — an `MYLIB_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
+`fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable: an `MYLIB_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
 
 ## Skipping
 

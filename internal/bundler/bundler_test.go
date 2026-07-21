@@ -262,3 +262,33 @@ func TestAssembleDedupDiamond(t *testing.T) {
 		t.Errorf("diamond include emitted _core.md %d times, want 1", n)
 	}
 }
+
+func TestCheckFlagsBannedCharacters(t *testing.T) {
+	t.Parallel()
+	fsys := fstest.MapFS{
+		// An em dash (U+2014) in prose: a banned symbol, must be flagged.
+		"src/fragments/dash.md": {Data: []byte("# Dash\n\nuse an em dash — here\n")},
+		// A non-ASCII letter in a translated string: the documented exception, must not be flagged.
+		"src/fragments/umlaut.md": {Data: []byte("# Umlaut\n\n\"Auf Standard zurücksetzen\"\n")},
+		"src/bundles/all":         {Data: []byte("dash.md\numlaut.md\n")},
+	}
+	problems, _, err := New(fsys).Check()
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	var dashFlagged, umlautFlagged bool
+	for _, p := range problems {
+		if strings.Contains(p, "dash.md") {
+			dashFlagged = true
+		}
+		if strings.Contains(p, "umlaut.md") {
+			umlautFlagged = true
+		}
+	}
+	if !dashFlagged {
+		t.Errorf("Check did not flag the em dash; problems=%v", problems)
+	}
+	if umlautFlagged {
+		t.Errorf("Check flagged a non-ASCII letter in a translation; it should not; problems=%v", problems)
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -249,10 +250,34 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 	return out, nil
 }
 
-// Check validates every bundle. It returns problems (missing fragments or include
-// cycles) and orphans (fragments present in src/fragments but referenced by no
-// bundle). The returned strings are for human display; callers that need to branch on
-// failure kind should call Expand or Assemble directly and use errors.Is instead.
+// bannedChar reports whether r is a non-ASCII rune that moon's house style forbids:
+// em dashes, smart quotes, arrows, tick and cross marks, and other decorative
+// symbols (see _core.md). Non-ASCII *letters* are allowed, so a legitimately
+// translated string value in a fragment (the one documented exception) does not trip
+// the check; only non-letter symbols do.
+func bannedChar(r rune) bool {
+	return r > unicode.MaxASCII && !unicode.IsLetter(r)
+}
+
+// scanChars returns one problem string per banned character in data, tagged with path
+// and 1-based line number so the location is clickable in an editor.
+func scanChars(path string, data []byte) []string {
+	var out []string
+	for i, line := range strings.Split(string(data), "\n") {
+		for _, r := range line {
+			if bannedChar(r) {
+				out = append(out, fmt.Sprintf("%s:%d: banned non-ASCII character %q (U+%04X)", path, i+1, r, r))
+			}
+		}
+	}
+	return out
+}
+
+// Check validates every bundle. It returns problems (missing fragments, include
+// cycles, or banned non-ASCII characters in a fragment or bundle file) and orphans
+// (fragments present in src/fragments but referenced by no bundle). The returned
+// strings are for human display; callers that need to branch on failure kind should
+// call Expand or Assemble directly and use errors.Is instead.
 func (e *Engine) Check() (problems, orphans []string, err error) {
 	names, err := e.List()
 	if err != nil {
@@ -260,6 +285,9 @@ func (e *Engine) Check() (problems, orphans []string, err error) {
 	}
 	referenced := make(map[string]bool)
 	for _, name := range names {
+		if data, rerr := fs.ReadFile(e.fsys, bundlesDir+"/"+name); rerr == nil {
+			problems = append(problems, scanChars(bundlesDir+"/"+name, data)...)
+		}
 		frags, rerr := e.resolve(name, nil)
 		if rerr != nil {
 			problems = append(problems, fmt.Sprintf("%s: %v", name, rerr))
@@ -282,6 +310,11 @@ func (e *Engine) Check() (problems, orphans []string, err error) {
 		if rel := strings.TrimPrefix(p, fragmentsDir+"/"); !referenced[rel] {
 			orphans = append(orphans, rel)
 		}
+		data, rerr := fs.ReadFile(e.fsys, p)
+		if rerr != nil {
+			return rerr
+		}
+		problems = append(problems, scanChars(p, data)...)
 		return nil
 	})
 	if err != nil {

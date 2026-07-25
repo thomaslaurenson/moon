@@ -142,7 +142,7 @@ RUN apk add --no-cache \
     g++
 WORKDIR /build
 COPY . .
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel $(nproc)
 
 # Stage 2: Runtime
 FROM scratch

@@ -369,12 +369,13 @@ install_clang_tools: ## Install clang-format and clang-tidy at pinned version
 
 ### Makefile targets
 
-Use the versioned binaries explicitly in all targets. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing.
+Use the versioned binaries explicitly in all targets. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
 
 ```makefile
 # Project-owned C++ directories, in whichever of them this tier actually has
 CPP_DIRS      := $(wildcard include src app test)
 CPP_LINT_DIRS := $(wildcard src app)
+JOBS          ?= $(shell nproc 2>/dev/null || echo 4)
 
 .PHONY: configure
 configure: ## Configure the cmake build
@@ -385,7 +386,7 @@ configure: ## Configure the cmake build
 
 .PHONY: build
 build: ## Build the project
-	cmake --build build
+	cmake --build build --parallel $(JOBS)
 
 .PHONY: fmt
 fmt: ## Format all source files with clang-format

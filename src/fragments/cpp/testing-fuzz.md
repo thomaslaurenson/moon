@@ -106,20 +106,20 @@ CLANG_VERSION ?= 18
 FUZZ_TIME     ?= 60
 
 .PHONY: configure_fuzz
-configure_fuzz: ## Configure with libFuzzer harnesses (requires Clang)
-	cmake -B build-fuzz \
+configure_fuzz: ## Configure build/ with libFuzzer harnesses (requires Clang)
+	cmake -B build \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DMYLIB_BUILD_FUZZERS=ON \
 	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION)
 
 .PHONY: build_fuzz
 build_fuzz: configure_fuzz ## Configure and build the fuzz harnesses
-	cmake --build build-fuzz --parallel $(JOBS)
+	cmake --build build --parallel $(JOBS)
 
 .PHONY: fuzz
 fuzz: ## Run one harness for FUZZ_TIME seconds (requires: NAME=fuzz_archive)
 	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=fuzz_archive" >&2; exit 1; fi
-	./build-fuzz/bin/$(NAME) -max_total_time=$(FUZZ_TIME) test/fuzz/corpus/$(subst fuzz_,,$(NAME))
+	./build/bin/$(NAME) -max_total_time=$(FUZZ_TIME) test/fuzz/corpus/$(subst fuzz_,,$(NAME))
 ```
 
-The fuzz build gets its own `build-fuzz/` directory rather than sharing `build/`. This is the one place a second build directory is justified: the harnesses need Clang and a sanitizer runtime that the normal build has no reason to carry, and reconfiguring `build/` back and forth would rebuild the world each time.
+The fuzz build reuses the project's single `build/` directory rather than one of its own. `-fsanitize=fuzzer` is Clang-only (see Option above), and CMake cannot change a build tree's compiler after the first configure without discarding the cache: running `configure_fuzz` against a `build/` last configured with a different compiler reconfigures and rebuilds everything, not just the harnesses, and switching back to a normal configure afterward pays that cost again. That is the accepted trade for one output directory; fuzzing is built on demand, not an everyday step, so the occasional full rebuild is cheaper than a second directory to track, gitignore, and clean.

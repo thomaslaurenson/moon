@@ -176,9 +176,9 @@ REQUIRE_THROWS(ParseVersion("not-a-version"));
 
 ## Makefile targets
 
-```makefile
-JOBS ?= $(shell nproc 2>/dev/null || echo 4)
+`JOBS` is declared once in the CMake fragment's `build` target and reused here.
 
+```makefile
 .PHONY: test
 test: ## Run Catch2 unit tests
 	ctest --test-dir build --output-on-failure --parallel $(JOBS) -L unit

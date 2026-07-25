@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5 - 2026-07-25
+
+### Fixed
+
+- Parallel build for cpp
+- Tidied cpp testing approach
+
 ## 0.2.4 - 2026-07-22
 
 ### Added

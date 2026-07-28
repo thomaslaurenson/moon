@@ -10,7 +10,10 @@ To the moon! A self-contained binary that composes AI agent instructions from ma
 
 ## What
 
-A **fragment** is a single markdown file (`src/fragments`). A **bundle** is a named composition of fragments (`src/bundles`). moon assembles bundles from fragments. The whole `src/` tree is embedded into the binary at build time, so the compiled `moon` needs no files alongside it at runtime.
+- moon assembles markdown bundles from fragments to make dynamic specs for AI agent instructions
+- A **fragment** is a single markdown file (`src/fragments`)
+- A **bundle** is a named composition of fragments (`src/bundles`)
+- All markdown is embedded into the binary at build time, so the compiled `moon` needs no files alongside it at runtime
 
 ## Installation
 
@@ -43,11 +46,3 @@ moon fragment list [filter]    # list fragment paths (optionally filtered)
 moon fragment show <path>      # print a single fragment to stdout
 moon init <target> [bundle...] # populate a repo for claude, agents, or copilot
 ```
-
-`moon init` writes agent-instruction files into a repo (it requires one; it looks for `.git`). The `<target>` is `claude`, `agents`, or `copilot`. Pass explicit bundle names, or omit them to auto-detect the project's language(s) from marker files (`go.mod`, `pyproject.toml`, `CMakeLists.txt`, and so on). Use `--dry-run` to preview the files it would write, `--force` to overwrite existing ones, and `-C <dir>` to target another directory.
-
-`--json` on the two `list` commands gives structured output for scripting an agent against moon. Run `moon help` for the full command reference, including `check`. Shell completion for bundle and fragment names is available via `moon completion <shell>` (bash, zsh, fish, powershell).
-
-## Editing
-
-Edit fragments in `src/fragments` and bundle definitions in `src/bundles`, then rebuild (`make build`) to pick up changes. Run `moon check` (or `make ci`, which includes it) to validate every bundle before committing.

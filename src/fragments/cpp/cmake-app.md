@@ -11,15 +11,15 @@ src/                   # implementation, built as an internal core library; no m
   CMakeLists.txt       # add_library
 app/                   # the CLI: main() plus argument wiring only
   CMakeLists.txt       # add_executable, links the core
-Dockerfile.glibc
 Dockerfile.musl
+.gpipe.yml             # installer/checksum config; see workflows-app.md
 .github/workflows/
   build.yml
   release.yml
   prerelease.yml
 ```
 
-Two Dockerfiles are required: one for glibc builds, one for musl (static) builds; see the Docker fragment.
+One Dockerfile is required, building a statically linked musl binary; see the Docker fragment for it, and workflows-app.md for why Linux ships a single static binary per architecture rather than a glibc/musl pair. macOS and Windows binaries are built natively on their own runners, not via Docker.
 
 The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `add_subdirectory(app)`, then `add_subdirectory(test)` when testing is on.
 

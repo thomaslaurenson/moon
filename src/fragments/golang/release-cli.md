@@ -8,9 +8,10 @@ Every project has two configs: `.goreleaser.yml` (versioned releases via `releas
 
 - GoReleaser builds binaries only; it does not create checksums, sign, or publish.
 - Always inject version via `ldflags`. Default matrix is `linux`/`darwin`/`windows` x `amd64`/`arm64`, excluding `windows/arm64`.
+- Windows on ARM runs x64 binaries under emulation, so the excluded `windows/arm64` build is a performance optimisation rather than a compatibility requirement. A project that ships `install.ps1` may include it: `Get-Platform` reports `windows_arm64`, and if no such asset exists the installer fails outright rather than falling back to the emulated x64 build. Include it in both goreleaser configs and in `.gpipe.yml`, or in neither.
 - Always set `no_unique_dist_dir: true` so binaries land flat in `dist/`.
 - Prefer `CGO_ENABLED=0` and `mod_timestamp` for reproducible static builds.
-- Checksums, install scripts, and signing are handled by `thomaslaurenson/gpipe-action` (`cosign_sign: true` for signing) via `.gpipe.yml`, not goreleaser.
+- Checksums, install scripts, and signing are handled by `thomaslaurenson/gpipe` (`cosign_sign: true` for signing) via `.gpipe.yml`, not goreleaser.
 
 ```yaml
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
@@ -36,11 +37,13 @@ The prerelease config is identical plus `snapshot.version_template: "{{ incpatch
 
 Add `.goreleaser*.yml` and `.gpipe.yml` to the `pr.yml`/`main.yml` paths filter alongside the shared Go entries.
 
-Three-step release pattern: goreleaser builds binaries (`args: build --clean`, does not publish), `gpipe-action` generates install scripts + checksums + cosign bundle, `gh release create` publishes. `fetch-depth: 0` is required in `release.yml`. Always set `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` so goreleaser does not pick up a `-dev` tag at the same commit. `id-token: write` is required on the workflow and its caller for cosign OIDC signing.
+Three-step release pattern: goreleaser builds binaries (`args: build --clean`, does not publish), `gpipe` generates install scripts + checksums + cosign bundle, `gh release create` publishes. `fetch-depth: 0` is required in `release.yml`. Always set `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` so goreleaser does not pick up a `-dev` tag at the same commit. `id-token: write` is required on the workflow and its caller for cosign OIDC signing.
+
+The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It needs Go on the runner, which GitHub-hosted runners provide; a self-hosted runner without Go must add `actions/setup-go` before it.
 
 ## Prerelease process
 
-The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums, or cosign signing (those are release-only, via `gpipe-action`). `id-token: write` is not needed for `prerelease.yml`, only `contents: write`.
+The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums, or cosign signing (those are release-only, via `gpipe`). `id-token: write` is not needed for `prerelease.yml`, only `contents: write`.
 
 `dev` is a real git tag that moves. `prerelease.yml` runs four steps in order:
 

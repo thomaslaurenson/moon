@@ -22,7 +22,7 @@ Canonical action per purpose:
 | Ruff | `astral-sh/ruff-action` |
 | GoReleaser (Go only) | `goreleaser/goreleaser-action` |
 | Artifact signing | `sigstore/cosign-installer` |
-| Release pipelines | `thomaslaurenson/gpipe-action` |
+| Release pipelines | `thomaslaurenson/gpipe` |
 
 Pin every action to a specific version, never `@latest`; use whichever version is current at the time of authoring. Do not treat any version number that has ever appeared in this doc as the target to match - a frozen version table goes stale faster than this spec gets updated. Dependabot (see below) keeps the pin current from there.
 

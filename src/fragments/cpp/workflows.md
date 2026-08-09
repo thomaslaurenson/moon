@@ -44,10 +44,10 @@ Install clang tools via the Makefile target before running any lint step:
     submodules: true
 
 - name: Install clang tools
-  run: make install_clang_tools
+  run: sudo apt-get install -y clang-format-18 clang-tidy-18
 ```
 
-`install_clang_tools` installs `clang-format-18` and `clang-tidy-18` at the pinned version. CMake 3.21+ ships with `ubuntu-24.04` so no CMake install step is needed.
+Installing the toolchain is a workflow step, not a Makefile target: it is specific to the runner image, and a `make` target doing it would fail on the macOS and Windows runners. Pin the major version here, so a runner image bump cannot silently change formatting output. CMake 3.21+ ships with `ubuntu-24.04`, so no CMake install step is needed.
 
 ## `lint.yml`
 
@@ -71,7 +71,7 @@ jobs:
           submodules: true
 
       - name: Install clang tools
-        run: make install_clang_tools
+        run: sudo apt-get install -y clang-format-18 clang-tidy-18
 
       - run: make configure
       - run: make fmt_check

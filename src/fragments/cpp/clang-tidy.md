@@ -89,7 +89,7 @@ The `CheckOptions` implement the naming conventions defined in the C++ style fra
 
 Additional checks are added per project. Before adding a check:
 
-1. Run it in isolation to confirm it fires on real issues in `src/`: `clang-tidy-18 --checks="-*,<check>" -p build/dev src/*.cpp`
+1. Run it in isolation to confirm it fires on real issues in `src/`: `$(CLANG_TIDY) --checks="-*,<check>" -p build/dev src/*.cpp`
 2. Decide whether the findings should be fixed or suppressed
 3. Add the check by name, never by wildcard
 4. If suppressed, add a comment above the `Checks:` block explaining why
@@ -127,7 +127,7 @@ FormatStyle: file
 
 ```bash
 # Run a single check against all source files
-clang-tidy-18 --checks="-*,<check-name>" -p build/dev src/*.cpp 2>&1 | grep -v " warnings generated"
+$(CLANG_TIDY) --checks="-*,<check-name>" -p build/dev src/*.cpp 2>&1 | grep -v " warnings generated"
 
 # Run the full current config to confirm a clean baseline
 make lint_cpp

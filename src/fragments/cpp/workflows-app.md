@@ -331,7 +331,7 @@ jobs:
 
 Three details in there are load-bearing:
 
-- **No `install_clang_tools` step.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. The target is also `sudo apt-get`, which fails outright on the macOS and Windows runners.
+- **No clang tools installed.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. Installing them here would also mean a per-runner branch, since the apt packages exist only on the Linux runner.
 - **`GITHUB_WORKSPACE` is rewritten with forward slashes on Windows.** The raw value is a backslash path (`D:\a\repo\repo`), and the binary path is baked into the test binary as a compile definition, where `\a` and friends are read as C escape sequences. `${GITHUB_WORKSPACE//\\//}` is pure bash and needs no `cygpath`.
 - **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`. That is what allows the functional layer alone to be skipped on a platform where the artifact cannot execute. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
 

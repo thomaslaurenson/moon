@@ -80,7 +80,7 @@ catch_discover_tests(mylib_integration_tests
 `LABELS` is what lets a layer be selected, with `ctest -L`:
 
 ```bash
-ctest --test-dir build/dev --output-on-failure --parallel $(nproc) -L unit
+ctest --test-dir build/dev --output-on-failure -L unit
 ```
 
 Never select a layer with `-R` instead. Catch2 registers each test under its `TEST_CASE` name, not the name of the binary it was compiled into, so `ctest -R unit` matches whichever test cases happen to have "unit" somewhere in their description and silently misses the rest. `-L` matches the label, which is exact.

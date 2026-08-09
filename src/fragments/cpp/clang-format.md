@@ -11,7 +11,7 @@ Configuration and usage conventions for clang-format across all C++ projects.
 
 ## Prerequisites
 
-`clang-format-18` must be installed. The `make install_clang_tools` target handles this. Always use the pinned version, because different versions can produce different formatting output.
+clang-format major version 18 must be installed; how depends on the platform (apt.llvm.org ships `clang-format-18`, Homebrew and the LLVM Windows installer ship a plain `clang-format`). The Makefile resolves whichever is present into `$(CLANG_FORMAT)`; see the clang tooling section of cpp/cmake.md. Keep to the pinned major version, because different majors produce different formatting output and a mismatch fails `fmt_check` on lines nobody edited.
 
 ## Running clang-format
 

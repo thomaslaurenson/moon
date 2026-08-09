@@ -220,6 +220,8 @@ Never use the bare `BUILD_TESTING` name for this. It is a single global that CTe
 
 `enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build/dev` finding nothing.
 
+**Call `enable_testing()`, never `include(CTest)`.** They look interchangeable and are not: `include(CTest)` calls `enable_testing()` for you, but it also declares `BUILD_TESTING` as a cache variable defaulting to `ON`, which is precisely the global the project-scoped name above exists to avoid. A project that scopes its own option correctly and then calls `include(CTest)` has reintroduced the problem through the back door, and the symptom is a vendored dependency's self-tests appearing in `ctest -N` output — with nothing in the project's own CMake mentioning `BUILD_TESTING` to explain why. `include(CTest)` also adds CDash dashboard targets (`Experimental`, `Nightly`, `Continuous`) that no project here uses. `enable_testing()` plus `include(Catch)` is the whole requirement.
+
 Do not call `include(CTest)`. Its purpose is to declare the global `BUILD_TESTING` option and call `enable_testing()` for you, which is exactly what this section replaces; it also drags in CDash submission targets no project here uses. `include(Catch)` is the only include needed, once, at the root, after `CMAKE_MODULE_PATH` picks up Catch2's `extras`. `test/CMakeLists.txt` then just calls `catch_discover_tests`.
 
 ## Target names
@@ -391,27 +393,36 @@ Consumers then write `target_link_libraries(mylib_transport PRIVATE asio)` and i
 
 ## Clang tooling
 
-Clang tools are pinned to version 18 across all projects for reproducibility. Never use the unversioned `clang-format` or `clang-tidy` binaries as the system default may differ between machines and CI runners.
+Clang tools are pinned to major version 18 across all projects, because formatting output and check behaviour differ between major versions: a tree formatted with one and checked with another fails `fmt_check` on lines nobody touched.
 
-### Installation
+How that version is installed differs per platform, so the Makefile resolves the binary rather than naming it:
 
-The Makefile must provide an `install_clang_tools` target:
+- Debian and Ubuntu install versioned binaries (`clang-format-18`) from apt.llvm.org
+- Homebrew and the LLVM Windows installer provide unversioned `clang-format` from a versioned install
+
+There is no `install_clang_tools` target. Installing a system toolchain is the environment's job, not the build's: a target that runs `sudo apt-get` fails outright on macOS and Windows runners, and shipping one per platform is a package manager written in Make.
+
+### Resolving the binaries
 
 ```makefile
-.PHONY: install_clang_tools
-install_clang_tools: ## Install clang-format and clang-tidy at pinned version
-	sudo apt-get install -y clang-format-18 clang-tidy-18
+CLANG_VERSION ?= 18
+CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) 2>/dev/null || echo clang-format)
+CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) 2>/dev/null || echo clang-tidy)
 ```
+
+Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make fmt CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
+
+CI pins the version explicitly, so drift between a contributor's local major version and the enforced one surfaces there rather than in review.
 
 ### Makefile targets
 
-Use the versioned binaries explicitly in all targets. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
+Use the resolved variables in all targets, never a literal binary name. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
 
 ```makefile
 # Project-owned C++ directories, in whichever of them this tier actually has
 CPP_DIRS      := $(wildcard include src app test)
 CPP_LINT_DIRS := $(wildcard src app)
-JOBS          ?= $(shell nproc 2>/dev/null || echo 4)
+JOBS          ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
 .PHONY: configure
 configure: ## Configure the cmake build
@@ -426,15 +437,15 @@ build: ## Build the project
 
 .PHONY: fmt
 fmt: ## Format all source files with clang-format
-	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs clang-format-18 -i
+	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) -i
 
 .PHONY: fmt_check
 fmt_check: ## Check formatting without modifying files
-	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs clang-format-18 --dry-run --Werror
+	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) --dry-run --Werror
 
 .PHONY: lint_cpp
 lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
-	clang-tidy-18 --quiet -p build/dev \
+	$(CLANG_TIDY) --quiet -p build/dev \
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}

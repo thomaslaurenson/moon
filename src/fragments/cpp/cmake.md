@@ -243,26 +243,71 @@ Consumers link the alias, never the raw name, so the prefix costs nothing at the
 
 ## Warnings
 
-Every project-owned target sets its warning bar explicitly, and a project-scoped option promotes warnings to errors:
+The warning bar is defined **once**, as an `INTERFACE` target that every project-owned target links privately:
 
 ```cmake
+# src/CMakeLists.txt, before the module add_subdirectory calls
 option(MYLIB_WERROR "Treat warnings as errors" OFF)
 
-target_compile_options(mylib PRIVATE -Wall -Wextra)
+add_library(mylib_warnings INTERFACE)
+target_compile_options(mylib_warnings INTERFACE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor -Wold-style-cast>
+)
 
 if(MYLIB_WERROR)
-    target_compile_options(mylib PRIVATE -Werror)
+    target_compile_options(mylib_warnings INTERFACE
+        $<$<CXX_COMPILER_ID:MSVC>:/WX>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
+    )
 endif()
+
+add_library(mylib::warnings ALIAS mylib_warnings)
 ```
 
-`PRIVATE`, so the bar applies to this project's own code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
-
-Vendored C or C++ compiled into a project target is exempt. Do not fix a third-party file's warnings, and do not lower the project's bar to accommodate it; silence it at the source:
+Every target the project owns then carries one line:
 
 ```cmake
-# blast.c is third-party C; do not hold it to the project's warning bar
-set_source_files_properties("${BLAST_C}" PROPERTIES COMPILE_OPTIONS "-Wno-unused-parameter")
+target_link_libraries(mylib_archive PRIVATE mylib::warnings)
 ```
+
+Defining the bar once is the point. A modular library that repeats the flag list per module has one copy per module to keep in step, and they drift: the module that hits an inconvenient warning gets a `-Wno-` appended locally, and the project quietly has two bars. One target means raising the bar is one edit.
+
+`PRIVATE`, so the bar applies to this project's code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
+
+**Test and example targets link it too.** Test code is the project's code, and an example is what a consumer copies — an example compiled at a lower bar than the library teaches the wrong habits. This is separate from clang-tidy, which deliberately skips `test/`; see the clang tooling section.
+
+### What each flag buys
+
+- `-Wall -Wextra` — the baseline every project starts from
+- `-Wpedantic` — rejects compiler extensions, which is what keeps one compiler's build from being the only one that works
+- `-Wconversion` — implicit narrowing. The highest-value flag in this list for anything parsing a binary format, where a silent `uint32_t` to `uint16_t` truncation is a data bug rather than a compile error
+- `-Wshadow` — a declaration hiding an outer name, where an edit then changes the wrong variable
+- `-Wnon-virtual-dtor` — deleting through a base pointer with no virtual destructor; only fires on polymorphic types, and is a leak when it does
+- `-Wold-style-cast` — forces C++ cast syntax. The value is not style: it makes `reinterpret_cast` greppable, so the genuinely dangerous conversions stop hiding behind `(uint32_t)`
+
+Resist adding more. A flag that never fires on the project is decoration that still has to be mapped for every compiler, and by then the list is long enough that nobody reads it before appending the next one.
+
+**Do not chase parity on MSVC.** `/W4` covers much of `-Wall -Wextra` plus some conversion diagnostics, and `/permissive-` is the conformance analogue of `-Wpedantic`, but there is no MSVC equivalent of `-Wold-style-cast`, and its non-virtual-destructor warning is off by default even under `/W4`. Set the two flags that exist and let the stricter analysis ride on the Linux CI job; a per-compiler warning list maintained to look identical is a maintenance cost that buys nothing.
+
+Vendored C or C++ is exempt. Do not fix a third-party file's warnings, and do not lower the project's bar to accommodate it. Give it its own target, which simply does not link the warnings target:
+
+```cmake
+# decoder.c is third-party C from a submodule's contrib/ directory. Its own
+# target, so the project's warning bar does not apply to it.
+add_library(mylib_decoder STATIC "${DECODER_C}")
+
+target_include_directories(mylib_decoder SYSTEM PUBLIC "${DECODER_INCLUDE_DIR}")
+
+add_library(mylib::decoder ALIAS mylib_decoder)
+
+# ... and the module that uses it:
+target_link_libraries(mylib_archive PRIVATE mylib::decoder)
+```
+
+A separate target rather than `set_source_files_properties(... COMPILE_OPTIONS "-Wno-...")` on the file. Per-file suppression works only while the suppression list matches the bar, so every flag added to the warnings target means revisiting every vendored file to extend its `-Wno-` list — and the failure mode is a wall of third-party diagnostics in the middle of the project's own build output. A target that never links the bar stays correct no matter how the bar changes.
+
+Mark its include directory `SYSTEM`, so the third-party headers are exempt where they are *included* as well as where they are compiled.
 
 ## Sanitizers
 

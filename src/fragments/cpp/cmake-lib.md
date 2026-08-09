@@ -26,6 +26,8 @@ examples/               # optional; see below
 
 `include/` mirrors `src/`, so `src/archive/archive.cpp` implements `include/<lib>/archive/archive.h` and a consumer writes `#include <mylib/archive/archive.h>`.
 
+The root `CMakeLists.txt` orchestrates: `add_subdirectory(src)`, then `add_subdirectory(test)` when testing is on, then `add_subdirectory(examples/<name>)` when examples are on. It defines no targets of its own — `src/CMakeLists.txt` adds the modules and defines the aggregate.
+
 ## Module targets
 
 Each directory under `src/` builds one library target, defaulting to `STATIC`. The target is named `<project>_<module>` and aliased into the project's namespace:
@@ -61,17 +63,17 @@ add_library(mylib::archive ALIAS mylib_archive)
 - `PROJECT_SOURCE_DIR`, never `CMAKE_SOURCE_DIR`: under the `add_subdirectory` consumption model this library is built for, the latter resolves to the consumer's root. See the universal fragment.
 - The `mylib_` prefix is not decoration. Target names are global to the whole CMake build, and a module called `crypto`, `common` or `config` will collide the first time this library and another land in the same superbuild. See the universal fragment.
 - A module never calls `find_package`. The root resolves external dependencies and the module consumes the resulting imported targets.
-- Link sibling modules through the alias (`mylib::common`), never the bare target. CMake requires a name containing `::` to be a target that already exists, so a typo fails at configure time with "target not found". A bare name is assumed to be a system library instead, and surfaces much later as an obscure `-lmylib_comon` linker error. The cost is that the root's `add_subdirectory` calls must run in dependency order, since an alias has to exist before it is linked.
+- Link sibling modules through the alias (`mylib::common`), never the bare target. CMake requires a name containing `::` to be a target that already exists, so a typo fails at configure time with "target not found". A bare name is assumed to be a system library instead, and surfaces much later as an obscure `-lmylib_comon` linker error. The cost is that the module `add_subdirectory` calls in `src/CMakeLists.txt` must run in dependency order, since an alias has to exist before it is linked.
 - A module is never its own standalone CMake project. Do not wrap it in `if(NOT DEFINED MYLIB_ROOT_BUILD) project(...)`: it duplicates the root's compiler and standard setup once per module, and those copies drift. A consumer wanting one module gets it through `EXCLUDE_FROM_ALL`; see the aggregate section.
 
 A library small enough to have no modules defines one target in `src/CMakeLists.txt` the same way, named plainly after the project. Modules are the shape a library grows into, not a ceremony to start with; the aggregate below is worth adding as soon as there are two.
 
 ## Aggregate target
 
-The root defines an `INTERFACE` target that links every module and carries the public include path. This is what a consumer links, and it is the only name they should need to know:
+`src/CMakeLists.txt` defines an `INTERFACE` target that links every module and carries the public include path. This is what a consumer links, and it is the only name they should need to know. It lives beside the module `add_subdirectory` calls, not in the root, so the root defines no targets of its own:
 
 ```cmake
-# Root CMakeLists.txt, after the module add_subdirectory calls
+# src/CMakeLists.txt, after the module add_subdirectory calls
 
 add_library(mylib INTERFACE)
 target_link_libraries(mylib INTERFACE

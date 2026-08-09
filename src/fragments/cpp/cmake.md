@@ -154,10 +154,20 @@ extern/
 
 ### src/CMakeLists.txt responsibilities
 
+`src/CMakeLists.txt` is where the target this project exposes is defined. That holds whichever shape the project has taken, which is what keeps the root purely orchestrational:
+
+- **Single target** — `add_library` directly, listing every source. Subdirectories under `src/` are source organisation and have no `CMakeLists.txt` of their own.
+- **Modular** — `add_subdirectory` for each module, then the aggregate target that links them. See the library tier fragment.
+
+Either way this file owns:
+
 - `add_library`; see the tier fragment for the target name and whether it carries a public include path
 - `target_include_directories`
 - `target_link_libraries`
 - `configure_file` for generated headers
+- the module `add_subdirectory` calls, in a modular project, ordered so a module is added before anything linking its alias
+
+A modular project puts the module list here rather than in the root for two reasons: the root stays a fixed size as modules are added, and adding one means editing the file next to the modules instead of a file otherwise concerned with dependency setup.
 
 ## Testing option
 

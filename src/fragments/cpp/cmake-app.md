@@ -72,6 +72,24 @@ build/
   compile_commands.json
 ```
 
+## Generated version header
+
+The version comes from `project(MyApp VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it in `src/CMakeLists.txt`, beside the core library, so the core and the CLI read the same constant:
+
+```cmake
+configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/version.h.in"
+    "${PROJECT_BINARY_DIR}/include/myapp/version.h"
+    @ONLY
+)
+
+target_include_directories(myapp_core PUBLIC "${PROJECT_BINARY_DIR}/include")
+```
+
+An application has no public API, so nothing outside the repository reads this header. Generate it into an include tree anyway rather than putting `"${PROJECT_BINARY_DIR}"` itself on the include path, which would expose every generated file in the build tree to `#include`. `app/` picks the header up through the core's `PUBLIC` include directory, so `--version` prints the same value the library reports and there is one place to change it.
+
+Keep the template in `cmake/`, never in `src/`: it is a build input, not something the compiler ever sees.
+
 ## Baking paths into test binaries
 
 Functional tests need to know where the compiled binary lives at runtime. Rather than discovering it at runtime, bake the path in at CMake configure time using `target_compile_definitions`. This eliminates a whole class of path-resolution bugs and makes the test binary fully self-contained:

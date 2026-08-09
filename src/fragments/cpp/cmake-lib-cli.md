@@ -82,7 +82,7 @@ target_include_directories(myapp SYSTEM PRIVATE
 )
 ```
 
-The executable stays thin: it parses arguments, calls library functions, and turns the library's exceptions into exit codes and messages on `stderr`. Anything worth unit testing belongs in the library. A CLI dependency is linked here and never by the library, so a consumer of the core does not inherit an argument parser they will not use. The binary lands in `build/bin/` via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting.
+The executable stays thin: it parses arguments, calls library functions, and turns the library's exceptions into exit codes and messages on `stderr`. Anything worth unit testing belongs in the library. A CLI dependency is linked here and never by the library, so a consumer of the core does not inherit an argument parser they will not use. The binary lands in the build configuration's `bin/` (for example `build/dev/bin/`) via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting.
 
 ## Testing
 

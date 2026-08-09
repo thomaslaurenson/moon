@@ -143,16 +143,16 @@ RUN apk add --no-cache \
 WORKDIR /build
 # -static is what makes the scratch stage below viable: the binary carries musl
 # and libstdc++ with it and needs no loader at runtime.
-RUN cmake -B build \
+RUN cmake -B build/release \
         -DCMAKE_BUILD_TYPE=Release \
         -DMYTOOL_BUILD_TESTING=OFF \
         -DCMAKE_EXE_LINKER_FLAGS="-static" \
-    && cmake --build build --parallel $(nproc) \
-    && strip build/bin/mytool
+    && cmake --build build/release --parallel $(nproc) \
+    && strip build/release/bin/mytool
 
 # Stage 2: Runtime
 FROM scratch
-COPY --from=builder /build/build/bin/mytool /mytool
+COPY --from=builder /build/build/release/bin/mytool /mytool
 ENTRYPOINT ["/mytool"]
 ```
 

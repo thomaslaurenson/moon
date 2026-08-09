@@ -188,7 +188,7 @@ TEST_CASE("list with filter", "[list]") { ... }
 Run a subset during development:
 
 ```bash
-./build/bin/myapp_functional_tests [create]
+./build/dev/bin/myapp_functional_tests [create]
 ```
 
 ## Asserting on the CLI contract
@@ -210,7 +210,7 @@ An expected failure the user can act on exits 1 and explains itself on stderr; a
 ```makefile
 .PHONY: test_functional
 test_functional: build ## Run Catch2 functional tests against the built binary
-	ctest --test-dir build --output-on-failure --parallel $(JOBS) -L functional
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L functional
 ```
 
 `test_functional` depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result.
@@ -220,5 +220,5 @@ This layer does not change cpp/testing.md's `test` target, which stays the unit 
 ```makefile
 .PHONY: test_all
 test_all: ## Run every test layer built into the current configure
-	ctest --test-dir build --output-on-failure --parallel $(JOBS)
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
 ```

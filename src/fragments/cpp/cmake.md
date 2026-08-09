@@ -6,7 +6,7 @@ Conventions for CMake-based C++ projects. Universal to every tier; the target de
 
 - CMake is the build system for all C++ projects; never use raw compiler invocations
 - The Makefile is a task runner that wraps CMake; CI calls `make <target>`, never raw `cmake` commands
-- One `build/` directory for everything; no separate lint or release build directories
+- All build output lives under `build/`, one subdirectory per configuration; see Build directory
 - Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
 
 ## Repository layout
@@ -94,8 +94,8 @@ endforeach()
 - `CMAKE_BUILD_TYPE` defaults to `Debug`: this ensures `compile_commands.json` is always generated with full debug information for clang-tidy
 - `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
-- `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in `build/bin/` regardless of how many targets the project defines
-- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/bin/Release/myapp.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
+- `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
+- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myapp.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
 
 ## Referring to project paths
 
@@ -117,14 +117,30 @@ Within a single directory's `CMakeLists.txt`, prefer bare relative paths for sou
 
 ## Build directory
 
-All projects use a single `build/` directory:
+All build output goes under `build/`, one subdirectory per configuration, named for whatever makes that configuration different:
 
 ```bash
-cmake -B build
-cmake --build build
+cmake -B build/dev -D<PROJECT>_BUILD_TESTING=ON
+cmake --build build/dev
 ```
 
-Never create separate build directories for lint, release, or test builds. The default `Debug` build type produces a `compile_commands.json` that covers all use cases.
+| Directory | Why it is separate |
+|---|---|
+| `build/dev` | The default: everything testable, `compile_commands.json`, the daily build |
+| `build/release` | Different build type |
+| `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
+| `build/asan` | Different code generation |
+| `build/32` | Different architecture |
+
+Only create a directory when the configuration genuinely cannot share one. A configuration that differs by a `-D` option affecting compiler, architecture or instrumentation cannot: reconfiguring in place silently replaces the previous one, and nothing afterwards tells you which of them you are looking at. Naming the directory for the configuration puts that answer in the path.
+
+**The test layers are not a reason to split.** Unit, integration and functional tests all build into `build/dev` and are selected when they are *run*, with `ctest -L unit`. An integration layer gated behind an option is still built into the same directory; the option controls whether the target exists, not where it lives. Never create `build/test` or a directory per test layer.
+
+`.gitignore` needs one entry, `build/`, and `rm -rf build` removes everything.
+
+The default directory is `dev`, not `debug`, because it is named for what it is for rather than for a build type. A multi-config generator (Visual Studio, Xcode) picks the build type at build time, so the same directory serves `--config Debug` and `--config Release`; a CI job that builds Release and runs the test suite still belongs in `build/dev`.
+
+Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myapp` becomes `build/dev/bin/myapp`. `compile_commands.json` for clang tooling comes from `build/dev`, which is why that configuration always has testing on.
 
 ## CMakeLists.txt structure
 
@@ -202,7 +218,7 @@ Never use the bare `BUILD_TESTING` name for this. It is a single global that CTe
 
 `PROJECT_IS_TOP_LEVEL` (CMake 3.21, the declared minimum here) makes the default correct automatically: on when the project is built directly, off when it is somebody's subdirectory. Do not hand-roll it with a `set(MYLIB_ROOT_BUILD TRUE)` marker.
 
-`enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build` finding nothing.
+`enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build/dev` finding nothing.
 
 Do not call `include(CTest)`. Its purpose is to declare the global `BUILD_TESTING` option and call `enable_testing()` for you, which is exactly what this section replaces; it also drags in CDash submission targets no project here uses. `include(Catch)` is the only include needed, once, at the root, after `CMAKE_MODULE_PATH` picks up Catch2's `extras`. `test/CMakeLists.txt` then just calls `catch_discover_tests`.
 
@@ -399,14 +415,14 @@ JOBS          ?= $(shell nproc 2>/dev/null || echo 4)
 
 .PHONY: configure
 configure: ## Configure the cmake build
-	cmake -B build \
+	cmake -B build/dev \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 	  $(CMAKE_ARGS)
 
 .PHONY: build
 build: ## Build the project
-	cmake --build build --parallel $(JOBS)
+	cmake --build build/dev --parallel $(JOBS)
 
 .PHONY: fmt
 fmt: ## Format all source files with clang-format
@@ -418,7 +434,7 @@ fmt_check: ## Check formatting without modifying files
 
 .PHONY: lint_cpp
 lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
-	clang-tidy-18 --quiet -p build \
+	clang-tidy-18 --quiet -p build/dev \
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
@@ -450,4 +466,4 @@ Note: `fmt` and `fmt_check` include the `test/` directory; test code is held to 
 
 ### Configuration files
 
-Both `.clang-format` and `.clang-tidy` live at the project root. CMake is pointed at the build directory via `-p build` so clang-tidy can find `compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.
+Both `.clang-format` and `.clang-tidy` live at the project root. CMake is pointed at the build directory via `-p build/dev` so clang-tidy can find `compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.

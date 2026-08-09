@@ -128,18 +128,18 @@ jobs:
 
       - name: Build (${{ matrix.osx_arch }})
         run: |
-          cmake -B build \
+          cmake -B build/release \
             -DCMAKE_BUILD_TYPE=Release \
             -DMYAPP_BUILD_TESTING=OFF \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.osx_arch }} \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-          cmake --build build --config Release --parallel 3
-          strip build/bin/myapp
+          cmake --build build/release --config Release --parallel 3
+          strip build/release/bin/myapp
           # strip invalidates the linker's ad-hoc signature; re-sign or the
           # binary is killed on launch on Apple Silicon. See below.
-          codesign --force --sign - build/bin/myapp
-          codesign --verify --verbose build/bin/myapp
-          mv build/bin/myapp ./${{ matrix.asset }}
+          codesign --force --sign - build/release/bin/myapp
+          codesign --verify --verbose build/release/bin/myapp
+          mv build/release/bin/myapp ./${{ matrix.asset }}
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
@@ -158,10 +158,10 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A x64 \
+          cmake -B build/release -G "Visual Studio 17 2022" -A x64 \
             -DMYAPP_BUILD_TESTING=OFF
-          cmake --build build --config Release
-          mv build/bin/myapp.exe ./myapp-windows-x86_64.exe
+          cmake --build build/release --config Release
+          mv build/release/bin/myapp.exe ./myapp-windows-x86_64.exe
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
@@ -173,7 +173,7 @@ jobs:
 
 Set `MYAPP_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artifact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
 
-`build/bin/myapp.exe` rather than `build/bin/Release/myapp.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
+`build/release/bin/myapp.exe` rather than `build/release/bin/Release/myapp.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
 
 #### Raw cmake on Windows
 
@@ -318,15 +318,15 @@ jobs:
         shell: bash
         run: |
           workspace="${GITHUB_WORKSPACE//\\//}"
-          cmake -B build -G "Visual Studio 17 2022" -A x64 \
+          cmake -B build/dev -G "Visual Studio 17 2022" -A x64 \
             -DMYAPP_BINARY_PATH_OVERRIDE="${workspace}/myapp-under-test.exe"
-          cmake --build build --config Release
+          cmake --build build/dev --config Release
 
       - name: Run tests
         shell: bash
         run: |
-          ctest --test-dir build --output-on-failure -C Release -L unit
-          ctest --test-dir build --output-on-failure -C Release -L functional
+          ctest --test-dir build/dev --output-on-failure -C Release -L unit
+          ctest --test-dir build/dev --output-on-failure -C Release -L functional
 ```
 
 Three details in there are load-bearing:

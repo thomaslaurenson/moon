@@ -61,15 +61,16 @@ Splitting the core out of the executable is what makes the logic testable. A tes
 
 An app whose implementation is genuinely one `main.cpp` with nothing worth unit testing may skip `src/` and the core library entirely, and define the executable directly in `app/`. Add the split when there is logic to test, not before.
 
-The binary lands in `build/bin/` via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
+The binary lands in the build configuration's `bin/` (for example `build/dev/bin/`) via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
 
 ```
 build/
-  bin/
-    myapp
-    myapp_unit_tests
-    myapp_functional_tests
-  compile_commands.json
+  dev/
+    bin/
+      myapp
+      myapp_unit_tests
+      myapp_functional_tests
+    compile_commands.json
 ```
 
 ## Generated version header

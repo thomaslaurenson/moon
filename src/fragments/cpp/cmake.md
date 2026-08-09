@@ -273,14 +273,42 @@ option(MYLIB_ASAN "Build with Address + UB sanitizers" OFF)
 
 # Applied before any target is declared, so every module and test is instrumented
 if(MYLIB_ASAN)
-    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
-    add_link_options(-fsanitize=address,undefined)
+    if(MSVC)
+        # MSVC has AddressSanitizer but no UndefinedBehaviorSanitizer, and links
+        # its runtime automatically, so there is no matching add_link_options.
+        add_compile_options(/fsanitize=address /Oy-)
+    else()
+        add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+        add_link_options(-fsanitize=address,undefined)
+    endif()
 endif()
 ```
+
+The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable — a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 
 This is the one legitimate use of the directory-scoped `add_compile_options` rather than `target_compile_options`. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
 
 Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job.
+
+### Makefile targets
+
+A sanitized build changes code generation, so it gets its own directory and cannot share `build/dev`:
+
+```makefile
+.PHONY: configure_asan
+configure_asan: ## Configure build/asan with Address + UB sanitizers
+	cmake -B build/asan \
+	  -DCMAKE_BUILD_TYPE=Debug \
+	  -DMYLIB_ASAN=ON \
+	  -DMYLIB_BUILD_TESTING=ON
+
+.PHONY: test_asan
+test_asan: configure_asan ## Build and run the unit tests under sanitizers
+	cmake --build build/asan --parallel $(JOBS)
+	ctest --test-dir build/asan --output-on-failure --parallel $(JOBS) -L unit
+```
+
+`test_asan` runs the unit layer only. That layer needs no external data or server, so it is the one that can run anywhere, and sanitizer findings in it point at the project's own code rather than at a fixture. Without these targets the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent.
 
 ## Dependencies
 

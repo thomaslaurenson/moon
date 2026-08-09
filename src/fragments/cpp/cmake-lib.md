@@ -110,15 +110,20 @@ A library may ship example programs demonstrating its API. They live in `example
 option(MYLIB_BUILD_EXAMPLES "Build example programs" OFF)
 
 if(MYLIB_BUILD_EXAMPLES)
-    add_subdirectory(examples/mylib_auth)
+    add_subdirectory(examples/auth)
 endif()
 ```
 
 ```cmake
-# examples/mylib_auth/CMakeLists.txt
-add_executable(mylib_auth main.cpp)
-target_link_libraries(mylib_auth PRIVATE mylib::mylib)
+# examples/auth/CMakeLists.txt
+add_executable(mylib_example_auth main.cpp)
+target_link_libraries(mylib_example_auth PRIVATE mylib::mylib)
+
+# The target name is namespaced; the binary a reader runs is not.
+set_target_properties(mylib_example_auth PROPERTIES OUTPUT_NAME "mylib-auth")
 ```
+
+The directory is named for what it demonstrates (`examples/auth/`), and the target is `<project>_example_<name>`. The `_example_` infix is not decoration: `<project>_<name>` is exactly the module target pattern, so an example demonstrating the `auth` module would otherwise declare a second target called `mylib_auth` and fail the configure with a duplicate-target error. Give the executable an `OUTPUT_NAME` so the file on disk stays readable.
 
 An example is not an application, and a library with one is still a library. The distinction is what the project ships:
 

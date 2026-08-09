@@ -23,13 +23,14 @@ CMakeLists.txt        # root: project settings, options, add_subdirectory calls
 Makefile
 CHANGELOG.md
 README.md
+cmake/                # version.h.in, plus any CMake helper modules
 src/                  # implementation, built as a library target; never contains main()
 extern/               # git submodules only; never copy third-party headers manually
 test/                 # see cpp/testing.md for internal structure
 ```
 
 - `extern/` contains only git submodules; never manually copied headers or installed libraries
-- `cmake/` holds CMake helper modules (`mark_system.cmake`, generated-header templates) and is created only by a project that needs one. It is not part of the required set: most projects link no dependency that exports its own target and so never need it. Do not create it empty as a convention.
+- `cmake/` holds build inputs that are neither source nor public headers: `version.h.in`, which every project has (see the version rule in cpp/style.md), plus helper modules such as `mark_system.cmake` where a project links a dependency that exports its own target. The version template is what makes this directory universal rather than optional. Keep templates out of `include/`: that tree is the API a consumer includes, and a file there that cannot be included misrepresents it.
 
 Two rules hold across every tier, and the tier fragments assume them:
 

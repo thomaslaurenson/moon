@@ -29,6 +29,7 @@ test/                 # see cpp/testing.md for internal structure
 ```
 
 - `extern/` contains only git submodules; never manually copied headers or installed libraries
+- `cmake/` holds CMake helper modules (`mark_system.cmake`, generated-header templates) and is created only by a project that needs one. It is not part of the required set: most projects link no dependency that exports its own target and so never need it. Do not create it empty as a convention.
 
 Two rules hold across every tier, and the tier fragments assume them:
 

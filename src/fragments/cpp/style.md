@@ -28,6 +28,39 @@ Enforced by clang-tidy's `readability-identifier-naming`.
 - `.cpp` for implementation, `.h` for headers. Never `.hpp`/`.hxx`.
 - Header-only `.h` for simple structs and helpers under ~50 lines; split into `.h`/`.cpp` when the implementation has real complexity.
 
+## Includes
+
+**Include what you use.** A file that names `std::array` includes `<array>` itself, even when a project header it already includes happens to provide it.
+
+Relying on a transitive include is not a style preference, it is a portability bug that only one of the three standard libraries reports. libstdc++ and libc++ pull in far more than they promise; MSVC's STL does not. The result is a file that compiles on Linux and macOS for years and fails the first time anyone builds it on Windows, with an error that names a type rather than the missing header:
+
+```
+error C2079: 'data' uses undefined class 'std::array<uint8_t,1>'
+```
+
+Nothing changed in that file to break it: a project header simply stopped including `<array>`, or a Windows job was added. The same rule covers `<cstdint>` for the fixed-width integer types, `<string>`, `<vector>`, `<span>` and `<algorithm>`, which are the ones most often inherited by accident.
+
+## Filesystem and binary I/O
+
+Two Windows failures that a POSIX-only build never surfaces.
+
+**Always open binary data with `std::ios::binary`.** Without it, Windows translates line endings on the way through and silently corrupts anything that is not text. There is no error and no warning; the file is simply wrong, and typically only in the bytes that happen to be `0x0A`.
+
+```cpp
+std::ifstream file(path, std::ios::binary);
+```
+
+**Take paths as `std::filesystem::path`, never `std::string`.** On Windows a narrow string is interpreted in the active ANSI code page, so a path containing anything outside it cannot be opened at all. `std::filesystem::path` stores `wchar_t` there and goes through the wide API, which handles any Unicode path:
+
+```cpp
+uint32_t Crc32File(const std::filesystem::path &path);   // opens any path
+uint32_t Crc32File(const std::string &path);             // fails outside the code page
+```
+
+The failure reaches users and not CI: runner paths are always ASCII, so a Windows job proves nothing here. It is one of the few portability classes that has to be got right by construction rather than caught by testing.
+
+Build paths with `operator/` rather than string concatenation, so the separator is the platform's own.
+
 ## Namespaces
 
 Everything a project compiles into a library goes in a namespace named after the library, in `snake_case`:

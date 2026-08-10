@@ -131,6 +131,7 @@ cmake --build build/dev
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
 | `build/32` | Different architecture |
+| `build/lint` | Different compiler: clang, so clang-tidy can parse the sources |
 
 Only create a directory when the configuration genuinely cannot share one. A configuration that differs by a `-D` option affecting compiler, architecture or instrumentation cannot: reconfiguring in place silently replaces the previous one, and nothing afterwards tells you which of them you are looking at. Naming the directory for the configuration puts that answer in the path.
 
@@ -487,6 +488,31 @@ Prefer the versioned name, fall back to the plain one, and let either be overrid
 
 CI pins the version explicitly, so drift between a contributor's local major version and the enforced one surfaces there rather than in review.
 
+### Configuring for clang-tidy
+
+clang-tidy resolves headers through the compiler that produced `compile_commands.json`. Point it at a GCC-configured build and it cannot find libstdc++ at all: it reports `'algorithm' file not found`, then keeps going and emits diagnostics from a broken AST. The output looks like real findings and is not: a free function gets reported as a *variable* with the wrong case style, because without the standard headers clang-tidy cannot tell what it is looking at. A lint job in that state passes or fails for reasons unrelated to the code.
+
+So clang-tidy gets its own configure, pinned to clang:
+
+```makefile
+LINT_DIR        ?= build/lint
+GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev/null)
+```
+
+```makefile
+.PHONY: configure_lint
+configure_lint: ## Configure $(LINT_DIR) with clang++, so clang-tidy can parse the sources
+	cmake -B $(LINT_DIR) \
+	  -DCMAKE_BUILD_TYPE=Debug \
+	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
+	  -DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)"
+```
+
+`--gcc-install-dir` tells clang which libstdc++ to use when the two toolchains are installed side by side, which is the normal state on a Linux runner and on most developer machines.
+
+A second directory rather than pinning clang in `configure` itself, because `configure` has to stay compiler-neutral: CI builds under both GCC and clang (see cpp/workflows.md), and `--gcc-install-dir` is a clang flag that `g++` rejects outright. The cost is close to nothing: `configure_lint` only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
+
 ### Makefile targets
 
 Use the resolved variables in all targets, never a literal binary name. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
@@ -517,8 +543,8 @@ fmt_check: ## Check formatting without modifying files
 	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) --dry-run --Werror
 
 .PHONY: lint_cpp
-lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
-	$(CLANG_TIDY) --quiet -p build/dev \
+lint_cpp: configure_lint ## Run clang-tidy static analysis
+	$(CLANG_TIDY) --quiet -p $(LINT_DIR) \
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
@@ -540,7 +566,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 - `include/` is formatted but not tidied directly: its headers carry no `.cpp` of their own, and clang-tidy reaches them through the `--header-filter` when it analyses the `src/` files that include them
 - `--header-filter="$(CURDIR)/(include|src|app)/.*"` limits diagnostic output to project headers; extern/ headers are already excluded as system headers (see Including extern/ headers in this file) but this provides belt-and-suspenders coverage
 - `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe
-- `make configure` must be run before `make lint_cpp`; clang-tidy reads `build/compile_commands.json` to resolve include paths
+- `lint_cpp` depends on `configure_lint`, so it needs no separate `make configure` first and reads `$(LINT_DIR)/compile_commands.json` rather than the everyday build's
 - `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure
 - `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes
 

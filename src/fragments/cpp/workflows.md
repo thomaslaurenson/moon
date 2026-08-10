@@ -36,7 +36,7 @@ Always check out with `submodules: true`. C++ projects use git submodules for al
 
 ## Clang tools
 
-Install clang tools via the Makefile target before running any lint step:
+Install the clang toolchain as a workflow step before running any lint step:
 
 ```yaml
 - uses: actions/checkout@vN
@@ -44,14 +44,16 @@ Install clang tools via the Makefile target before running any lint step:
     submodules: true
 
 - name: Install clang tools
-  run: sudo apt-get install -y clang-format-18 clang-tidy-18
+  run: sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
 ```
+
+`clang-18` itself, not only the two tools: `make lint_cpp` configures its own clang build directory so clang-tidy can resolve libstdc++ headers (see cpp/cmake.md), which needs the compiler present.
 
 Installing the toolchain is a workflow step, not a Makefile target: it is specific to the runner image, and a `make` target doing it would fail on the macOS and Windows runners. Pin the major version here, so a runner image bump cannot silently change formatting output. CMake 3.21+ ships with `ubuntu-24.04`, so no CMake install step is needed.
 
 ## `lint.yml`
 
-Installs clang tools and runs format check and clang-tidy. Requires `make configure` first so clang-tidy can resolve `compile_commands.json`.
+Installs the clang toolchain and runs format check and clang-tidy. No `make configure` step: `lint_cpp` depends on `configure_lint`, which produces the `compile_commands.json` clang-tidy reads (see cpp/cmake.md).
 
 ```yaml
 name: Lint
@@ -71,9 +73,8 @@ jobs:
           submodules: true
 
       - name: Install clang tools
-        run: sudo apt-get install -y clang-format-18 clang-tidy-18
+        run: sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
 
-      - run: make configure
       - run: make fmt_check
       - run: make lint_cpp
 ```

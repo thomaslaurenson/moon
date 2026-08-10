@@ -26,7 +26,7 @@ examples/               # optional; see below
 
 `include/` mirrors `src/`, so `src/archive/archive.cpp` implements `include/<lib>/archive/archive.h` and a consumer writes `#include <mylib/archive/archive.h>`.
 
-The root `CMakeLists.txt` orchestrates: `add_subdirectory(src)`, then `add_subdirectory(test)` when testing is on, then `add_subdirectory(examples/<name>)` when examples are on. It defines no targets of its own — `src/CMakeLists.txt` adds the modules and defines the aggregate.
+The root `CMakeLists.txt` orchestrates: `add_subdirectory(src)`, then `add_subdirectory(test)` when testing is on, then `add_subdirectory(examples/<name>)` when examples are on. It defines no targets of its own: `src/CMakeLists.txt` adds the modules and defines the aggregate.
 
 ## Module targets
 
@@ -87,7 +87,7 @@ add_library(mylib::mylib ALIAS mylib)
 
 A consumer then writes `target_link_libraries(theirs PRIVATE mylib::mylib)` and gets every module, the public headers, and any transitive dependency. Without the aggregate they have to know the module map and list `mylib::archive mylib::record mylib::common` themselves, which turns every internal reorganisation into a breaking change.
 
-Use an alias in every `target_link_libraries`, never the bare target name — inside the project as well as outside it, for the configure-time error described above.
+Use an alias in every `target_link_libraries`, never the bare target name. This holds inside the project as well as outside it, for the configure-time error described above.
 
 ### Consuming a single module
 
@@ -100,7 +100,7 @@ add_subdirectory(extern/mylib EXCLUDE_FROM_ALL)
 target_link_libraries(theirapp PRIVATE mylib::record)
 ```
 
-`EXCLUDE_FROM_ALL` is what makes this worth doing. Without it every module is added to the default build target and compiles whether or not anything links it. With it, CMake builds only `mylib_record` and whatever it depends on — the other modules are configured but never compiled.
+`EXCLUDE_FROM_ALL` is what makes this worth doing. Without it every module is added to the default build target and compiles whether or not anything links it. With it, CMake builds only `mylib_record` and whatever it depends on: the other modules are configured but never compiled.
 
 This is the whole reason a library is split into module targets rather than built as one archive: a consumer pays for the parts they use. It also means module dependencies should be kept honest, since linking one module drags in everything it declares.
 

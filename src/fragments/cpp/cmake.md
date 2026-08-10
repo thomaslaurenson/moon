@@ -173,8 +173,8 @@ extern/
 
 `src/CMakeLists.txt` is where the target this project exposes is defined. That holds whichever shape the project has taken, which is what keeps the root purely orchestrational:
 
-- **Single target** — `add_library` directly, listing every source. Subdirectories under `src/` are source organisation and have no `CMakeLists.txt` of their own.
-- **Modular** — `add_subdirectory` for each module, then the aggregate target that links them. See the library tier fragment.
+- **Single target**: `add_library` directly, listing every source. Subdirectories under `src/` are source organisation and have no `CMakeLists.txt` of their own.
+- **Modular**: `add_subdirectory` for each module, then the aggregate target that links them. See the library tier fragment.
 
 Either way this file owns:
 
@@ -221,7 +221,7 @@ Never use the bare `BUILD_TESTING` name for this. It is a single global that CTe
 
 `enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build/dev` finding nothing.
 
-**Call `enable_testing()`, never `include(CTest)`.** They look interchangeable and are not: `include(CTest)` calls `enable_testing()` for you, but it also declares `BUILD_TESTING` as a cache variable defaulting to `ON`, which is precisely the global the project-scoped name above exists to avoid. A project that scopes its own option correctly and then calls `include(CTest)` has reintroduced the problem through the back door, and the symptom is a vendored dependency's self-tests appearing in `ctest -N` output — with nothing in the project's own CMake mentioning `BUILD_TESTING` to explain why. `include(CTest)` also adds CDash dashboard targets (`Experimental`, `Nightly`, `Continuous`) that no project here uses. `enable_testing()` plus `include(Catch)` is the whole requirement.
+**Call `enable_testing()`, never `include(CTest)`.** They look interchangeable and are not: `include(CTest)` calls `enable_testing()` for you, but it also declares `BUILD_TESTING` as a cache variable defaulting to `ON`, which is precisely the global the project-scoped name above exists to avoid. A project that scopes its own option correctly and then calls `include(CTest)` has reintroduced the problem through the back door, and the symptom is a vendored dependency's self-tests appearing in `ctest -N` output, with nothing in the project's own CMake mentioning `BUILD_TESTING` to explain why. `include(CTest)` also adds CDash dashboard targets (`Experimental`, `Nightly`, `Continuous`) that no project here uses. `enable_testing()` plus `include(Catch)` is the whole requirement.
 
 Do not call `include(CTest)`. Its purpose is to declare the global `BUILD_TESTING` option and call `enable_testing()` for you, which is exactly what this section replaces; it also drags in CDash submission targets no project here uses. `include(Catch)` is the only include needed, once, at the root, after `CMAKE_MODULE_PATH` picks up Catch2's `extras`. `test/CMakeLists.txt` then just calls `catch_discover_tests`.
 
@@ -276,16 +276,16 @@ Defining the bar once is the point. A modular library that repeats the flag list
 
 `PRIVATE`, so the bar applies to this project's code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
 
-**Test and example targets link it too.** Test code is the project's code, and an example is what a consumer copies — an example compiled at a lower bar than the library teaches the wrong habits. This is separate from clang-tidy, which deliberately skips `test/`; see the clang tooling section.
+**Test and example targets link it too.** Test code is the project's code, and an example is what a consumer copies: one compiled at a lower bar than the library teaches the wrong habits. This is separate from clang-tidy, which deliberately skips `test/`; see the clang tooling section.
 
 ### What each flag buys
 
-- `-Wall -Wextra` — the baseline every project starts from
-- `-Wpedantic` — rejects compiler extensions, which is what keeps one compiler's build from being the only one that works
-- `-Wconversion` — implicit narrowing. The highest-value flag in this list for anything parsing a binary format, where a silent `uint32_t` to `uint16_t` truncation is a data bug rather than a compile error
-- `-Wshadow` — a declaration hiding an outer name, where an edit then changes the wrong variable
-- `-Wnon-virtual-dtor` — deleting through a base pointer with no virtual destructor; only fires on polymorphic types, and is a leak when it does
-- `-Wold-style-cast` — forces C++ cast syntax. The value is not style: it makes `reinterpret_cast` greppable, so the genuinely dangerous conversions stop hiding behind `(uint32_t)`
+- `-Wall -Wextra`: the baseline every project starts from
+- `-Wpedantic`: rejects compiler extensions, which is what keeps one compiler's build from being the only one that works
+- `-Wconversion`: implicit narrowing. The highest-value flag in this list for anything parsing a binary format, where a silent `uint32_t` to `uint16_t` truncation is a data bug rather than a compile error
+- `-Wshadow`: a declaration hiding an outer name, where an edit then changes the wrong variable
+- `-Wnon-virtual-dtor`: deleting through a base pointer with no virtual destructor; only fires on polymorphic types, and is a leak when it does
+- `-Wold-style-cast`: forces C++ cast syntax. The value is not style: it makes `reinterpret_cast` greppable, so the genuinely dangerous conversions stop hiding behind `(uint32_t)`
 
 Resist adding more. A flag that never fires on the project is decoration that still has to be mapped for every compiler, and by then the list is long enough that nobody reads it before appending the next one.
 
@@ -306,7 +306,7 @@ add_library(mylib::decoder ALIAS mylib_decoder)
 target_link_libraries(mylib_archive PRIVATE mylib::decoder)
 ```
 
-A separate target rather than `set_source_files_properties(... COMPILE_OPTIONS "-Wno-...")` on the file. Per-file suppression works only while the suppression list matches the bar, so every flag added to the warnings target means revisiting every vendored file to extend its `-Wno-` list — and the failure mode is a wall of third-party diagnostics in the middle of the project's own build output. A target that never links the bar stays correct no matter how the bar changes.
+A separate target rather than `set_source_files_properties(... COMPILE_OPTIONS "-Wno-...")` on the file. Per-file suppression works only while the suppression list matches the bar, so every flag added to the warnings target means revisiting every vendored file to extend its `-Wno-` list, and the failure mode is a wall of third-party diagnostics in the middle of the project's own build output. A target that never links the bar stays correct no matter how the bar changes.
 
 Mark its include directory `SYSTEM`, so the third-party headers are exempt where they are *included* as well as where they are compiled.
 
@@ -330,7 +330,7 @@ if(MYLIB_ASAN)
 endif()
 ```
 
-The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable — a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
+The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable: a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 
 This is the one legitimate use of the directory-scoped `add_compile_options` rather than `target_compile_options`. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
 

@@ -34,6 +34,44 @@ Always check out with `submodules: true`. C++ projects use git submodules for al
     submodules: true
 ```
 
+## Compilers
+
+`test.yml` builds under both GCC and clang on Linux, with warnings as errors. They disagree at the same warning level, so a tree that is clean under one is not necessarily clean under the other, and whichever one a developer happens to have locally is the one CI adds nothing by repeating.
+
+```yaml
+jobs:
+  test_linux:
+    name: test_linux (${{ matrix.compiler }})
+    strategy:
+      # Report both independently. Cancelling one on the other's failure hides
+      # half the findings on exactly the runs where they matter.
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc
+            cxx: g++
+          - compiler: clang
+            cxx: clang++-18
+
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          submodules: true
+
+      - name: Install clang
+        if: matrix.compiler == 'clang'
+        run: sudo apt-get install -y clang-18
+
+      - run: make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -D<PROJECT>_WERROR=ON"
+      - run: make build
+      - run: make test
+```
+
+Two compilers on one platform is a better use of a budget than one compiler on two platforms. Both run on Linux at the lowest billing rate, where a second platform costs two to ten times as much and mostly re-runs the same compiler. Reach for another platform when it is a deployment target, not for extra confidence in the code.
+
+`<PROJECT>_WERROR` is off by default so a developer upgrading a compiler is not blocked by new warnings, and on in CI so those warnings are never merged; see cpp/cmake.md.
+
 ## Clang tools
 
 Install the clang toolchain as a workflow step before running any lint step:

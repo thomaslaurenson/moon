@@ -72,6 +72,8 @@ No `needs:` between `lint` and `test`. Neither consumes the other's output, so w
 
 ## `test.yml`
 
+The job body is the two-compiler matrix in cpp/workflows.md, unchanged. A library needs nothing added to it: there is no downloaded artifact to point the tests at and no functional layer to run against a binary, so `configure`, `build` and `test` in one job is the whole workflow.
+
 ```yaml
 name: Test
 
@@ -82,19 +84,11 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@vN
-        with:
-          submodules: true
-
-      - run: make configure
-      - run: make build
-      - run: make test
+  test_linux:
+    # matrix, compiler install and steps: see cpp/workflows.md
 ```
 
-No `needs: build` wiring in the caller: this workflow configures, builds, and tests in one job, unlike an application's separate `build.yml`.
+That self-containment is why there is no `build.yml` here for anything to wait on.
 
 ## Releases
 

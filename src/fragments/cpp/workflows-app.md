@@ -8,20 +8,42 @@ Applies to any tier that ships a distributable binary: an application, or a libr
 
 Add `Dockerfile*` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see `release.yml` below).
 
-## Build step in caller workflows
+## Depth is a function of the trigger
 
-These tiers add a `build.yml` reusable workflow that compiles release binaries before lint and test can run. Callers must add a `build` job and `needs: build` on `lint` and `test`:
+These tiers add a `build.yml` that produces the distributable artifacts. Running the whole of it on every pull request is the expensive default and buys the least: a pull request needs to know the code compiles and the tests pass, not that a shippable artifact for every platform is correct. A tag needs the second, and only a tag can act on it.
+
+So the caller decides the depth, and `build.yml` takes an input:
+
+| Trigger | Runs | Why |
+|---|---|---|
+| `pr.yml` | lint, test, and the artifact jobs that a test cannot cover | Cheapest signal that catches a real break |
+| `main.yml` | the above plus the full artifact set and `prerelease` | The rolling channel has to contain everything a release would |
+| `tag.yml` | everything, plus `release` | This is the run whose output people install |
+
+"An artifact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
 
 ```yaml
+# build.yml
+on:
+  workflow_call:
+    inputs:
+      artifacts:
+        description: Build the full release artifact set, not just the cheap subset
+        type: boolean
+        default: false
+```
+
+```yaml
+# pr.yml and main.yml
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
   lint:
     uses: ./.github/workflows/lint.yml
-    needs: build
   test:
     uses: ./.github/workflows/test.yml
-    needs: build
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      artifacts: true                   # main.yml and tag.yml only; omit on pr.yml
   release:                              # tag.yml only
     uses: ./.github/workflows/release.yml
     needs: [build, lint, test]
@@ -34,6 +56,10 @@ jobs:
     permissions:
       contents: write
 ```
+
+**No `needs: build` on `lint` or `test`.** Neither consumes a build artifact: lint configures its own tree, and test builds the binaries it runs. Wiring them behind `build` holds the fastest signal in the pipeline behind the slowest job and buys nothing. Only `release` and `prerelease` genuinely need the artifacts, and they say so.
+
+Declare `permissions: contents: read` at the top of every caller and widen it on the jobs that need more. A caller with no top-level block inherits the repository default, which may be read and write.
 
 No `secrets: inherit`: every job here authenticates with the automatic `github.token`, so nothing needs to be forwarded. Add `secrets: inherit` only if a workflow genuinely reads a repository secret.
 

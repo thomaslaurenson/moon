@@ -48,9 +48,9 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
+      # Default depth: get_changelog reads CHANGELOG.md from the working tree
+      # and gh release create uses the API, so neither needs git history.
       - uses: actions/checkout@vN
-        with:
-          fetch-depth: 0
 
       - name: Publish release
         run: |

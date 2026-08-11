@@ -39,7 +39,7 @@ Add `.goreleaser*.yml` and `.gpipe.yml` to the `pr.yml`/`main.yml` paths filter 
 
 Three-step release pattern: goreleaser builds binaries (`args: build --clean`, does not publish), `gpipe` generates install scripts + checksums + cosign bundle, `gh release create` publishes. `fetch-depth: 0` is required in `release.yml`. Always set `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` so goreleaser does not pick up a `-dev` tag at the same commit. `id-token: write` is required on the workflow and its caller for cosign OIDC signing.
 
-The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It needs Go on the runner, which GitHub-hosted runners provide; a self-hosted runner without Go must add `actions/setup-go` before it.
+The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It installs its own Go from its `go.mod`, independently of the `actions/setup-go` this workflow already runs for goreleaser.
 
 ## Prerelease process
 

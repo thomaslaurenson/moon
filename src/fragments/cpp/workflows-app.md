@@ -365,9 +365,9 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
+      # Default depth. Nothing here reads git history: get_changelog reads
+      # CHANGELOG.md from the working tree, and gh release create uses the API.
       - uses: actions/checkout@vN
-        with:
-          fetch-depth: 0
 
       - name: Download all build artifacts
         uses: actions/download-artifact@vN
@@ -396,7 +396,7 @@ jobs:
 
 `gpipe` needs no `version` or `repo` inputs here: they default to `github.ref_name` and `github.repository`, and `tag.yml` only ever fires on a `v*` tag, so `ref_name` is already the semantic version gpipe expects. `id-token: write` must also be granted by the caller job in `tag.yml`, not just declared here.
 
-The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current (see golang/release-cli.md, which uses the same action). It needs Go on the runner, which GitHub-hosted runners provide; a self-hosted runner without Go must add `actions/setup-go` before it.
+The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current (see golang/release-cli.md, which uses the same action). It installs its own Go, so a caller needs none of its own: the runner image ships Go, but not necessarily a version new enough for gpipe's `go.mod`, and a project that never invokes Go directly has no reason to carry `actions/setup-go` for a tool's benefit.
 
 #### `.gpipe.yml`
 
@@ -453,6 +453,11 @@ permissions:
 jobs:
   prerelease:
     runs-on: ubuntu-24.04
+    # This job never checks out, so gh has no remote to infer the repository
+    # from and GH_REPO has to name it. See github/actions.md.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Download all build artifacts
         uses: actions/download-artifact@vN
@@ -470,8 +475,6 @@ jobs:
             echo "::error::could not determine whether a dev release exists: ${err}"
             exit 1
           fi
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Create prerelease
         run: |
@@ -480,6 +483,4 @@ jobs:
             --title "dev" \
             --notes "Rolling build of ${{ github.sha }}" \
             dist/myapp-*
-        env:
-          GH_TOKEN: ${{ github.token }}
 ```

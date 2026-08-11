@@ -19,6 +19,7 @@ Canonical action per purpose:
 |---|---|
 | Checkout | `actions/checkout` |
 | Upload artefacts | `actions/upload-artifact` |
+| Download artefacts | `actions/download-artifact` |
 | Go setup | `actions/setup-go` |
 | Python setup | `actions/setup-python` |
 | uv setup | `astral-sh/setup-uv` |
@@ -48,7 +49,7 @@ Three callers and at least three reusable workflows. Two more are conditional on
 
 Both are decided by the tier, not by the language. "This language has a compile step" is the wrong test: a compiled library and a compiled application share a compiler and need different workflow sets.
 
-- `pr.yml`: concurrency group `pr-${{ github.event.pull_request.number }}`, `cancel-in-progress: true`, with a `paths:` filter (language-specific).
-- `main.yml`: concurrency group `main-${{ github.ref }}`, `cancel-in-progress: false`; `paths:` must match `pr.yml` exactly.
-- `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally.
+- `pr.yml`: concurrency group `pr-${{ github.event.pull_request.number }}`, `cancel-in-progress: true`, with a `paths:` filter (language-specific). Grouping by pull request number means a push only ever cancels its own earlier run, and a superseded run of a branch nobody is looking at is pure waste.
+- `main.yml`: concurrency group `main-${{ github.ref }}`, **`cancel-in-progress: false`**; `paths:` must match `pr.yml` exactly. Never cancel on main. A cancelled pull request run costs nothing but minutes, whereas a cancelled main run can stop midway through publishing, leaving a rolling release whose assets, tag and registry image disagree with each other. The two filters must match because a path that gates a pull request but not the merge lets main go red for a change no pull request ever ran on.
+- `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally. A release that skipped its tests because the tag happened to touch no matching path is worse than a slow one.
 - No `push.yml`.

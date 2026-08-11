@@ -10,17 +10,22 @@ Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
 paths:
   - ".github/workflows/**"
   - "Makefile"
+  - "CMakeLists.txt"
+  - "cmake/**"
   - "include/**"
   - "src/**"
   - "app/**"
   - "test/**"
+  - "extern/**"
   - ".clang-format"
   - ".clang-tidy"
-  - "CMakeLists.txt"
-  - "extern/**"
 ```
 
+`cmake/**` is not optional. Every project has that directory, because `version.h.in` lives there (see cpp/cmake.md), and it also holds helper modules such as `mark_system.cmake`. A filter that omits it lets a change to the version template or a helper module merge with no CI run at all.
+
 Include `extern/**` only if the project uses git submodules for dependencies. Drop `include/**` in an application and `app/**` in a library; a path filter naming a directory the tier does not have is dead configuration that outlives the reason it was copied. A tier that ships a binary adds `Dockerfile*` to this list; see workflows-app.md.
+
+The two failure modes are not symmetric. A stale entry is inert: it names a path that never changes, so it never triggers anything. A missing entry fails silently in the dangerous direction, letting a real change skip CI entirely, which is why a directory every project has belongs in the list rather than being left to each project to remember.
 
 ## Checkout
 

@@ -28,5 +28,5 @@ help: ## Show this help message
 - Set `SHELL := /bin/bash` at the top, before variables. Do not use `.SILENT:`; use `@` selectively.
 - Declare variables in `UPPER_SNAKE_CASE` at the top, `:=` by default, `?=` only for command-line overrides.
 - Use a comment separator before each logical group (`# BUILD`, `# LINT`, `# TEST`, `# GET`). Omit empty sections.
-- Include a `ci` target mirroring what the lint and test workflows run, placed just before `clean`.
+- Include a `ci` target naming the checks the lint and test workflows run, and a `clean` target after it. The language fragment defines both, since their recipes are language-specific. `ci` is prerequisites only: it exists so a developer can run the same checks in one command before pushing, and it reproduces the checks rather than any matrix CI runs them under.
 - All version and changelog extraction goes through `# GET` targets (`get_changelog`, `get_version`), so workflows never embed raw bash or awk.

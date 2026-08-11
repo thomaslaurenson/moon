@@ -34,13 +34,19 @@ Use reusable workflows (`workflow_call`) for all job logic; callers compose them
   lint.yml        # reusable
   test.yml        # reusable
   release.yml     # reusable
-  prerelease.yml  # reusable
-  pr.yml          # caller: lint + test on PRs
-  tag.yml         # caller: lint + test + release on v* tags
-  main.yml        # caller: lint + test + prerelease on push to main
+  pr.yml          # caller: on pull requests
+  tag.yml         # caller: on v* tags
+  main.yml        # caller: on push to main
 ```
+
+Three callers and at least three reusable workflows. Two more are conditional on what the project ships:
+
+- **`build.yml`** exists only where a distributable artifact has to be produced before anything can consume it. A project whose tests build what they test does not need one, and adding it means a second build of the same sources.
+- **`prerelease.yml`** exists only where there is an artifact to roll. A library ships no binary: its consumers take a git ref and compile it themselves, so there is nothing a rolling `dev` release could contain. Omit it, and `main.yml` is then lint and test alone, which still verifies the merged commit.
+
+Both are decided by the tier, not by the language. "This language has a compile step" is the wrong test: a compiled library and a compiled application share a compiler and need different workflow sets.
 
 - `pr.yml`: concurrency group `pr-${{ github.event.pull_request.number }}`, `cancel-in-progress: true`, with a `paths:` filter (language-specific).
 - `main.yml`: concurrency group `main-${{ github.ref }}`, `cancel-in-progress: false`; `paths:` must match `pr.yml` exactly.
 - `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally.
-- No `push.yml`. Languages with a compile step before lint/test add a `build.yml` reusable workflow and `needs: build` in callers.
+- No `push.yml`.

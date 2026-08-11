@@ -216,6 +216,57 @@ Package comments are the exception; every non-obvious package always gets a comm
 
 A `.dockerignore` file is required when the build context contains files that must not enter the image (secrets, credentials, large generated directories, or local configuration files). It is optional but encouraged for all other service directories.
 
+### Labels
+
+An image that gets published carries OCI labels, **on the final stage**. Set in a build stage they are discarded with it, which is the usual reason labels appear to do nothing:
+
+```dockerfile
+FROM scratch
+
+LABEL org.opencontainers.image.source="https://github.com/<owner>/<repo>"
+LABEL org.opencontainers.image.description="One sentence, the same as the repository description"
+LABEL org.opencontainers.image.licenses="MIT"
+
+COPY --from=build /src/build/bin/myapp /myapp
+ENTRYPOINT ["/myapp"]
+```
+
+`source` is the load-bearing one: it links the package to its repository, which is what puts the README on the package page and lets the package inherit the repository's visibility. Without these labels the registry falls back on whatever it can infer, and two projects set up the same way end up presented differently for no visible reason.
+
+## Publishing to a registry
+
+Images are published to GitHub Container Registry, named `ghcr.io/<owner>/<repo>`. In a workflow that is `ghcr.io/${{ github.repository }}`, which needs no per-project configuration and cannot drift from the repository it was built in.
+
+Tags:
+
+| Tag | When |
+|---|---|
+| `<version>` | On a release, matching the git tag |
+| `latest` | On a release, moved to the newest |
+| `dev` | On the rolling prerelease, never on a release |
+
+`latest` tracks releases only. Pointing it at a rolling build makes `docker pull` without a tag return whatever last landed on the default branch, which is the opposite of what the tag means to everyone who uses it.
+
+**Build the image once and push the bytes that were built.** The build job saves the image with `docker save` and uploads it as an artifact; the publishing job downloads it, `docker load`s it and pushes. Rebuilding at publish time produces an image nobody tested, and the difference only shows up when the two disagree.
+
+**Publish in a separate job, gated on the release having succeeded.** A registry outage then leaves a complete release with no image, which is recoverable, rather than an image with no release.
+
+Authenticate with the automatic `github.token` and pass it through the environment rather than interpolating it into the script; `packages: write` is required on both the reusable workflow and the caller job that invokes it.
+
+```yaml
+      - name: Push to ghcr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker tag myapp "$IMAGE:${GITHUB_REF_NAME}"
+          docker tag myapp "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_REF_NAME}"
+          docker push "$IMAGE:latest"
+```
+
 ## Docker Compose
 
 ### Structure

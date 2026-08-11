@@ -194,6 +194,33 @@ jobs:
           name: myapp-windows-x86_64.exe
           path: myapp-windows-x86_64.exe
           retention-days: 1
+
+  # Only where the project publishes an image. The tar is what release and
+  # prerelease push, so the bytes that ship are the bytes that were built here.
+  build_docker:
+    if: inputs.artifacts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          submodules: true
+
+      - name: Build image
+        run: docker build --platform linux/amd64 -t myapp -f Dockerfile.musl .
+
+      - name: Save image as a tar
+        run: docker save myapp -o docker-image.tar
+
+      # Named outside the myapp-<os>-<arch> scheme deliberately. Every artifact
+      # lands flat in dist/ at release time, where the binaries are selected by
+      # a myapp-* glob; an image tar matching that glob would be attached to
+      # the release as though it were a binary.
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@vN
+        with:
+          name: docker-image
+          path: docker-image.tar
+          retention-days: 1
 ```
 
 Set `MYAPP_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artifact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
@@ -395,7 +422,35 @@ jobs:
             --notes-file /tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Gated on the release: a registry outage then leaves a complete release with
+  # no image, rather than an image with no release. See tools/docker.md.
+  release_docker:
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@vN
+        with:
+          name: docker-image
+
+      - name: Load image
+        run: docker load -i docker-image.tar
+
+      - name: Push to ghcr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker tag myapp "$IMAGE:${GITHUB_REF_NAME}"
+          docker tag myapp "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_REF_NAME}"
+          docker push "$IMAGE:latest"
 ```
+
+A project publishing an image adds `packages: write` to this workflow's `permissions` and to the caller job in `tag.yml`.
 
 `gpipe` needs no `version` or `repo` inputs here: they default to `github.ref_name` and `github.repository`, and `tag.yml` only ever fires on a `v*` tag, so `ref_name` is already the semantic version gpipe expects. `id-token: write` must also be granted by the caller job in `tag.yml`, not just declared here.
 
@@ -486,4 +541,31 @@ jobs:
             --title "dev" \
             --notes "Rolling build of ${{ github.sha }}" \
             dist/myapp-*
+
+  prerelease_docker:
+    needs: prerelease
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@vN
+        with:
+          name: docker-image
+
+      - name: Load image
+        run: docker load -i docker-image.tar
+
+      # dev only, never latest: latest tracks releases, so pointing it at a
+      # rolling build makes an untagged docker pull return whatever last landed
+      # on the default branch.
+      - name: Push dev tag to ghcr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker tag myapp "$IMAGE:dev"
+          docker push "$IMAGE:dev"
 ```
+
+As with `release.yml`, a project publishing an image adds `packages: write` to this workflow's `permissions` and to the `prerelease` job in `main.yml`.

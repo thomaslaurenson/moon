@@ -141,23 +141,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - osx_arch: arm64
+          - runner: macos-15
             asset: myapp-darwin-aarch64
-          - osx_arch: x86_64
+          - runner: macos-15-intel
             asset: myapp-darwin-x86_64
 
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@vN
         with:
           submodules: true
 
-      - name: Build (${{ matrix.osx_arch }})
+      - name: Build
         run: |
           cmake -B build/release \
             -DCMAKE_BUILD_TYPE=Release \
             -DMYAPP_BUILD_TESTING=OFF \
-            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.osx_arch }} \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
           cmake --build build/release --config Release --parallel 3
           strip build/release/bin/myapp
@@ -213,7 +212,9 @@ Either strip and re-sign, or do neither. What must not happen is stripping witho
 
 #### macOS architectures
 
-`macos-14` and `macos-15` are both Apple Silicon, and `macos-13` (Intel) is outside the supported runner list and being retired. So the x86_64 macOS binary is **cross-compiled** via `CMAKE_OSX_ARCHITECTURES=x86_64` and cannot be exercised natively; see `test.yml` for how that is handled. Set `CMAKE_OSX_DEPLOYMENT_TARGET` explicitly so the binary is not accidentally floored to the runner's current macOS version.
+Both architectures build natively, on `macos-15` for Apple Silicon and `macos-15-intel` for Intel. Pick the runner, not `CMAKE_OSX_ARCHITECTURES`: a cross-compiled binary cannot run on the machine that produced it, so its tests can only be skipped, and a build-verified-only artifact is the one most likely to be broken on arrival.
+
+Set `CMAKE_OSX_DEPLOYMENT_TARGET` explicitly so the binary is not accidentally floored to the runner's current macOS version.
 
 ### `test.yml`
 
@@ -270,12 +271,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - asset: myapp-darwin-aarch64
-            native: true
-          - asset: myapp-darwin-x86_64
-            native: false
+          - runner: macos-15
+            asset: myapp-darwin-aarch64
+          - runner: macos-15-intel
+            asset: myapp-darwin-x86_64
 
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@vN
         with:
@@ -292,26 +293,6 @@ jobs:
           mv artifact/${{ matrix.asset }} ./myapp-under-test
           chmod +x ./myapp-under-test
 
-      # A native binary that will not run is a broken release artifact and must
-      # fail the job. Only the cross-compiled one may legitimately be unable to
-      # run here, and only then is skipping the right answer.
-      - name: Check the binary can execute on this runner
-        id: exec_check
-        run: |
-          if ./myapp-under-test --version > /dev/null 2>&1; then
-            echo "runnable=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.native }}" = "true" ]; then
-            echo "::error::${{ matrix.asset }} is native to this runner but will not execute."
-            echo "A stripped macOS binary whose ad-hoc signature was not restored fails exactly this way;"
-            echo "check the codesign step in build.yml. Diagnostics follow."
-            codesign --verify --verbose ./myapp-under-test || true
-            ./myapp-under-test --version || true
-            exit 1
-          else
-            echo "runnable=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::${{ matrix.asset }} is cross-compiled and cannot execute here (no Rosetta 2); functional tests skipped"
-          fi
-
       - name: Configure with the release binary as the functional-test target
         run: make configure CMAKE_ARGS="-DMYAPP_BINARY_PATH_OVERRIDE=${{ github.workspace }}/myapp-under-test"
 
@@ -319,9 +300,7 @@ jobs:
         run: make build
 
       - run: make test
-
-      - if: steps.exec_check.outputs.runnable == 'true'
-        run: make test_functional
+      - run: make test_functional
 
   test_windows:
     runs-on: windows-2022
@@ -359,15 +338,13 @@ Three details in there are load-bearing:
 
 - **No clang tools installed.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. Installing them here would also mean a per-runner branch, since the apt packages exist only on the Linux runner.
 - **`GITHUB_WORKSPACE` is rewritten with forward slashes on Windows.** The raw value is a backslash path (`D:\a\repo\repo`), and the binary path is baked into the test binary as a compile definition, where `\a` and friends are read as C escape sequences. `${GITHUB_WORKSPACE//\\//}` is pure bash and needs no `cygpath`.
-- **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`. That is what allows the functional layer alone to be skipped on a platform where the artifact cannot execute. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
+- **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`, so a failure names the layer that broke. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
 
-#### The cross-compiled macOS binary
+#### Every artifact runs its own tests
 
-The x86_64 macOS artifact is cross-compiled on an Apple Silicon runner (see `build.yml`), so the runner may not be able to execute it. The unit layer is compiled natively on the runner and so verifies the library on the runner's own architecture for both matrix entries; only the functional layer actually spawns the downloaded artifact.
+Each matrix entry tests on the runner its binary was built on, so the functional layer always spawns a binary the runner can execute and there is no skip branch anywhere in this workflow.
 
-The `native` matrix flag is what keeps the skip honest, and it is the reason the check is not a plain `if runnable`. "This binary will not run" has two very different causes: the runner lacks Rosetta 2 and cannot be expected to run a foreign-architecture binary, or the binary itself is broken. Without the flag both take the skip branch, and a macOS release binary that was stripped without re-signing sails through CI green with a warning that blames Rosetta. Skipping is only ever correct for the cross-compiled artifact; for the native one, refusing to run *is* the test failing.
-
-Whether the skip branch is ever reached depends on Rosetta 2 being present on the image, which is not guaranteed and changes between runner image releases. Confirm it empirically on the first run rather than assuming: if the check reports `runnable=false`, the x86_64 macOS binary is build-verified only, and that is worth stating in the project's README rather than leaving implicit.
+That is the argument for building on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artifact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime. A macOS binary stripped without re-signing, for instance, builds cleanly and is killed on launch, which no build-only check can catch.
 
 ### `release.yml`
 

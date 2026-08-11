@@ -9,7 +9,9 @@ Language-agnostic CI conventions. Per-language paths filters, setup steps, and r
 - `gh` infers the repository from the local git remote, so any job that calls it without an `actions/checkout` step must set `GH_REPO: ${{ github.repository }}`. Otherwise every call fails with `not a git repository`, which is not a not-found answer and must not be treated as one. Set it at job level alongside `GH_TOKEN` rather than per step.
 - Never let a failed `gh` call stand in for a negative answer. An existence check has three outcomes, not two: it is there, it is not there, or the API could not say. Match the not-found message explicitly and fail the job on anything else. Both `|| true` and a bare `if gh view ...; then` collapse a rate limit, an auth failure or a flaky API into "it does not exist", and the step then does the wrong thing confidently.
 
-Pin runners; never use `-latest`. Supported: `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-14`, `macos-15`, `windows-2022`, `windows-2025`.
+Pin runners; never use `-latest`. Supported at the time of writing: `ubuntu-24.04`, `ubuntu-24.04-arm`, `macos-15`, `macos-15-intel`, `windows-2022`, `windows-2025`.
+
+Architecture is part of the label, not a flag: on macOS `macos-15` is Apple Silicon and `macos-15-intel` is Intel, so both architectures build natively and neither needs cross-compiling. Check the current runner list before relying on this one. Images are added and retired on GitHub's schedule, and a spec that freezes the roster goes stale the same way a frozen action version does.
 
 Canonical action per purpose:
 

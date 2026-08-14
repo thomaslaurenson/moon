@@ -52,6 +52,8 @@ Never suppress `SC2086` (unquoted variables), `SC2046` (unquoted command substit
 
 Use [bats-core](https://github.com/bats-core/bats-core) for functional tests. Pin bats as a git submodule under `test/extern/bats` so the version is controlled and no system install is required.
 
+Pin the submodule to a release tag and bump it via a Makefile target (`bump_bats`), never Dependabot: the `gitsubmodule` ecosystem follows branch commits, not releases, so automated bumps would land untagged development commits.
+
 ### Version requirement
 
 Every test file must declare the minimum bats version at the top:

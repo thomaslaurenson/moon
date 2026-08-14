@@ -39,3 +39,7 @@ Do not set `set -euo pipefail` in sourced files; they run in the caller's shell.
 - Define a `die` helper at the top of every executable script: `die() { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }` and use it consistently.
 - Any function that is not both obvious and short has a header comment; all functions in a sourced library have one regardless of length.
 - For scripts with more than one function, wrap the entry point in `main` and call `main "$@"` at the bottom.
+
+## Verification
+
+A script is not done until `bash -n <script>` and `shellcheck <script>` both pass clean. This is the minimum for a one-off script with no test suite; a maintained project layers the full bash testing standards on top.

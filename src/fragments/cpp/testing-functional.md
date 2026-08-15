@@ -32,7 +32,7 @@ See cpp/testing.md for why the label rather than `-R`, and why the skip code mat
 
 Every project that has functional tests includes a cross-platform subprocess helper: `test/subprocess_helper.h` and `test/subprocess_helper.cpp`. This helper is not written from scratch each time; copy it from an existing project that already uses this pattern.
 
-The helper exposes a `run()` function that returns a `RunResult` containing `stdout_output_`, `stderr_output_`, `returncode_`, and `timed_out_`. A `RunOptions` struct controls optional stdin input and working directory.
+The helper exposes a `run()` function that returns a `RunResult` containing `stdout_output`, `stderr_output`, `returncode`, and `timed_out`. A `RunOptions` struct controls optional stdin input and working directory.
 
 Usage in a functional test:
 
@@ -41,7 +41,7 @@ Usage in a functional test:
 
 TEST_CASE("create: target does not exist", "[create]") {
     auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
-    REQUIRE(result.returncode_ == 1);
+    REQUIRE(result.returncode == 1);
 }
 ```
 
@@ -79,8 +79,8 @@ struct TestEnvironment {
         return env;
     }
 
-    const fs::path binary_path { MYAPP_BINARY_PATH };
-    const fs::path test_dir    { MYAPP_TEST_DIR };
+    const fs::path binary_path{MYAPP_BINARY_PATH};
+    const fs::path test_dir{MYAPP_TEST_DIR};
 
 private:
     TestEnvironment() = default;
@@ -93,13 +93,14 @@ All other fixtures (for example `TestFiles`) are ordinary function-scoped struct
 // test/fixtures/test_files.h
 #pragma once
 #include <filesystem>
+
 #include "test_environment.h"
 
 namespace fs = std::filesystem;
 
 /// Creates the static input files used across functional tests.
 struct TestFiles {
-    fs::path files_dir_;
+    fs::path files_dir;
 
     TestFiles() {
         // create files, set timestamps etc.
@@ -114,9 +115,9 @@ Instantiate in a test:
 ```cpp
 TEST_CASE("add file to archive", "[add]") {
     TestFiles files;
-    auto result = run(MYAPP_BINARY_PATH,
-                      {"add", (files.files_dir_ / "sample.txt").string(), "out.dat"});
-    REQUIRE(result.returncode_ == 0);
+    auto result =
+        run(MYAPP_BINARY_PATH, {"add", (files.files_dir / "sample.txt").string(), "out.dat"});
+    REQUIRE(result.returncode == 0);
 }
 ```
 
@@ -125,14 +126,15 @@ TEST_CASE("add file to archive", "[add]") {
 Use a `lines_to_set` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it as a static function at the top of each functional test file:
 
 ```cpp
-static std::set<std::string> lines_to_set(const std::string &output,
-                                           bool skip_empty = false) {
+static std::set<std::string> lines_to_set(const std::string &output, bool skip_empty = false) {
     std::set<std::string> result;
     std::istringstream stream(output);
     std::string line;
     while (std::getline(stream, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (skip_empty && line.empty()) continue;
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        if (skip_empty && line.empty())
+            continue;
         result.insert(line);
     }
     return result;
@@ -142,7 +144,7 @@ static std::set<std::string> lines_to_set(const std::string &output,
 Usage:
 
 ```cpp
-auto output = lines_to_set(result.stdout_output_);
+auto output = lines_to_set(result.stdout_output);
 std::set<std::string> expected = {"cats.txt", "dogs.txt"};
 REQUIRE(output == expected);
 ```
@@ -177,7 +179,7 @@ Use `#ifdef _WIN32` for expected values that differ between Windows and POSIX; f
 #else
     std::string expected_size = "1381";
 #endif
-REQUIRE(result.stdout_output_.find(expected_size) != std::string::npos);
+REQUIRE(result.stdout_output.find(expected_size) != std::string::npos);
 ```
 
 ## Skipping tests with optional dependencies
@@ -186,7 +188,7 @@ Use Catch2's `SKIP()` macro when a test depends on a file or resource that may n
 
 ```cpp
 TEST_CASE("verify signature", "[verify]") {
-    fs::path data = env.test_dir_ / "data" / "sample.dat";
+    fs::path data = TestEnvironment::instance().test_dir / "data" / "sample.dat";
     if (!fs::exists(data)) {
         SKIP("Test data not found - run scripts/download_test_data.sh");
     }
@@ -218,8 +220,8 @@ The functional layer owns the exit-code contract, because it is the only layer t
 ```cpp
 TEST_CASE("create: target does not exist", "[create]") {
     auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
-    REQUIRE(result.returncode_ == 1);
-    REQUIRE_THAT(result.stderr_output_, Catch::Matchers::ContainsSubstring("does not exist"));
+    REQUIRE(result.returncode == 1);
+    REQUIRE_THAT(result.stderr_output, Catch::Matchers::ContainsSubstring("does not exist"));
 }
 ```
 

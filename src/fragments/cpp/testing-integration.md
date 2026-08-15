@@ -81,14 +81,14 @@ namespace mylib::testing {
 inline std::optional<fs::path> IntegrationDataPath() {
 #ifdef MYLIB_INTEGRATION_DATA
     {
-        fs::path p { MYLIB_INTEGRATION_DATA };
+        fs::path p{MYLIB_INTEGRATION_DATA};
         if (fs::exists(p)) {
             return p;
         }
     }
 #endif
     if (const char *env = std::getenv("MYLIB_INTEGRATION_DATA")) {
-        fs::path p { env };
+        fs::path p{env};
         if (fs::exists(p)) {
             return p;
         }
@@ -109,6 +109,7 @@ Every integration test opens by resolving the environment and skipping if it is 
 
 ```cpp
 #include <catch2/catch_test_macros.hpp>
+
 #include "integration_data.h"
 
 TEST_CASE("reads entries from a real dataset archive", "[archive]") {

@@ -63,6 +63,17 @@ add_fuzzer(archive)
 add_fuzzer(record)
 ```
 
+`test/CMakeLists.txt` adds this directory, guarded on the same option:
+
+```cmake
+# test/CMakeLists.txt, after the unit and functional targets
+if(MYLIB_BUILD_FUZZERS)
+    add_subdirectory(fuzz)
+endif()
+```
+
+Without that line the harnesses are never configured and `make build_fuzz` builds nothing, with no error to explain it: `test/fuzz/CMakeLists.txt` is simply a file CMake never reads. The guard is on the tier fragment's `test/CMakeLists.txt` rather than the root, because the root adds `test/` as a whole and the fuzz layer is a layer of the test tree like any other.
+
 The function takes the bare harness name and builds both the target name and the source name from it, so `add_fuzzer(archive)` compiles `fuzz_archive.cpp` into `mylib_fuzz_archive`. The prefix is not optional: a target called `fuzz_archive` breaks the rule that every target name carries the project prefix, and a harness is exactly as capable of colliding in a superbuild as a module is. See Target names in cpp/cmake.md.
 
 Harnesses link the warning bar like any other target the project owns; see Warnings in cpp/cmake.md.
@@ -77,8 +88,8 @@ A harness is not registered with `catch_discover_tests`: it runs forever by desi
 // test/fuzz/fuzz_archive.cpp
 #include <cstddef>
 #include <cstdint>
-#include <mylib/errors.h>
 #include <mylib/archive/archive.h>
+#include <mylib/errors.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     try {

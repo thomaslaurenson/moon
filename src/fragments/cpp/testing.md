@@ -97,6 +97,7 @@ Use one `TEST_CASE` per function under test, with `SECTION` blocks for individua
 
 ```cpp
 #include <catch2/catch_test_macros.hpp>
+
 #include "helpers.h"
 
 TEST_CASE("next_power_of_two", "[helpers]") {

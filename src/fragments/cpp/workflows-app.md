@@ -71,9 +71,13 @@ No `secrets: inherit`: every job here authenticates with the automatic `github.t
 
 Builds one release binary per target platform and uploads each as an artifact for the test, release and prerelease workflows to consume. Linux builds go through Docker; macOS and Windows build natively on their own runners, because there is no container route to either.
 
+**Which platforms is a decision, not a default.** The jobs below are the full set; a project takes the ones matching where its users actually run the binary. macOS in particular is opt-in: it costs ten times a Linux job on a private repository and proves nothing about a tool nobody runs there. The same test applies as in cpp/workflows.md, that a platform earns a job by being a deployment target rather than by adding confidence.
+
+Once a platform is in, it stays consistent all the way through: a job in `build.yml`, a matching entry in `test.yml`, an asset in `.gpipe.yml`, and a line in the release asset list. A platform built but not tested ships an artifact nothing has run.
+
 #### Asset naming
 
-Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows:
+Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows. The table is the naming for whichever platforms a project builds, not a list of platforms it must:
 
 | Platform | Asset |
 |---|---|
@@ -209,17 +213,13 @@ jobs:
         run: docker build --platform linux/amd64 -t myapp -f Dockerfile.musl .
 
       - name: Save image as a tar
-        run: docker save myapp -o docker-image.tar
+        run: docker save myapp -o myapp-docker.tar
 
-      # Named outside the myapp-<os>-<arch> scheme deliberately. Every artifact
-      # lands flat in dist/ at release time, where the binaries are selected by
-      # a myapp-* glob; an image tar matching that glob would be attached to
-      # the release as though it were a binary.
       - name: Upload image as artifact
         uses: actions/upload-artifact@vN
         with:
-          name: docker-image
-          path: docker-image.tar
+          name: myapp-docker
+          path: myapp-docker.tar
           retention-days: 1
 ```
 
@@ -412,10 +412,15 @@ jobs:
         with:
           cosign_sign: true
 
+      # Name every asset. A dist/myapp-* glob is shorter and wrong: with
+      # merge-multiple every artifact lands flat in dist/, so the Docker image
+      # tar matches too and is attached to the release as if it were a binary.
       - name: Create release
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            dist/myapp-* \
+            dist/myapp-linux-x86_64 \
+            dist/myapp-linux-aarch64 \
+            dist/myapp-windows-x86_64.exe \
             install.sh install.ps1 \
             checksums.txt checksums.txt.sigstore.json \
             --title "${GITHUB_REF_NAME}" \
@@ -432,10 +437,10 @@ jobs:
       - name: Download image artifact
         uses: actions/download-artifact@vN
         with:
-          name: docker-image
+          name: myapp-docker
 
       - name: Load image
-        run: docker load -i docker-image.tar
+        run: docker load -i myapp-docker.tar
 
       - name: Push to ghcr
         env:
@@ -495,7 +500,7 @@ A single rolling GitHub prerelease under the literal tag `dev`, rebuilt on every
 
 This mirrors the Go rolling-dev channel (see golang/release-cli.md) but needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
 
-Reuse the same `path: dist, merge-multiple: true` download and `dist/myapp-*` glob as `release.yml`, rather than downloading and naming each `build.yml` matrix entry individually. A build matrix entry added later needs no matching change here; a prerelease workflow that lists each artifact by name has to be edited every time the matrix does, and silently omits new targets in the meantime.
+Reuse the same `path: dist, merge-multiple: true` download and the same explicit asset list as `release.yml`. Naming them is deliberate in both places: release assets are a public interface, and a glob attaches whatever happens to match, which is how an image tar sharing the directory ends up published as a binary. Adding a platform is a decision, so let it be an edit.
 
 Existence-check the delete exactly as in the Go prerelease pattern: three outcomes, not two. Never write `gh release delete dev --yes --cleanup-tag || true`; that collapses "no dev release exists yet" and "the API could not tell me" into the same branch, and the job then publishes over a release state it never established.
 
@@ -540,7 +545,9 @@ jobs:
             --target "${{ github.sha }}" \
             --title "dev" \
             --notes "Rolling build of ${{ github.sha }}" \
-            dist/myapp-*
+            dist/myapp-linux-x86_64 \
+            dist/myapp-linux-aarch64 \
+            dist/myapp-windows-x86_64.exe
 
   prerelease_docker:
     needs: prerelease
@@ -549,10 +556,10 @@ jobs:
       - name: Download image artifact
         uses: actions/download-artifact@vN
         with:
-          name: docker-image
+          name: myapp-docker
 
       - name: Load image
-        run: docker load -i docker-image.tar
+        run: docker load -i myapp-docker.tar
 
       # dev only, never latest: latest tracks releases, so pointing it at a
       # rolling build makes an untagged docker pull return whatever last landed

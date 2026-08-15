@@ -53,15 +53,19 @@ Each harness links its library and the libFuzzer runtime. The sanitizer flags ar
 set(FUZZ_FLAGS -g -O1 -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
 
 function(add_fuzzer name)
-    add_executable(${name} ${name}.cpp)
-    target_link_libraries(${name} PRIVATE mylib::mylib)
-    target_compile_options(${name} PRIVATE ${FUZZ_FLAGS})
-    target_link_options(${name} PRIVATE ${FUZZ_FLAGS})
+    add_executable(mylib_fuzz_${name} fuzz_${name}.cpp)
+    target_link_libraries(mylib_fuzz_${name} PRIVATE mylib::mylib mylib::warnings)
+    target_compile_options(mylib_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
+    target_link_options(mylib_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
 endfunction()
 
-add_fuzzer(fuzz_archive)
-add_fuzzer(fuzz_record)
+add_fuzzer(archive)
+add_fuzzer(record)
 ```
+
+The function takes the bare harness name and builds both the target name and the source name from it, so `add_fuzzer(archive)` compiles `fuzz_archive.cpp` into `mylib_fuzz_archive`. The prefix is not optional: a target called `fuzz_archive` breaks the rule that every target name carries the project prefix, and a harness is exactly as capable of colliding in a superbuild as a module is. See Target names in cpp/cmake.md.
+
+Harnesses link the warning bar like any other target the project owns; see Warnings in cpp/cmake.md.
 
 A harness is not registered with `catch_discover_tests`: it runs forever by design and is not a pass/fail test case. It is driven from the Makefile instead.
 
@@ -101,9 +105,10 @@ When a harness finds something, it writes the offending input to a `crash-<hash>
 
 ## Makefile targets
 
+`FUZZ_TIME` is declared here; `CLANG_VERSION` and `JOBS` come from the CMake fragment.
+
 ```makefile
-CLANG_VERSION ?= 18
-FUZZ_TIME     ?= 60
+FUZZ_TIME ?= 60
 
 .PHONY: configure_fuzz
 configure_fuzz: ## Configure build/fuzz with libFuzzer harnesses (requires Clang)
@@ -117,9 +122,15 @@ build_fuzz: configure_fuzz ## Configure and build the fuzz harnesses
 	cmake --build build/fuzz --parallel $(JOBS)
 
 .PHONY: fuzz
-fuzz: ## Run one harness for FUZZ_TIME seconds (requires: NAME=fuzz_archive)
-	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=fuzz_archive" >&2; exit 1; fi
-	./build/fuzz/bin/$(NAME) -max_total_time=$(FUZZ_TIME) test/fuzz/corpus/$(subst fuzz_,,$(NAME))
+fuzz: build_fuzz ## Run one harness for FUZZ_TIME seconds (requires: NAME=archive)
+	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=archive" >&2; exit 1; fi
+	@corpus=test/fuzz/corpus/$(NAME); \
+	  [ -d "$$corpus" ] || corpus=; \
+	  ./build/fuzz/bin/mylib_fuzz_$(NAME) -max_total_time=$(FUZZ_TIME) $$corpus
 ```
+
+`NAME` is the bare harness name, the same string `add_fuzzer` takes, so `make fuzz NAME=archive` runs `mylib_fuzz_archive` against `test/fuzz/corpus/archive`.
+
+The corpus directory is passed only when it exists. libFuzzer treats a corpus path it was given as mandatory and exits 1 with `ERROR: The required directory ... does not exist`, so hardcoding the path makes a harness unrunnable in a project that has not seeded one, which the corpus section above says is allowed. Passing nothing is the supported way to run without a corpus, and libFuzzer then generates from scratch.
 
 Fuzzing gets its own `build/fuzz` directory, and this is the clearest case for the rule in cpp/cmake.md. `-fsanitize=fuzzer` is Clang-only (see Option above), and CMake cannot change a build tree's compiler after the first configure without discarding the cache. Pointing `configure_fuzz` at `build/dev` would therefore reconfigure and rebuild everything, not just the harnesses, destroy whatever `build/dev` previously held, and charge the same cost again on the next ordinary configure. Two directories cost one `.gitignore` entry that already exists, and `rm -rf build` still cleans both.

@@ -189,3 +189,31 @@ test_verbose: ## Run unit tests with verbose Catch2 output
 ```
 
 `test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.
+
+## Coverage
+
+Coverage is measured over the unit layer using clang's source-based instrumentation. It gets its own `build/coverage` directory: the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. `CLANG_VERSION`, `JOBS`, `LLVM_PROFDATA` and `LLVM_COV` are declared once in the CMake fragment and reused here.
+
+```makefile
+.PHONY: configure_coverage
+configure_coverage: ## Configure build/coverage with clang source-based coverage
+	cmake -B build/coverage \
+	  -DCMAKE_BUILD_TYPE=Debug \
+	  -DMYLIB_BUILD_TESTING=ON \
+	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
+	  -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
+	  -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate"
+
+.PHONY: test_coverage
+test_coverage: configure_coverage ## Report unit-test coverage
+	cmake --build build/coverage --parallel $(JOBS) --target mylib_unit_tests
+	LLVM_PROFILE_FILE=build/coverage/unit.profraw ./build/coverage/bin/mylib_unit_tests
+	$(LLVM_PROFDATA) merge -o build/coverage/unit.profdata build/coverage/unit.profraw
+	$(LLVM_COV) report ./build/coverage/bin/mylib_unit_tests \
+	  -instr-profile=build/coverage/unit.profdata \
+	  --ignore-filename-regex="extern/|test/"
+```
+
+- The unit layer alone, for the same reason `test_asan` uses it: that layer needs no external data and runs anywhere, so the number means the same thing on every machine and in every checkout. A figure that moves depending on whether the developer happens to have the integration dataset is not a figure worth publishing.
+- `--ignore-filename-regex` keeps vendored code and the tests themselves out of the report. A project that counts its own test files reports a number that climbs as tests are added and says nothing about how well the library is covered.
+- The report goes to stdout. Nothing publishes it automatically: the percentage is copied by hand into the static coverage badge on each release, which is what cpp/badges.md asks for. This target is where that number comes from.

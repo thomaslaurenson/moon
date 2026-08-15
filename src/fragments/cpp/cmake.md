@@ -130,6 +130,7 @@ cmake --build build/dev
 | `build/release` | Different build type |
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
+| `build/coverage` | Different code generation: clang instrumentation, and clang whatever the default compiler is |
 | `build/32` | Different architecture |
 | `build/lint` | Different compiler: clang, so clang-tidy can parse the sources |
 
@@ -490,7 +491,11 @@ There is no `install_clang_tools` target. Installing a system toolchain is the e
 CLANG_VERSION ?= 18
 CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) 2>/dev/null || echo clang-format)
 CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) 2>/dev/null || echo clang-tidy)
+LLVM_PROFDATA ?= $(shell command -v llvm-profdata-$(CLANG_VERSION) 2>/dev/null || echo llvm-profdata)
+LLVM_COV      ?= $(shell command -v llvm-cov-$(CLANG_VERSION) 2>/dev/null || echo llvm-cov)
 ```
+
+`llvm-profdata` and `llvm-cov` are resolved here with the rest, rather than beside the coverage target that uses them, so every clang tool the project shells out to is named in one block. They are packaged and versioned exactly like `clang-format`, so they need the same fallback; see the coverage section of cpp/testing.md.
 
 Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make fmt CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
 

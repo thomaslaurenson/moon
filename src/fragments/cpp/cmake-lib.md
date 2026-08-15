@@ -42,6 +42,7 @@ add_library(mylib_archive STATIC
 
 target_include_directories(mylib_archive
     PUBLIC  "${PROJECT_SOURCE_DIR}/include"
+            "${PROJECT_BINARY_DIR}/include"
     PRIVATE "${PROJECT_SOURCE_DIR}/src"
 )
 
@@ -59,6 +60,7 @@ add_library(mylib::archive ALIAS mylib_archive)
 
 - Source files are named relative to the directory holding the `CMakeLists.txt`. This file lives in `src/archive/`, so the entry is `archive.cpp`, never `src/archive/archive.cpp`, which would resolve to `src/archive/src/archive/archive.cpp` and fail to configure.
 - `PUBLIC` on `include/` propagates that path to anything linking the module, so neither a sibling module nor an outside consumer needs an include path of its own.
+- `"${PROJECT_BINARY_DIR}/include"` is the generated header tree, which holds `version.h`. Every module carries it, and carries it `PUBLIC`, so a module's own sources and an outside consumer reach the version constant the same way. See Generated version header.
 - `PRIVATE` on `src/` lets modules include each other's private headers while keeping them off a consumer's include path entirely.
 - `PROJECT_SOURCE_DIR`, never `CMAKE_SOURCE_DIR`: under the `add_subdirectory` consumption model this library is built for, the latter resolves to the consumer's root. See the universal fragment.
 - The `mylib_` prefix is not decoration. Target names are global to the whole CMake build, and a module called `crypto`, `common` or `config` will collide the first time this library and another land in the same superbuild. See the universal fragment.
@@ -136,19 +138,23 @@ Default `OFF` because an example is dead weight in a consumer's build. Keep exam
 
 ## Generated version header
 
-The version comes from `project(MyLib VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree so consumers can query it, rather than putting the whole binary directory on their include path:
+The version comes from `project(MyLib VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree so consumers can query it, rather than putting the whole binary directory on their include path. The `configure_file` call goes at the top of `src/CMakeLists.txt`, above the module `add_subdirectory` calls, so a module's own sources can include the header it writes:
 
 ```cmake
+# src/CMakeLists.txt, before the module add_subdirectory calls
+
 configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/version.h.in"
     "${PROJECT_BINARY_DIR}/include/mylib/version.h"
     @ONLY
 )
-
-target_include_directories(mylib PUBLIC "${PROJECT_BINARY_DIR}/include")
 ```
 
-A consumer then writes `#include <mylib/version.h>`, matching every other public header. Adding `PUBLIC "${PROJECT_BINARY_DIR}"` instead would put every generated file in the build tree on their include path.
+The generated directory is then carried by the module targets (see Module targets), and never added to the aggregate. The aggregate is an `INTERFACE` library, and `target_include_directories(mylib PUBLIC ...)` on one of those is not a style preference but a configure error: "target_include_directories may only set INTERFACE properties on INTERFACE targets". Writing `INTERFACE` there instead configures cleanly and is still wrong, because only code linking the aggregate would see the header: a module wanting its own version constant would fail to compile, and the aggregate is declared after the modules that would need it. A `PUBLIC` path on each module reaches both, since the aggregate links the modules and inherits their interface.
+
+A consumer then writes `#include <mylib/version.h>`, matching every other public header. Naming `"${PROJECT_BINARY_DIR}"` itself instead would put every generated file in the build tree on their include path.
+
+A library small enough to have no modules has no aggregate either: its single `add_library` in `src/CMakeLists.txt` carries both include directories as `PUBLIC` directly, which is the same arrangement with one target instead of several.
 
 ## Testing
 

@@ -248,7 +248,7 @@ The warning bar is defined **once**, as an `INTERFACE` target that every project
 
 ```cmake
 # src/CMakeLists.txt, before the module add_subdirectory calls
-option(MYLIB_WERROR "Treat warnings as errors" OFF)
+# MYLIB_WERROR is declared in the root with the other project-wide options
 
 add_library(mylib_warnings INTERFACE)
 target_compile_options(mylib_warnings INTERFACE
@@ -276,6 +276,10 @@ Defining the bar once is the point. A modular library that repeats the flag list
 
 `PRIVATE`, so the bar applies to this project's code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
 
+The `MYLIB_WERROR` option is declared in the root, alongside every other project-wide `option()`, while the target it feeds is declared in `src/`. The two are separated because the root orchestrates and never defines targets, and `src/` is the first place a target appears that needs the bar. Declaring the option in `src/` instead still works, since an `option()` anywhere becomes a cache entry `-D` can set, but it puts one of the project's options somewhere none of the others are.
+
+Linking the bar is not optional and not per-target judgement. A target that omits the line is compiled at whatever the compiler defaults to, and nothing reports it: the build is green, CI is green, and the project quietly has an unwarned island. That is the failure this section exists to prevent, so the tier fragments show the link on every target they define.
+
 **Test and example targets link it too.** Test code is the project's code, and an example is what a consumer copies: one compiled at a lower bar than the library teaches the wrong habits. This is separate from clang-tidy, which deliberately skips `test/`; see the clang tooling section.
 
 ### What each flag buys
@@ -286,6 +290,10 @@ Defining the bar once is the point. A modular library that repeats the flag list
 - `-Wshadow`: a declaration hiding an outer name, where an edit then changes the wrong variable
 - `-Wnon-virtual-dtor`: deleting through a base pointer with no virtual destructor; only fires on polymorphic types, and is a leak when it does
 - `-Wold-style-cast`: forces C++ cast syntax. The value is not style: it makes `reinterpret_cast` greppable, so the genuinely dangerous conversions stop hiding behind `(uint32_t)`
+
+`-Wconversion` is not one flag in practice, and this is the sharpest disagreement between the two compilers CI runs. clang treats it as covering signed-to-unsigned changes; GCC does not, and reports them only when `-Wsign-conversion` is given as well. A codebase that indexes containers with signed integers is then clean under GCC and rejected outright under clang, on a build that asked both of them for the same bar.
+
+Settle it explicitly on the warnings target, with `-Wsign-conversion` to match clang or `-Wno-sign-conversion` to match GCC. Either is defensible and the choice is the project's, but it has to be made once, in the one place the bar is defined. Leaving it implicit is what produces a green GCC job and a red clang job on identical source, and it is the hardest such failure to read, because nothing in the project's own configuration mentions the flag that differs.
 
 Resist adding more. A flag that never fires on the project is decoration that still has to be mapped for every compiler, and by then the list is long enough that nobody reads it before appending the next one.
 

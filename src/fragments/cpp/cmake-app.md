@@ -37,8 +37,12 @@ add_library(myapp_core STATIC
 
 target_include_directories(myapp_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
+target_link_libraries(myapp_core PRIVATE myapp::warnings)
+
 target_compile_features(myapp_core PUBLIC cxx_std_20)
 ```
+
+The core carries no alias of its own, but it links one: `myapp::warnings` is the warning bar from the universal fragment, and the no-alias rule above is about the core being unreachable from outside the repository, not about the targets it links.
 
 `app/CMakeLists.txt` builds the binary:
 
@@ -48,7 +52,7 @@ add_executable(myapp
     options.cpp
 )
 
-target_link_libraries(myapp PRIVATE myapp_core)
+target_link_libraries(myapp PRIVATE myapp_core myapp::warnings)
 
 target_include_directories(myapp SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/CLI11/include"
@@ -137,7 +141,11 @@ add_executable(myapp_unit_tests
     unit/test_helpers.cpp
     unit/test_config.cpp
 )
-target_link_libraries(myapp_unit_tests PRIVATE myapp_core Catch2::Catch2WithMain)
+target_link_libraries(myapp_unit_tests PRIVATE
+    myapp_core
+    myapp::warnings
+    Catch2::Catch2WithMain
+)
 
 # Functional tests - spawn the binary as a subprocess, and link neither it nor the core
 add_executable(myapp_functional_tests
@@ -155,7 +163,10 @@ target_include_directories(myapp_functional_tests PRIVATE
 target_include_directories(myapp_functional_tests SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/subprocess.h"
 )
-target_link_libraries(myapp_functional_tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(myapp_functional_tests PRIVATE
+    myapp::warnings
+    Catch2::Catch2WithMain
+)
 
 catch_discover_tests(myapp_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)

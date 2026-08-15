@@ -37,6 +37,8 @@ target_include_directories(mylib
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+target_link_libraries(mylib PRIVATE mylib::warnings)
+
 target_compile_features(mylib PUBLIC cxx_std_20)
 
 add_library(mylib::mylib ALIAS mylib)
@@ -75,7 +77,7 @@ add_executable(myapp
     options.cpp
 )
 
-target_link_libraries(myapp PRIVATE mylib::mylib)
+target_link_libraries(myapp PRIVATE mylib::mylib mylib::warnings)
 
 target_include_directories(myapp SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/CLI11/include"
@@ -103,7 +105,11 @@ add_executable(mylib_unit_tests
 target_include_directories(mylib_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
-target_link_libraries(mylib_unit_tests PRIVATE mylib::mylib Catch2::Catch2WithMain)
+target_link_libraries(mylib_unit_tests PRIVATE
+    mylib::mylib
+    mylib::warnings
+    Catch2::Catch2WithMain
+)
 
 add_executable(myapp_functional_tests
     subprocess_helper.cpp
@@ -118,7 +124,10 @@ target_include_directories(myapp_functional_tests PRIVATE
 target_include_directories(myapp_functional_tests SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/subprocess.h"
 )
-target_link_libraries(myapp_functional_tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(myapp_functional_tests PRIVATE
+    mylib::warnings
+    Catch2::Catch2WithMain
+)
 
 catch_discover_tests(mylib_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)

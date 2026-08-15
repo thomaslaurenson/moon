@@ -46,14 +46,12 @@ target_include_directories(mylib_archive
     PRIVATE "${PROJECT_SOURCE_DIR}/src"
 )
 
-target_link_libraries(mylib_archive PUBLIC ZLIB::ZLIB mylib::common)
+target_link_libraries(mylib_archive
+    PUBLIC  ZLIB::ZLIB mylib::common
+    PRIVATE mylib::warnings
+)
 
 target_compile_features(mylib_archive PUBLIC cxx_std_20)
-target_compile_options(mylib_archive PRIVATE -Wall -Wextra)
-
-if(MYLIB_WERROR)
-    target_compile_options(mylib_archive PRIVATE -Werror)
-endif()
 
 add_library(mylib::archive ALIAS mylib_archive)
 ```
@@ -62,6 +60,7 @@ add_library(mylib::archive ALIAS mylib_archive)
 - `PUBLIC` on `include/` propagates that path to anything linking the module, so neither a sibling module nor an outside consumer needs an include path of its own.
 - `"${PROJECT_BINARY_DIR}/include"` is the generated header tree, which holds `version.h`. Every module carries it, and carries it `PUBLIC`, so a module's own sources and an outside consumer reach the version constant the same way. See Generated version header.
 - `PRIVATE` on `src/` lets modules include each other's private headers while keeping them off a consumer's include path entirely.
+- `PRIVATE mylib::warnings` is the warning bar, and every module carries this line. It is never a per-module flag list: see Warnings in the universal fragment for why the bar is one target rather than a copy per module.
 - `PROJECT_SOURCE_DIR`, never `CMAKE_SOURCE_DIR`: under the `add_subdirectory` consumption model this library is built for, the latter resolves to the consumer's root. See the universal fragment.
 - The `mylib_` prefix is not decoration. Target names are global to the whole CMake build, and a module called `crypto`, `common` or `config` will collide the first time this library and another land in the same superbuild. See the universal fragment.
 - A module never calls `find_package`. The root resolves external dependencies and the module consumes the resulting imported targets.
@@ -121,7 +120,7 @@ endif()
 ```cmake
 # examples/auth/CMakeLists.txt
 add_executable(mylib_example_auth main.cpp)
-target_link_libraries(mylib_example_auth PRIVATE mylib::mylib)
+target_link_libraries(mylib_example_auth PRIVATE mylib::mylib mylib::warnings)
 
 # The target name is namespaced; the binary a reader runs is not.
 set_target_properties(mylib_example_auth PROPERTIES OUTPUT_NAME "mylib-auth")
@@ -175,17 +174,15 @@ target_include_directories(mylib_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 
-target_link_libraries(mylib_unit_tests PRIVATE mylib::mylib Catch2::Catch2WithMain)
+target_link_libraries(mylib_unit_tests PRIVATE
+    mylib::mylib
+    mylib::warnings
+    Catch2::Catch2WithMain
+)
 
 target_compile_definitions(mylib_unit_tests PRIVATE
     MYLIB_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
-
-target_compile_options(mylib_unit_tests PRIVATE -Wall -Wextra)
-
-if(MYLIB_WERROR)
-    target_compile_options(mylib_unit_tests PRIVATE -Werror)
-endif()
 
 catch_discover_tests(mylib_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)

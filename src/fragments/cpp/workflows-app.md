@@ -116,6 +116,9 @@ permissions:
 jobs:
   build_linux:
     strategy:
+      # Report both architectures independently; one failing tells you nothing
+      # about the other, and cancelling hides half the answer.
+      fail-fast: false
       matrix:
         include:
           - arch: amd64
@@ -298,7 +301,7 @@ That is also the argument for building release artifacts on a native runner rath
 
 Publishes a GitHub release: downloads every build artifact, generates install scripts and checksums with gpipe, signs them, and creates the release with changelog notes.
 
-The pattern is the same three steps as the Go flow (see golang/release-cli.md): **build -> gpipe -> release**. gpipe is language-agnostic, not Go-only; it consumes built binaries from paths named in `.gpipe.yml` and neither knows nor cares what produced them. `gpipe` generates `install.sh`, `install.ps1` and `checksums.txt`, and with `cosign_sign: true` also emits `checksums.txt.sigstore.json`. Do not hand-roll `sha256sum`: gpipe's `checksums.txt` covers the installer scripts themselves as well as the platform binaries, which is what lets a cautious user verify `install.sh` before piping it to a shell.
+The pattern is three steps: **build -> gpipe -> release**. gpipe is language-agnostic, not Go-only; it consumes built binaries from paths named in `.gpipe.yml` and neither knows nor cares what produced them, so the Go and C++ release flows are the same shape. `gpipe` generates `install.sh`, `install.ps1` and `checksums.txt`, and with `cosign_sign: true` also emits `checksums.txt.sigstore.json`. Do not hand-roll `sha256sum`: gpipe's `checksums.txt` covers the installer scripts themselves as well as the platform binaries, which is what lets a cautious user verify `install.sh` before piping it to a shell.
 
 ```yaml
 name: Release
@@ -380,7 +383,7 @@ A project publishing an image adds `packages: write` to this workflow's `permiss
 
 `gpipe` needs no `version` or `repo` inputs here: they default to `github.ref_name` and `github.repository`, and `tag.yml` only ever fires on a `v*` tag, so `ref_name` is already the semantic version gpipe expects. `id-token: write` must also be granted by the caller job in `tag.yml`, not just declared here.
 
-The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current (see golang/release-cli.md, which uses the same action). It installs its own Go, so a caller needs none of its own: the runner image ships Go, but not necessarily a version new enough for gpipe's `go.mod`, and a project that never invokes Go directly has no reason to carry `actions/setup-go` for a tool's benefit.
+The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It installs its own Go, so a caller needs none of its own: the runner image ships Go, but not necessarily a version new enough for gpipe's `go.mod`, and a project that never invokes Go directly has no reason to carry `actions/setup-go` for a tool's benefit.
 
 #### `.gpipe.yml`
 
@@ -413,11 +416,11 @@ A single rolling GitHub prerelease under the literal tag `dev`, rebuilt on every
 
 **gpipe does not appear here, and cannot.** It validates `--version` as a semantic version, so the literal string `dev` is rejected outright; and the installers it generates hardcode `releases/download/<version>/<asset>`, so passing a semver-shaped stand-in like `v1.2.4-dev` produces a script whose every download URL 404s against a release actually tagged `dev`. Install scripts are a release-only artifact. A rolling channel that is deleted and recreated on every push is the wrong thing to hang a stable `curl | bash` URL off anyway.
 
-This mirrors the Go rolling-dev channel (see golang/release-cli.md) but needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
+This is the same rolling-dev channel the Go flow publishes, and it needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
 
 Reuse the same `path: dist, merge-multiple: true` download and the same explicit asset list as `release.yml`. Naming them is deliberate in both places: release assets are a public interface, and a glob attaches whatever happens to match, which is how an image tar sharing the directory ends up published as a binary. Adding a platform is a decision, so let it be an edit.
 
-Existence-check the delete exactly as in the Go prerelease pattern: three outcomes, not two. Never write `gh release delete dev --yes --cleanup-tag || true`; that collapses "no dev release exists yet" and "the API could not tell me" into the same branch, and the job then publishes over a release state it never established.
+Existence-check the delete: three outcomes, not two. Never write `gh release delete dev --yes --cleanup-tag || true`; that collapses "no dev release exists yet" and "the API could not tell me" into the same branch, and the job then publishes over a release state it never established.
 
 ```yaml
 name: Prerelease

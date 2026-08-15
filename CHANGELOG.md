@@ -1,28 +1,38 @@
 # Changelog
 
-## 0.3.0 - 2026-08-11
+## 0.3.0 - 2026-08-15
 
 ### Added
 
 - Add comment conventions covering history, earned length, and pre-empting wrong fixes
 - Add C++ portability rules for include hygiene, binary I/O, and path types
 - Add container image labels and ghcr publishing to the C++ application tier
+- Add C++ coverage and sanitizer targets, and the CI jobs that run them
+- Add a get_version target, and build C++ examples in CI
 - Expand the bash workflow, testing, and style fragments, add bash-project badges
 
 ### Changed
 
-- Tie C++ CI depth to the trigger, test under both GCC and clang
+- Tie C++ CI depth to the trigger, test under both GCC and clang and both build types
 - Define the C++ library workflow set, make build and prerelease depend on the tier
 - Split the C++ build directory by configuration, define the warning bar once
+- Build and test each platform in one job instead of testing a downloaded artifact
+- Describe integration test data by its contract rather than one project's sourcing
+- Take file paths as std::filesystem::path throughout the C++ examples
+- Note the runner cost multipliers and make the cheap platform set the default
 
 ### Fixed
 
 - Configure clang-tidy against clang so its lint output stops being fiction
 - Correct the fetch-depth, GH_REPO, gpipe Go, and get_changelog header rules
+- Fix the library version header, warning bar, and fuzz harness wiring
+- Fix the member naming rule to apply the trailing underscore by access
+- Make every C++ make target runnable from a clean checkout
 
 ### Removed
 
 - Remove install_clang_tools, resolving clang tool paths per platform instead
+- Remove macOS from the C++ release path
 
 ## 0.2.6 - 2026-08-06
 

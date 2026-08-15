@@ -61,16 +61,35 @@ Splitting the core out of the executable is what makes the logic testable. A tes
 
 An app whose implementation is genuinely one `main.cpp` with nothing worth unit testing may skip `src/` and the core library entirely, and define the executable directly in `app/`. Add the split when there is logic to test, not before.
 
-The binary lands in `build/bin/` via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
+The binary lands in the build configuration's `bin/` (for example `build/dev/bin/`) via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
 
 ```
 build/
-  bin/
-    myapp
-    myapp_unit_tests
-    myapp_functional_tests
-  compile_commands.json
+  dev/
+    bin/
+      myapp
+      myapp_unit_tests
+      myapp_functional_tests
+    compile_commands.json
 ```
+
+## Generated version header
+
+The version comes from `project(MyApp VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it in `src/CMakeLists.txt`, beside the core library, so the core and the CLI read the same constant:
+
+```cmake
+configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/version.h.in"
+    "${PROJECT_BINARY_DIR}/include/myapp/version.h"
+    @ONLY
+)
+
+target_include_directories(myapp_core PUBLIC "${PROJECT_BINARY_DIR}/include")
+```
+
+An application has no public API, so nothing outside the repository reads this header. Generate it into an include tree anyway rather than putting `"${PROJECT_BINARY_DIR}"` itself on the include path, which would expose every generated file in the build tree to `#include`. `app/` picks the header up through the core's `PUBLIC` include directory, so `--version` prints the same value the library reports and there is one place to change it.
+
+Keep the template in `cmake/`, never in `src/`: it is a build input, not something the compiler ever sees.
 
 ## Baking paths into test binaries
 

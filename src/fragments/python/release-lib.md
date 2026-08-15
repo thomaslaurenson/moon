@@ -41,7 +41,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 ```
 
-`fetch-depth: 0` is required so `get_changelog` can read the tagged history. `get_changelog` strips the leading `v` from the tag before matching the bare changelog header (see `python/make.md` and `github/changelog.md`). The version comes from the tag via the build backend's tag-based versioning, or from `[project]` in `pyproject.toml`; either way, never inject it by hand.
+`fetch-depth: 0` is required by tag-based versioning, which reads the tag history to derive the version, not by `get_changelog`, which reads `CHANGELOG.md` from the working tree and is satisfied by the default depth. A project pinning its version in `pyproject.toml` instead does not need it. `get_changelog` strips the leading `v` from the tag before matching the bare changelog header (see `python/make.md` and `github/changelog.md`). The version comes from the tag via the build backend's tag-based versioning, or from `[project]` in `pyproject.toml`; either way, never inject it by hand.
 
 ## Caller wiring
 

@@ -6,7 +6,7 @@ Conventions for CMake-based C++ projects. Universal to every tier; the target de
 
 - CMake is the build system for all C++ projects; never use raw compiler invocations
 - The Makefile is a task runner that wraps CMake; CI calls `make <target>`, never raw `cmake` commands
-- One `build/` directory for everything; no separate lint or release build directories
+- All build output lives under `build/`, one subdirectory per configuration; see Build directory
 - Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
 
 ## Repository layout
@@ -23,12 +23,14 @@ CMakeLists.txt        # root: project settings, options, add_subdirectory calls
 Makefile
 CHANGELOG.md
 README.md
+cmake/                # version.h.in, plus any CMake helper modules
 src/                  # implementation, built as a library target; never contains main()
 extern/               # git submodules only; never copy third-party headers manually
 test/                 # see cpp/testing.md for internal structure
 ```
 
 - `extern/` contains only git submodules; never manually copied headers or installed libraries
+- `cmake/` holds build inputs that are neither source nor public headers: `version.h.in`, which every project has (see the version rule in cpp/style.md), plus helper modules such as `mark_system.cmake` where a project links a dependency that exports its own target. The version template is what makes this directory universal rather than optional. Keep templates out of `include/`: that tree is the API a consumer includes, and a file there that cannot be included misrepresents it.
 
 Two rules hold across every tier, and the tier fragments assume them:
 
@@ -92,8 +94,8 @@ endforeach()
 - `CMAKE_BUILD_TYPE` defaults to `Debug`: this ensures `compile_commands.json` is always generated with full debug information for clang-tidy
 - `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
-- `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in `build/bin/` regardless of how many targets the project defines
-- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/bin/Release/myapp.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
+- `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
+- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myapp.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
 
 ## Referring to project paths
 
@@ -115,14 +117,31 @@ Within a single directory's `CMakeLists.txt`, prefer bare relative paths for sou
 
 ## Build directory
 
-All projects use a single `build/` directory:
+All build output goes under `build/`, one subdirectory per configuration, named for whatever makes that configuration different:
 
 ```bash
-cmake -B build
-cmake --build build
+cmake -B build/dev -D<PROJECT>_BUILD_TESTING=ON
+cmake --build build/dev
 ```
 
-Never create separate build directories for lint, release, or test builds. The default `Debug` build type produces a `compile_commands.json` that covers all use cases.
+| Directory | Why it is separate |
+|---|---|
+| `build/dev` | The default: everything testable, `compile_commands.json`, the daily build |
+| `build/release` | Different build type |
+| `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
+| `build/asan` | Different code generation |
+| `build/32` | Different architecture |
+| `build/lint` | Different compiler: clang, so clang-tidy can parse the sources |
+
+Only create a directory when the configuration genuinely cannot share one. A configuration that differs by a `-D` option affecting compiler, architecture or instrumentation cannot: reconfiguring in place silently replaces the previous one, and nothing afterwards tells you which of them you are looking at. Naming the directory for the configuration puts that answer in the path.
+
+**The test layers are not a reason to split.** Unit, integration and functional tests all build into `build/dev` and are selected when they are *run*, with `ctest -L unit`. An integration layer gated behind an option is still built into the same directory; the option controls whether the target exists, not where it lives. Never create `build/test` or a directory per test layer.
+
+`.gitignore` needs one entry, `build/`, and `rm -rf build` removes everything.
+
+The default directory is `dev`, not `debug`, because it is named for what it is for rather than for a build type. A multi-config generator (Visual Studio, Xcode) picks the build type at build time, so the same directory serves `--config Debug` and `--config Release`; a CI job that builds Release and runs the test suite still belongs in `build/dev`.
+
+Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myapp` becomes `build/dev/bin/myapp`. `compile_commands.json` for clang tooling comes from `build/dev`, which is why that configuration always has testing on.
 
 ## CMakeLists.txt structure
 
@@ -152,10 +171,20 @@ extern/
 
 ### src/CMakeLists.txt responsibilities
 
+`src/CMakeLists.txt` is where the target this project exposes is defined. That holds whichever shape the project has taken, which is what keeps the root purely orchestrational:
+
+- **Single target**: `add_library` directly, listing every source. Subdirectories under `src/` are source organisation and have no `CMakeLists.txt` of their own.
+- **Modular**: `add_subdirectory` for each module, then the aggregate target that links them. See the library tier fragment.
+
+Either way this file owns:
+
 - `add_library`; see the tier fragment for the target name and whether it carries a public include path
 - `target_include_directories`
 - `target_link_libraries`
 - `configure_file` for generated headers
+- the module `add_subdirectory` calls, in a modular project, ordered so a module is added before anything linking its alias
+
+A modular project puts the module list here rather than in the root for two reasons: the root stays a fixed size as modules are added, and adding one means editing the file next to the modules instead of a file otherwise concerned with dependency setup.
 
 ## Testing option
 
@@ -190,7 +219,9 @@ Never use the bare `BUILD_TESTING` name for this. It is a single global that CTe
 
 `PROJECT_IS_TOP_LEVEL` (CMake 3.21, the declared minimum here) makes the default correct automatically: on when the project is built directly, off when it is somebody's subdirectory. Do not hand-roll it with a `set(MYLIB_ROOT_BUILD TRUE)` marker.
 
-`enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build` finding nothing.
+`enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build/dev` finding nothing.
+
+**Call `enable_testing()`, never `include(CTest)`.** They look interchangeable and are not: `include(CTest)` calls `enable_testing()` for you, but it also declares `BUILD_TESTING` as a cache variable defaulting to `ON`, which is precisely the global the project-scoped name above exists to avoid. A project that scopes its own option correctly and then calls `include(CTest)` has reintroduced the problem through the back door, and the symptom is a vendored dependency's self-tests appearing in `ctest -N` output, with nothing in the project's own CMake mentioning `BUILD_TESTING` to explain why. `include(CTest)` also adds CDash dashboard targets (`Experimental`, `Nightly`, `Continuous`) that no project here uses. `enable_testing()` plus `include(Catch)` is the whole requirement.
 
 Do not call `include(CTest)`. Its purpose is to declare the global `BUILD_TESTING` option and call `enable_testing()` for you, which is exactly what this section replaces; it also drags in CDash submission targets no project here uses. `include(Catch)` is the only include needed, once, at the root, after `CMAKE_MODULE_PATH` picks up Catch2's `extras`. `test/CMakeLists.txt` then just calls `catch_discover_tests`.
 
@@ -213,26 +244,71 @@ Consumers link the alias, never the raw name, so the prefix costs nothing at the
 
 ## Warnings
 
-Every project-owned target sets its warning bar explicitly, and a project-scoped option promotes warnings to errors:
+The warning bar is defined **once**, as an `INTERFACE` target that every project-owned target links privately:
 
 ```cmake
+# src/CMakeLists.txt, before the module add_subdirectory calls
 option(MYLIB_WERROR "Treat warnings as errors" OFF)
 
-target_compile_options(mylib PRIVATE -Wall -Wextra)
+add_library(mylib_warnings INTERFACE)
+target_compile_options(mylib_warnings INTERFACE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor -Wold-style-cast>
+)
 
 if(MYLIB_WERROR)
-    target_compile_options(mylib PRIVATE -Werror)
+    target_compile_options(mylib_warnings INTERFACE
+        $<$<CXX_COMPILER_ID:MSVC>:/WX>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
+    )
 endif()
+
+add_library(mylib::warnings ALIAS mylib_warnings)
 ```
 
-`PRIVATE`, so the bar applies to this project's own code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
-
-Vendored C or C++ compiled into a project target is exempt. Do not fix a third-party file's warnings, and do not lower the project's bar to accommodate it; silence it at the source:
+Every target the project owns then carries one line:
 
 ```cmake
-# blast.c is third-party C; do not hold it to the project's warning bar
-set_source_files_properties("${BLAST_C}" PROPERTIES COMPILE_OPTIONS "-Wno-unused-parameter")
+target_link_libraries(mylib_archive PRIVATE mylib::warnings)
 ```
+
+Defining the bar once is the point. A modular library that repeats the flag list per module has one copy per module to keep in step, and they drift: the module that hits an inconvenient warning gets a `-Wno-` appended locally, and the project quietly has two bars. One target means raising the bar is one edit.
+
+`PRIVATE`, so the bar applies to this project's code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
+
+**Test and example targets link it too.** Test code is the project's code, and an example is what a consumer copies: one compiled at a lower bar than the library teaches the wrong habits. This is separate from clang-tidy, which deliberately skips `test/`; see the clang tooling section.
+
+### What each flag buys
+
+- `-Wall -Wextra`: the baseline every project starts from
+- `-Wpedantic`: rejects compiler extensions, which is what keeps one compiler's build from being the only one that works
+- `-Wconversion`: implicit narrowing. The highest-value flag in this list for anything parsing a binary format, where a silent `uint32_t` to `uint16_t` truncation is a data bug rather than a compile error
+- `-Wshadow`: a declaration hiding an outer name, where an edit then changes the wrong variable
+- `-Wnon-virtual-dtor`: deleting through a base pointer with no virtual destructor; only fires on polymorphic types, and is a leak when it does
+- `-Wold-style-cast`: forces C++ cast syntax. The value is not style: it makes `reinterpret_cast` greppable, so the genuinely dangerous conversions stop hiding behind `(uint32_t)`
+
+Resist adding more. A flag that never fires on the project is decoration that still has to be mapped for every compiler, and by then the list is long enough that nobody reads it before appending the next one.
+
+**Do not chase parity on MSVC.** `/W4` covers much of `-Wall -Wextra` plus some conversion diagnostics, and `/permissive-` is the conformance analogue of `-Wpedantic`, but there is no MSVC equivalent of `-Wold-style-cast`, and its non-virtual-destructor warning is off by default even under `/W4`. Set the two flags that exist and let the stricter analysis ride on the Linux CI job; a per-compiler warning list maintained to look identical is a maintenance cost that buys nothing.
+
+Vendored C or C++ is exempt. Do not fix a third-party file's warnings, and do not lower the project's bar to accommodate it. Give it its own target, which simply does not link the warnings target:
+
+```cmake
+# decoder.c is third-party C from a submodule's contrib/ directory. Its own
+# target, so the project's warning bar does not apply to it.
+add_library(mylib_decoder STATIC "${DECODER_C}")
+
+target_include_directories(mylib_decoder SYSTEM PUBLIC "${DECODER_INCLUDE_DIR}")
+
+add_library(mylib::decoder ALIAS mylib_decoder)
+
+# ... and the module that uses it:
+target_link_libraries(mylib_archive PRIVATE mylib::decoder)
+```
+
+A separate target rather than `set_source_files_properties(... COMPILE_OPTIONS "-Wno-...")` on the file. Per-file suppression works only while the suppression list matches the bar, so every flag added to the warnings target means revisiting every vendored file to extend its `-Wno-` list, and the failure mode is a wall of third-party diagnostics in the middle of the project's own build output. A target that never links the bar stays correct no matter how the bar changes.
+
+Mark its include directory `SYSTEM`, so the third-party headers are exempt where they are *included* as well as where they are compiled.
 
 ## Sanitizers
 
@@ -243,14 +319,42 @@ option(MYLIB_ASAN "Build with Address + UB sanitizers" OFF)
 
 # Applied before any target is declared, so every module and test is instrumented
 if(MYLIB_ASAN)
-    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
-    add_link_options(-fsanitize=address,undefined)
+    if(MSVC)
+        # MSVC has AddressSanitizer but no UndefinedBehaviorSanitizer, and links
+        # its runtime automatically, so there is no matching add_link_options.
+        add_compile_options(/fsanitize=address /Oy-)
+    else()
+        add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+        add_link_options(-fsanitize=address,undefined)
+    endif()
 endif()
 ```
+
+The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable: a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 
 This is the one legitimate use of the directory-scoped `add_compile_options` rather than `target_compile_options`. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
 
 Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job.
+
+### Makefile targets
+
+A sanitized build changes code generation, so it gets its own directory and cannot share `build/dev`:
+
+```makefile
+.PHONY: configure_asan
+configure_asan: ## Configure build/asan with Address + UB sanitizers
+	cmake -B build/asan \
+	  -DCMAKE_BUILD_TYPE=Debug \
+	  -DMYLIB_ASAN=ON \
+	  -DMYLIB_BUILD_TESTING=ON
+
+.PHONY: test_asan
+test_asan: configure_asan ## Build and run the unit tests under sanitizers
+	cmake --build build/asan --parallel $(JOBS)
+	ctest --test-dir build/asan --output-on-failure --parallel $(JOBS) -L unit
+```
+
+`test_asan` runs the unit layer only. That layer needs no external data or server, so it is the one that can run anywhere, and sanitizer findings in it point at the project's own code rather than at a fixture. Without these targets the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent.
 
 ## Dependencies
 
@@ -363,53 +467,96 @@ Consumers then write `target_link_libraries(mylib_transport PRIVATE asio)` and i
 
 ## Clang tooling
 
-Clang tools are pinned to version 18 across all projects for reproducibility. Never use the unversioned `clang-format` or `clang-tidy` binaries as the system default may differ between machines and CI runners.
+Clang tools are pinned to major version 18 across all projects, because formatting output and check behaviour differ between major versions: a tree formatted with one and checked with another fails `fmt_check` on lines nobody touched.
 
-### Installation
+How that version is installed differs per platform, so the Makefile resolves the binary rather than naming it:
 
-The Makefile must provide an `install_clang_tools` target:
+- Debian and Ubuntu install versioned binaries (`clang-format-18`) from apt.llvm.org
+- Homebrew and the LLVM Windows installer provide unversioned `clang-format` from a versioned install
+
+There is no `install_clang_tools` target. Installing a system toolchain is the environment's job, not the build's: a target that runs `sudo apt-get` fails outright on macOS and Windows runners, and shipping one per platform is a package manager written in Make.
+
+### Resolving the binaries
 
 ```makefile
-.PHONY: install_clang_tools
-install_clang_tools: ## Install clang-format and clang-tidy at pinned version
-	sudo apt-get install -y clang-format-18 clang-tidy-18
+CLANG_VERSION ?= 18
+CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) 2>/dev/null || echo clang-format)
+CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) 2>/dev/null || echo clang-tidy)
 ```
+
+Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make fmt CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
+
+CI pins the version explicitly, so drift between a contributor's local major version and the enforced one surfaces there rather than in review.
+
+### Configuring for clang-tidy
+
+clang-tidy resolves headers through the compiler that produced `compile_commands.json`. Point it at a GCC-configured build and it cannot find libstdc++ at all: it reports `'algorithm' file not found`, then keeps going and emits diagnostics from a broken AST. The output looks like real findings and is not: a free function gets reported as a *variable* with the wrong case style, because without the standard headers clang-tidy cannot tell what it is looking at. A lint job in that state passes or fails for reasons unrelated to the code.
+
+So clang-tidy gets its own configure, pinned to clang:
+
+```makefile
+LINT_DIR        ?= build/lint
+GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev/null)
+```
+
+```makefile
+.PHONY: configure_lint
+configure_lint: ## Configure $(LINT_DIR) with clang++, so clang-tidy can parse the sources
+	cmake -B $(LINT_DIR) \
+	  -DCMAKE_BUILD_TYPE=Debug \
+	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
+	  -DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)"
+```
+
+`--gcc-install-dir` tells clang which libstdc++ to use when the two toolchains are installed side by side, which is the normal state on a Linux runner and on most developer machines.
+
+A second directory rather than pinning clang in `configure` itself, because `configure` has to stay compiler-neutral: CI builds under both GCC and clang (see cpp/workflows.md), and `--gcc-install-dir` is a clang flag that `g++` rejects outright. The cost is close to nothing: `configure_lint` only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
 
 ### Makefile targets
 
-Use the versioned binaries explicitly in all targets. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
+Use the resolved variables in all targets, never a literal binary name. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
 
 ```makefile
 # Project-owned C++ directories, in whichever of them this tier actually has
 CPP_DIRS      := $(wildcard include src app test)
 CPP_LINT_DIRS := $(wildcard src app)
-JOBS          ?= $(shell nproc 2>/dev/null || echo 4)
+JOBS          ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
 .PHONY: configure
 configure: ## Configure the cmake build
-	cmake -B build \
+	cmake -B build/dev \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 	  $(CMAKE_ARGS)
 
 .PHONY: build
 build: ## Build the project
-	cmake --build build --parallel $(JOBS)
+	cmake --build build/dev --parallel $(JOBS)
 
 .PHONY: fmt
 fmt: ## Format all source files with clang-format
-	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs clang-format-18 -i
+	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) -i
 
 .PHONY: fmt_check
 fmt_check: ## Check formatting without modifying files
-	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs clang-format-18 --dry-run --Werror
+	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) --dry-run --Werror
 
 .PHONY: lint_cpp
-lint_cpp: ## Run clang-tidy static analysis (requires: make configure)
-	clang-tidy-18 --quiet -p build \
+lint_cpp: configure_lint ## Run clang-tidy static analysis
+	$(CLANG_TIDY) --quiet -p $(LINT_DIR) \
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
+
+# CI
+
+.PHONY: ci
+ci: fmt_check lint_cpp test ## Run the checks CI runs
+
+.PHONY: clean
+clean: ## Remove all build directories
+	rm -rf build
 
 # GET
 
@@ -418,7 +565,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
 	@awk -v raw="$(TAG)" '\
 	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; print; next } } \
+	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
 	  found { print } \
 	  END { if (!found) exit 1 }' CHANGELOG.md
 ```
@@ -428,9 +575,11 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 - `include/` is formatted but not tidied directly: its headers carry no `.cpp` of their own, and clang-tidy reaches them through the `--header-filter` when it analyses the `src/` files that include them
 - `--header-filter="$(CURDIR)/(include|src|app)/.*"` limits diagnostic output to project headers; extern/ headers are already excluded as system headers (see Including extern/ headers in this file) but this provides belt-and-suspenders coverage
 - `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe
-- `make configure` must be run before `make lint_cpp`; clang-tidy reads `build/compile_commands.json` to resolve include paths
+- `lint_cpp` depends on `configure_lint`, so it needs no separate `make configure` first and reads `$(LINT_DIR)/compile_commands.json` rather than the everyday build's
+- `ci` is prerequisites only, with no recipe: it names the checks CI runs so a developer can run them in one command before pushing. A tier with a functional layer adds `test_functional`. It cannot mirror CI exactly, and should not try: CI builds under two compilers and a developer has one, so `ci` reproduces the checks rather than the matrix
+- `clean` removes `build` entirely, not `$(BUILD_DIR)`. There are several build directories (`dev`, `lint`, `asan`, `fuzz`) and a clean that leaves the others behind is the one that gets debugged at the wrong moment
 - `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure
-- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes
+- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes
 
 Every target a workflow invokes must be defined by one of these fragments. A workflow calling `make <something>` that no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
 
@@ -438,4 +587,4 @@ Note: `fmt` and `fmt_check` include the `test/` directory; test code is held to 
 
 ### Configuration files
 
-Both `.clang-format` and `.clang-tidy` live at the project root. CMake is pointed at the build directory via `-p build` so clang-tidy can find `compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.
+Both `.clang-format` and `.clang-tidy` live at the project root. CMake is pointed at the build directory via `-p build/dev` so clang-tidy can find `compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.

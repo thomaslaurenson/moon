@@ -138,7 +138,7 @@ configure_integration: ## Configure with integration tests (requires: INTEGRATIO
 	@if [ -z "$(INTEGRATION_DATA)" ]; then \
 	  echo "Error: set INTEGRATION_DATA=/path/to/dataset or MYLIB_INTEGRATION_DATA" >&2; exit 1; \
 	fi
-	cmake -B build \
+	cmake -B build/dev \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 	  -DMYLIB_INTEGRATION=ON \
@@ -146,11 +146,11 @@ configure_integration: ## Configure with integration tests (requires: INTEGRATIO
 
 .PHONY: test_integration
 test_integration: ## Run integration tests (requires: configure_integration first)
-	ctest --test-dir build --output-on-failure -L integration
+	ctest --test-dir build/dev --output-on-failure -L integration
 
 .PHONY: test_all
 test_all: ## Run every test layer built into the current configure
-	ctest --test-dir build --output-on-failure --parallel $(JOBS)
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
 ```
 
 The guard on `INTEGRATION_DATA` fails the configure with an actionable message rather than producing a build whose integration tests all skip. `test_all` runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.

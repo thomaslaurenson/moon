@@ -8,20 +8,42 @@ Applies to any tier that ships a distributable binary: an application, or a libr
 
 Add `Dockerfile*` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see `release.yml` below).
 
-## Build step in caller workflows
+## Depth is a function of the trigger
 
-These tiers add a `build.yml` reusable workflow that compiles release binaries before lint and test can run. Callers must add a `build` job and `needs: build` on `lint` and `test`:
+These tiers add a `build.yml` that produces the distributable artifacts. Running the whole of it on every pull request is the expensive default and buys the least: a pull request needs to know the code compiles and the tests pass, not that a shippable artifact for every platform is correct. A tag needs the second, and only a tag can act on it.
+
+So the caller decides the depth, and `build.yml` takes an input:
+
+| Trigger | Runs | Why |
+|---|---|---|
+| `pr.yml` | lint, test, and the artifact jobs that a test cannot cover | Cheapest signal that catches a real break |
+| `main.yml` | the above plus the full artifact set and `prerelease` | The rolling channel has to contain everything a release would |
+| `tag.yml` | everything, plus `release` | This is the run whose output people install |
+
+"An artifact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
 
 ```yaml
+# build.yml
+on:
+  workflow_call:
+    inputs:
+      artifacts:
+        description: Build the full release artifact set, not just the cheap subset
+        type: boolean
+        default: false
+```
+
+```yaml
+# pr.yml and main.yml
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
   lint:
     uses: ./.github/workflows/lint.yml
-    needs: build
   test:
     uses: ./.github/workflows/test.yml
-    needs: build
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      artifacts: true                   # main.yml and tag.yml only; omit on pr.yml
   release:                              # tag.yml only
     uses: ./.github/workflows/release.yml
     needs: [build, lint, test]
@@ -35,6 +57,10 @@ jobs:
       contents: write
 ```
 
+**No `needs: build` on `lint` or `test`.** Neither consumes a build artifact: lint configures its own tree, and test builds the binaries it runs. Wiring them behind `build` holds the fastest signal in the pipeline behind the slowest job and buys nothing. Only `release` and `prerelease` genuinely need the artifacts, and they say so.
+
+Declare `permissions: contents: read` at the top of every caller and widen it on the jobs that need more. A caller with no top-level block inherits the repository default, which may be read and write.
+
 No `secrets: inherit`: every job here authenticates with the automatic `github.token`, so nothing needs to be forwarded. Add `secrets: inherit` only if a workflow genuinely reads a repository secret.
 
 `id-token: write` has to appear on the caller's `release` job as well as inside `release.yml`. A reusable workflow cannot widen its own permissions beyond what the caller grants, so declaring it only in the callee fails at signing time with an OIDC token request error.
@@ -45,9 +71,13 @@ No `secrets: inherit`: every job here authenticates with the automatic `github.t
 
 Builds one release binary per target platform and uploads each as an artifact for the test, release and prerelease workflows to consume. Linux builds go through Docker; macOS and Windows build natively on their own runners, because there is no container route to either.
 
+**Which platforms is a decision, not a default.** The jobs below are the full set; a project takes the ones matching where its users actually run the binary. macOS in particular is opt-in: it costs ten times a Linux job on a private repository and proves nothing about a tool nobody runs there. The same test applies as in cpp/workflows.md, that a platform earns a job by being a deployment target rather than by adding confidence.
+
+Once a platform is in, it stays consistent all the way through: a job in `build.yml`, a matching entry in `test.yml`, an asset in `.gpipe.yml`, and a line in the release asset list. A platform built but not tested ships an artifact nothing has run.
+
 #### Asset naming
 
-Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows:
+Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows. The table is the naming for whichever platforms a project builds, not a list of platforms it must:
 
 | Platform | Asset |
 |---|---|
@@ -115,31 +145,30 @@ jobs:
     strategy:
       matrix:
         include:
-          - osx_arch: arm64
+          - runner: macos-15
             asset: myapp-darwin-aarch64
-          - osx_arch: x86_64
+          - runner: macos-15-intel
             asset: myapp-darwin-x86_64
 
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@vN
         with:
           submodules: true
 
-      - name: Build (${{ matrix.osx_arch }})
+      - name: Build
         run: |
-          cmake -B build \
+          cmake -B build/release \
             -DCMAKE_BUILD_TYPE=Release \
             -DMYAPP_BUILD_TESTING=OFF \
-            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.osx_arch }} \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-          cmake --build build --config Release --parallel 3
-          strip build/bin/myapp
+          cmake --build build/release --config Release --parallel 3
+          strip build/release/bin/myapp
           # strip invalidates the linker's ad-hoc signature; re-sign or the
           # binary is killed on launch on Apple Silicon. See below.
-          codesign --force --sign - build/bin/myapp
-          codesign --verify --verbose build/bin/myapp
-          mv build/bin/myapp ./${{ matrix.asset }}
+          codesign --force --sign - build/release/bin/myapp
+          codesign --verify --verbose build/release/bin/myapp
+          mv build/release/bin/myapp ./${{ matrix.asset }}
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
@@ -158,10 +187,10 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A x64 \
+          cmake -B build/release -G "Visual Studio 17 2022" -A x64 \
             -DMYAPP_BUILD_TESTING=OFF
-          cmake --build build --config Release
-          mv build/bin/myapp.exe ./myapp-windows-x86_64.exe
+          cmake --build build/release --config Release
+          mv build/release/bin/myapp.exe ./myapp-windows-x86_64.exe
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
@@ -169,11 +198,34 @@ jobs:
           name: myapp-windows-x86_64.exe
           path: myapp-windows-x86_64.exe
           retention-days: 1
+
+  # Only where the project publishes an image. The tar is what release and
+  # prerelease push, so the bytes that ship are the bytes that were built here.
+  build_docker:
+    if: inputs.artifacts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          submodules: true
+
+      - name: Build image
+        run: docker build --platform linux/amd64 -t myapp -f Dockerfile.musl .
+
+      - name: Save image as a tar
+        run: docker save myapp -o myapp-docker.tar
+
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@vN
+        with:
+          name: myapp-docker
+          path: myapp-docker.tar
+          retention-days: 1
 ```
 
 Set `MYAPP_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artifact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
 
-`build/bin/myapp.exe` rather than `build/bin/Release/myapp.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
+`build/release/bin/myapp.exe` rather than `build/release/bin/Release/myapp.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
 
 #### Raw cmake on Windows
 
@@ -187,7 +239,9 @@ Either strip and re-sign, or do neither. What must not happen is stripping witho
 
 #### macOS architectures
 
-`macos-14` and `macos-15` are both Apple Silicon, and `macos-13` (Intel) is outside the supported runner list and being retired. So the x86_64 macOS binary is **cross-compiled** via `CMAKE_OSX_ARCHITECTURES=x86_64` and cannot be exercised natively; see `test.yml` for how that is handled. Set `CMAKE_OSX_DEPLOYMENT_TARGET` explicitly so the binary is not accidentally floored to the runner's current macOS version.
+Both architectures build natively, on `macos-15` for Apple Silicon and `macos-15-intel` for Intel. Pick the runner, not `CMAKE_OSX_ARCHITECTURES`: a cross-compiled binary cannot run on the machine that produced it, so its tests can only be skipped, and a build-verified-only artifact is the one most likely to be broken on arrival.
+
+Set `CMAKE_OSX_DEPLOYMENT_TARGET` explicitly so the binary is not accidentally floored to the runner's current macOS version.
 
 ### `test.yml`
 
@@ -244,12 +298,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - asset: myapp-darwin-aarch64
-            native: true
-          - asset: myapp-darwin-x86_64
-            native: false
+          - runner: macos-15
+            asset: myapp-darwin-aarch64
+          - runner: macos-15-intel
+            asset: myapp-darwin-x86_64
 
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@vN
         with:
@@ -266,26 +320,6 @@ jobs:
           mv artifact/${{ matrix.asset }} ./myapp-under-test
           chmod +x ./myapp-under-test
 
-      # A native binary that will not run is a broken release artifact and must
-      # fail the job. Only the cross-compiled one may legitimately be unable to
-      # run here, and only then is skipping the right answer.
-      - name: Check the binary can execute on this runner
-        id: exec_check
-        run: |
-          if ./myapp-under-test --version > /dev/null 2>&1; then
-            echo "runnable=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.native }}" = "true" ]; then
-            echo "::error::${{ matrix.asset }} is native to this runner but will not execute."
-            echo "A stripped macOS binary whose ad-hoc signature was not restored fails exactly this way;"
-            echo "check the codesign step in build.yml. Diagnostics follow."
-            codesign --verify --verbose ./myapp-under-test || true
-            ./myapp-under-test --version || true
-            exit 1
-          else
-            echo "runnable=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::${{ matrix.asset }} is cross-compiled and cannot execute here (no Rosetta 2); functional tests skipped"
-          fi
-
       - name: Configure with the release binary as the functional-test target
         run: make configure CMAKE_ARGS="-DMYAPP_BINARY_PATH_OVERRIDE=${{ github.workspace }}/myapp-under-test"
 
@@ -293,9 +327,7 @@ jobs:
         run: make build
 
       - run: make test
-
-      - if: steps.exec_check.outputs.runnable == 'true'
-        run: make test_functional
+      - run: make test_functional
 
   test_windows:
     runs-on: windows-2022
@@ -318,30 +350,28 @@ jobs:
         shell: bash
         run: |
           workspace="${GITHUB_WORKSPACE//\\//}"
-          cmake -B build -G "Visual Studio 17 2022" -A x64 \
+          cmake -B build/dev -G "Visual Studio 17 2022" -A x64 \
             -DMYAPP_BINARY_PATH_OVERRIDE="${workspace}/myapp-under-test.exe"
-          cmake --build build --config Release
+          cmake --build build/dev --config Release
 
       - name: Run tests
         shell: bash
         run: |
-          ctest --test-dir build --output-on-failure -C Release -L unit
-          ctest --test-dir build --output-on-failure -C Release -L functional
+          ctest --test-dir build/dev --output-on-failure -C Release -L unit
+          ctest --test-dir build/dev --output-on-failure -C Release -L functional
 ```
 
 Three details in there are load-bearing:
 
-- **No `install_clang_tools` step.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. The target is also `sudo apt-get`, which fails outright on the macOS and Windows runners.
+- **No clang tools installed.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. Installing them here would also mean a per-runner branch, since the apt packages exist only on the Linux runner.
 - **`GITHUB_WORKSPACE` is rewritten with forward slashes on Windows.** The raw value is a backslash path (`D:\a\repo\repo`), and the binary path is baked into the test binary as a compile definition, where `\a` and friends are read as C escape sequences. `${GITHUB_WORKSPACE//\\//}` is pure bash and needs no `cygpath`.
-- **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`. That is what allows the functional layer alone to be skipped on a platform where the artifact cannot execute. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
+- **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`, so a failure names the layer that broke. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
 
-#### The cross-compiled macOS binary
+#### Every artifact runs its own tests
 
-The x86_64 macOS artifact is cross-compiled on an Apple Silicon runner (see `build.yml`), so the runner may not be able to execute it. The unit layer is compiled natively on the runner and so verifies the library on the runner's own architecture for both matrix entries; only the functional layer actually spawns the downloaded artifact.
+Each matrix entry tests on the runner its binary was built on, so the functional layer always spawns a binary the runner can execute and there is no skip branch anywhere in this workflow.
 
-The `native` matrix flag is what keeps the skip honest, and it is the reason the check is not a plain `if runnable`. "This binary will not run" has two very different causes: the runner lacks Rosetta 2 and cannot be expected to run a foreign-architecture binary, or the binary itself is broken. Without the flag both take the skip branch, and a macOS release binary that was stripped without re-signing sails through CI green with a warning that blames Rosetta. Skipping is only ever correct for the cross-compiled artifact; for the native one, refusing to run *is* the test failing.
-
-Whether the skip branch is ever reached depends on Rosetta 2 being present on the image, which is not guaranteed and changes between runner image releases. Confirm it empirically on the first run rather than assuming: if the check reports `runnable=false`, the x86_64 macOS binary is build-verified only, and that is worth stating in the project's README rather than leaving implicit.
+That is the argument for building on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artifact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime. A macOS binary stripped without re-signing, for instance, builds cleanly and is killed on launch, which no build-only check can catch.
 
 ### `release.yml`
 
@@ -365,9 +395,9 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
+      # Default depth. Nothing here reads git history: get_changelog reads
+      # CHANGELOG.md from the working tree, and gh release create uses the API.
       - uses: actions/checkout@vN
-        with:
-          fetch-depth: 0
 
       - name: Download all build artifacts
         uses: actions/download-artifact@vN
@@ -382,21 +412,54 @@ jobs:
         with:
           cosign_sign: true
 
+      # Name every asset. A dist/myapp-* glob is shorter and wrong: with
+      # merge-multiple every artifact lands flat in dist/, so the Docker image
+      # tar matches too and is attached to the release as if it were a binary.
       - name: Create release
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            dist/myapp-* \
+            dist/myapp-linux-x86_64 \
+            dist/myapp-linux-aarch64 \
+            dist/myapp-windows-x86_64.exe \
             install.sh install.ps1 \
             checksums.txt checksums.txt.sigstore.json \
             --title "${GITHUB_REF_NAME}" \
             --notes-file /tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Gated on the release: a registry outage then leaves a complete release with
+  # no image, rather than an image with no release. See tools/docker.md.
+  release_docker:
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@vN
+        with:
+          name: myapp-docker
+
+      - name: Load image
+        run: docker load -i myapp-docker.tar
+
+      - name: Push to ghcr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker tag myapp "$IMAGE:${GITHUB_REF_NAME}"
+          docker tag myapp "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_REF_NAME}"
+          docker push "$IMAGE:latest"
 ```
+
+A project publishing an image adds `packages: write` to this workflow's `permissions` and to the caller job in `tag.yml`.
 
 `gpipe` needs no `version` or `repo` inputs here: they default to `github.ref_name` and `github.repository`, and `tag.yml` only ever fires on a `v*` tag, so `ref_name` is already the semantic version gpipe expects. `id-token: write` must also be granted by the caller job in `tag.yml`, not just declared here.
 
-The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current (see golang/release-cli.md, which uses the same action). It needs Go on the runner, which GitHub-hosted runners provide; a self-hosted runner without Go must add `actions/setup-go` before it.
+The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current (see golang/release-cli.md, which uses the same action). It installs its own Go, so a caller needs none of its own: the runner image ships Go, but not necessarily a version new enough for gpipe's `go.mod`, and a project that never invokes Go directly has no reason to carry `actions/setup-go` for a tool's benefit.
 
 #### `.gpipe.yml`
 
@@ -437,7 +500,7 @@ A single rolling GitHub prerelease under the literal tag `dev`, rebuilt on every
 
 This mirrors the Go rolling-dev channel (see golang/release-cli.md) but needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
 
-Reuse the same `path: dist, merge-multiple: true` download and `dist/myapp-*` glob as `release.yml`, rather than downloading and naming each `build.yml` matrix entry individually. A build matrix entry added later needs no matching change here; a prerelease workflow that lists each artifact by name has to be edited every time the matrix does, and silently omits new targets in the meantime.
+Reuse the same `path: dist, merge-multiple: true` download and the same explicit asset list as `release.yml`. Naming them is deliberate in both places: release assets are a public interface, and a glob attaches whatever happens to match, which is how an image tar sharing the directory ends up published as a binary. Adding a platform is a decision, so let it be an edit.
 
 Existence-check the delete exactly as in the Go prerelease pattern: three outcomes, not two. Never write `gh release delete dev --yes --cleanup-tag || true`; that collapses "no dev release exists yet" and "the API could not tell me" into the same branch, and the job then publishes over a release state it never established.
 
@@ -453,6 +516,11 @@ permissions:
 jobs:
   prerelease:
     runs-on: ubuntu-24.04
+    # This job never checks out, so gh has no remote to infer the repository
+    # from and GH_REPO has to name it. See github/actions.md.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Download all build artifacts
         uses: actions/download-artifact@vN
@@ -470,8 +538,6 @@ jobs:
             echo "::error::could not determine whether a dev release exists: ${err}"
             exit 1
           fi
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Create prerelease
         run: |
@@ -479,7 +545,34 @@ jobs:
             --target "${{ github.sha }}" \
             --title "dev" \
             --notes "Rolling build of ${{ github.sha }}" \
-            dist/myapp-*
+            dist/myapp-linux-x86_64 \
+            dist/myapp-linux-aarch64 \
+            dist/myapp-windows-x86_64.exe
+
+  prerelease_docker:
+    needs: prerelease
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@vN
+        with:
+          name: myapp-docker
+
+      - name: Load image
+        run: docker load -i myapp-docker.tar
+
+      # dev only, never latest: latest tracks releases, so pointing it at a
+      # rolling build makes an untagged docker pull return whatever last landed
+      # on the default branch.
+      - name: Push dev tag to ghcr
         env:
           GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker tag myapp "$IMAGE:dev"
+          docker push "$IMAGE:dev"
 ```
+
+As with `release.yml`, a project publishing an image adds `packages: write` to this workflow's `permissions` and to the `prerelease` job in `main.yml`.

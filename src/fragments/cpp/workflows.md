@@ -10,17 +10,22 @@ Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
 paths:
   - ".github/workflows/**"
   - "Makefile"
+  - "CMakeLists.txt"
+  - "cmake/**"
   - "include/**"
   - "src/**"
   - "app/**"
   - "test/**"
+  - "extern/**"
   - ".clang-format"
   - ".clang-tidy"
-  - "CMakeLists.txt"
-  - "extern/**"
 ```
 
+`cmake/**` is not optional. Every project has that directory, because `version.h.in` lives there (see cpp/cmake.md), and it also holds helper modules such as `mark_system.cmake`. A filter that omits it lets a change to the version template or a helper module merge with no CI run at all.
+
 Include `extern/**` only if the project uses git submodules for dependencies. Drop `include/**` in an application and `app/**` in a library; a path filter naming a directory the tier does not have is dead configuration that outlives the reason it was copied. A tier that ships a binary adds `Dockerfile*` to this list; see workflows-app.md.
+
+The two failure modes are not symmetric. A stale entry is inert: it names a path that never changes, so it never triggers anything. A missing entry fails silently in the dangerous direction, letting a real change skip CI entirely, which is why a directory every project has belongs in the list rather than being left to each project to remember.
 
 ## Checkout
 
@@ -34,9 +39,47 @@ Always check out with `submodules: true`. C++ projects use git submodules for al
     submodules: true
 ```
 
+## Compilers
+
+`test.yml` builds under both GCC and clang on Linux, with warnings as errors. They disagree at the same warning level, so a tree that is clean under one is not necessarily clean under the other, and whichever one a developer happens to have locally is the one CI adds nothing by repeating.
+
+```yaml
+jobs:
+  test_linux:
+    name: test_linux (${{ matrix.compiler }})
+    strategy:
+      # Report both independently. Cancelling one on the other's failure hides
+      # half the findings on exactly the runs where they matter.
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc
+            cxx: g++
+          - compiler: clang
+            cxx: clang++-18
+
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          submodules: true
+
+      - name: Install clang
+        if: matrix.compiler == 'clang'
+        run: sudo apt-get install -y clang-18
+
+      - run: make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -D<PROJECT>_WERROR=ON"
+      - run: make build
+      - run: make test
+```
+
+Two compilers on one platform is a better use of a budget than one compiler on two platforms. Both run on Linux at the lowest billing rate, where a second platform costs two to ten times as much and mostly re-runs the same compiler. Reach for another platform when it is a deployment target, not for extra confidence in the code.
+
+`<PROJECT>_WERROR` is off by default so a developer upgrading a compiler is not blocked by new warnings, and on in CI so those warnings are never merged; see cpp/cmake.md.
+
 ## Clang tools
 
-Install clang tools via the Makefile target before running any lint step:
+Install the clang toolchain as a workflow step before running any lint step:
 
 ```yaml
 - uses: actions/checkout@vN
@@ -44,14 +87,16 @@ Install clang tools via the Makefile target before running any lint step:
     submodules: true
 
 - name: Install clang tools
-  run: make install_clang_tools
+  run: sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
 ```
 
-`install_clang_tools` installs `clang-format-18` and `clang-tidy-18` at the pinned version. CMake 3.21+ ships with `ubuntu-24.04` so no CMake install step is needed.
+`clang-18` itself, not only the two tools: `make lint_cpp` configures its own clang build directory so clang-tidy can resolve libstdc++ headers (see cpp/cmake.md), which needs the compiler present.
+
+Installing the toolchain is a workflow step, not a Makefile target: it is specific to the runner image, and a `make` target doing it would fail on the macOS and Windows runners. Pin the major version here, so a runner image bump cannot silently change formatting output. CMake 3.21+ ships with `ubuntu-24.04`, so no CMake install step is needed.
 
 ## `lint.yml`
 
-Installs clang tools and runs format check and clang-tidy. Requires `make configure` first so clang-tidy can resolve `compile_commands.json`.
+Installs the clang toolchain and runs format check and clang-tidy. No `make configure` step: `lint_cpp` depends on `configure_lint`, which produces the `compile_commands.json` clang-tidy reads (see cpp/cmake.md).
 
 ```yaml
 name: Lint
@@ -71,9 +116,8 @@ jobs:
           submodules: true
 
       - name: Install clang tools
-        run: make install_clang_tools
+        run: sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
 
-      - run: make configure
       - run: make fmt_check
       - run: make lint_cpp
 ```

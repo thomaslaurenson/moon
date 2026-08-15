@@ -149,6 +149,26 @@ REQUIRE(output == expected);
 
 ## Platform differences
 
+Inputs and expected values are handled differently. Prefer a portable input; conditionalise only an expectation that genuinely cannot be unified.
+
+### Inputs: choose a value that means the same thing everywhere
+
+**Never pass a POSIX-absolute path as a command-line argument.** On Windows a leading `/` is option syntax, not a path, and argument parsers honour it: CLI11 defaults `allow_windows_style_options` to `true` there, so `/does/not/exist` is consumed as a flag and never reaches the code under test. The test then fails with a parse error that looks nothing like the file error it was written to assert:
+
+```cpp
+// Wrong - parsed as an option on Windows, exits 106 (CLI11 RequiredError)
+run(binary, {"info", "/does/not/exist.bin"});
+
+// Right - means the same thing on every platform
+run(binary, {"info", "no-such-file.bin"});
+```
+
+A relative path needs no `#ifdef`, which is the point: a conditional here would compile two tests that assert different things, when one value works for both. Reach for a portable input first and a branch only when there is not one.
+
+An application can opt out of the collision with `app.allow_windows_style_options(false)`, and should if it has no `/x` style options of its own: the convention then costs a path shape and buys nothing. That is a decision about the CLI, though, not a substitute for portable test inputs.
+
+### Expectations: `#ifdef` only where the value really differs
+
 Use `#ifdef _WIN32` for expected values that differ between Windows and POSIX; for example file sizes that differ due to CRLF vs LF line endings. Never use runtime platform detection in tests:
 
 ```cpp
@@ -188,7 +208,7 @@ TEST_CASE("list with filter", "[list]") { ... }
 Run a subset during development:
 
 ```bash
-./build/bin/myapp_functional_tests [create]
+./build/dev/bin/myapp_functional_tests [create]
 ```
 
 ## Asserting on the CLI contract
@@ -210,7 +230,7 @@ An expected failure the user can act on exits 1 and explains itself on stderr; a
 ```makefile
 .PHONY: test_functional
 test_functional: build ## Run Catch2 functional tests against the built binary
-	ctest --test-dir build --output-on-failure --parallel $(JOBS) -L functional
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L functional
 ```
 
 `test_functional` depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result.
@@ -220,5 +240,5 @@ This layer does not change cpp/testing.md's `test` target, which stays the unit 
 ```makefile
 .PHONY: test_all
 test_all: ## Run every test layer built into the current configure
-	ctest --test-dir build --output-on-failure --parallel $(JOBS)
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
 ```

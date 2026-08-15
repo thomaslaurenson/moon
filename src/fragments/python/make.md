@@ -16,7 +16,7 @@ get_changelog:
 	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
 	@awk -v raw="$(TAG)" '\
 	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; print; next } } \
+	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
 	  found { print } \
 	  END { if (!found) exit 1 }' CHANGELOG.md
 ```

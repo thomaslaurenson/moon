@@ -80,14 +80,14 @@ catch_discover_tests(mylib_integration_tests
 `LABELS` is what lets a layer be selected, with `ctest -L`:
 
 ```bash
-ctest --test-dir build --output-on-failure --parallel $(nproc) -L unit
+ctest --test-dir build/dev --output-on-failure -L unit
 ```
 
 Never select a layer with `-R` instead. Catch2 registers each test under its `TEST_CASE` name, not the name of the binary it was compiled into, so `ctest -R unit` matches whichever test cases happen to have "unit" somewhere in their description and silently misses the rest. `-L` matches the label, which is exact.
 
 `SKIP_RETURN_CODE 4` is what makes Catch2's `SKIP()` macro work. `SKIP()` exits the test binary with code 4; without this property CTest sees a non-zero exit and reports a **failure**. Any layer that can skip (integration always, unit where a test needs an optional file) must set it, or the first skip turns CI red.
 
-Use `ctest --test-dir build` rather than `cd build && ctest`; it needs no subshell and works from any directory.
+Use `ctest --test-dir build/dev` rather than `cd build/dev && ctest`; it needs no subshell and works from any directory.
 
 ## Unit tests
 
@@ -124,8 +124,8 @@ TEST_CASE("parse_config", "[config]") { ... }
 Run a subset during development:
 
 ```bash
-./build/bin/mytarget_unit_tests [helpers]
-./build/bin/mytarget_unit_tests [config]
+./build/dev/bin/mytarget_unit_tests [helpers]
+./build/dev/bin/mytarget_unit_tests [config]
 ```
 
 ### What to unit test
@@ -181,11 +181,11 @@ REQUIRE_THROWS(ParseVersion("not-a-version"));
 ```makefile
 .PHONY: test
 test: ## Run Catch2 unit tests
-	ctest --test-dir build --output-on-failure --parallel $(JOBS) -L unit
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L unit
 
 .PHONY: test_verbose
 test_verbose: ## Run unit tests with verbose Catch2 output
-	ctest --test-dir build --verbose -L unit
+	ctest --test-dir build/dev --verbose -L unit
 ```
 
 `test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.

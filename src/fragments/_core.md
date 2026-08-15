@@ -13,10 +13,16 @@ These instructions are assembled from general fragments followed by more specifi
 
 ## Comments
 
-- Do not write step-narration comments that restate the next line of code. Bad: `# Open the file`, `# Loop through results`.
-- Preserve comments that explain the why (business logic, architecture). Aggressively delete and refactor comments that narrate the what.
+A comment has to earn its place, and the test is usefulness rather than length. A comment that saves a reader real work is worth twenty lines; one that restates the code is not worth one.
+
+- **Comment what the code cannot say.** If a competent reader of the language can get it from the code in a few seconds, delete it. Step-narration is the common case and is always noise: `# Open the file`, `# Loop through results`.
+- **Describe the present.** State how the code behaves now, never how it used to behave or why it changed. Version control holds the history and is better at it. The one exception is behaviour still reachable today: a compatibility shim or a deprecated path is present behaviour, not history.
+- **Pre-empt the plausible wrong fix.** Where code deliberately rejects a simpler approach a reader would reasonably try, name the approach and say why it fails. This is the highest-value comment there is, and the one most often deleted as "too long" by someone who has not yet made the mistake it prevents.
+- Contrasting with an alternative is useful when the alternative is hypothetical ("match the field exactly rather than a substring grep") and noise when it is the code's own past ("this used to use a substring grep"). The wording barely differs; the test is whether a reader might otherwise try it.
 - Single-line comments start with the comment character and a single space, capitalise the first word, and take no trailing full stop. A comment of multiple sentences uses normal punctuation; continuation lines need not be capitalised.
 - Do not inject `TODO` or `FIXME` comments unless they refer to a real, known issue.
+
+Doc comments are a different job. They are the interface, rendered by tooling, so restating a signature is their purpose rather than a violation. See the language fragment for the applicable convention.
 
 ## Spelling
 

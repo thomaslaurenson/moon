@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 - 2026-08-11
+
+### Added
+
+- Add comment conventions covering history, earned length, and pre-empting wrong fixes
+- Add C++ portability rules for include hygiene, binary I/O, and path types
+- Add container image labels and ghcr publishing to the C++ application tier
+- Expand the bash workflow, testing, and style fragments, add bash-project badges
+
+### Changed
+
+- Tie C++ CI depth to the trigger, test under both GCC and clang
+- Define the C++ library workflow set, make build and prerelease depend on the tier
+- Split the C++ build directory by configuration, define the warning bar once
+
+### Fixed
+
+- Configure clang-tidy against clang so its lint output stops being fiction
+- Correct the fetch-depth, GH_REPO, gpipe Go, and get_changelog header rules
+
+### Removed
+
+- Remove install_clang_tools, resolving clang tool paths per platform instead
+
 ## 0.2.6 - 2026-08-06
 
 ### Updated

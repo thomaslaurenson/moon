@@ -154,10 +154,10 @@ else()
     set(MYAPP_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myapp")
 endif()
 
-# CI runs functional tests against a downloaded release binary rather than the
-# one just built. MYAPP_BINARY_PATH_OVERRIDE lets the workflow point the tests at
-# that artifact at configure time; locally it is unset and the build-tree path
-# above is used.
+# MYAPP_BINARY_PATH_OVERRIDE points the functional tests at a binary other than
+# the one just built: a downloaded release asset, or an installed copy, to check
+# a published artifact behaves. Unset, which is the normal case including in CI,
+# the build-tree path above is used.
 if(MYAPP_BINARY_PATH_OVERRIDE)
     set(MYAPP_BINARY_PATH "${MYAPP_BINARY_PATH_OVERRIDE}")
 endif()

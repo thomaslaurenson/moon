@@ -127,7 +127,7 @@ cmake --build build/dev
 | Directory | Why it is separate |
 |---|---|
 | `build/dev` | The default: everything testable, `compile_commands.json`, the daily build |
-| `build/release` | Different build type |
+| `build/release` | The shipped artifact: optimised, testing off, produced by the Dockerfile or a release job |
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
 | `build/coverage` | Different code generation: clang instrumentation, and clang whatever the default compiler is |
@@ -141,6 +141,8 @@ Only create a directory when the configuration genuinely cannot share one. A con
 `.gitignore` needs one entry, `build/`, and `rm -rf build` removes everything.
 
 The default directory is `dev`, not `debug`, because it is named for what it is for rather than for a build type. A multi-config generator (Visual Studio, Xcode) picks the build type at build time, so the same directory serves `--config Debug` and `--config Release`; a CI job that builds Release and runs the test suite still belongs in `build/dev`.
+
+That is why `build/release` is described above by what it produces rather than by its build type. Testing the release configuration and shipping it are different jobs: the first is `make configure BUILD_TYPE=Release` in `build/dev`, still with tests on, and the second is an optimised tree with testing off that nothing runs `ctest` against. A developer alternating build types locally does pay a reconfigure and a rebuild, which is the honest cost of one directory rather than two; a CI runner starts empty and pays nothing.
 
 Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myapp` becomes `build/dev/bin/myapp`. `compile_commands.json` for clang tooling comes from `build/dev`, which is why that configuration always has testing on.
 
@@ -538,11 +540,12 @@ Use the resolved variables in all targets, never a literal binary name. Both tar
 CPP_DIRS      := $(wildcard include src app test)
 CPP_LINT_DIRS := $(wildcard src app)
 JOBS          ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+BUILD_TYPE    ?= Debug
 
 .PHONY: configure
 configure: ## Configure the cmake build
 	cmake -B build/dev \
-	  -DCMAKE_BUILD_TYPE=Debug \
+	  -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 	  $(CMAKE_ARGS)
 
@@ -605,6 +608,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 - `build` depends on `configure`, and every test target depends on `build`, so any entry point works from a fresh clone. CMake keeps cached `-D` values across a reconfigure, so the repeat does not discard the compiler or `-Werror` a CI job set with `make configure CMAKE_ARGS=...`
 - `ci` is prerequisites only, with no recipe: it names the checks CI runs so a developer can run them in one command before pushing. Through `test` it pulls in `build` and `configure`, so it runs on a clean checkout. A tier with a functional layer adds `test_functional`. It cannot mirror CI exactly, and should not try: CI builds under two compilers and a developer has one, so `ci` reproduces the checks rather than the matrix
 - `clean` removes `build` entirely, not `$(BUILD_DIR)`. There are several build directories (`dev`, `lint`, `asan`, `fuzz`) and a clean that leaves the others behind is the one that gets debugged at the wrong moment
+- `BUILD_TYPE` defaults to `Debug`, the everyday configuration, and is overridable so a CI job can test the shipped one with `make configure BUILD_TYPE=Release`. It is a variable rather than a `CMAKE_ARGS` flag because it is the one setting a developer changes often enough to deserve a name
 - `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure
 - `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style.md makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox
 - `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes

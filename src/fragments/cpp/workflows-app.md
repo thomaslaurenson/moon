@@ -16,9 +16,11 @@ So the caller decides the depth, and `build.yml` takes an input:
 
 | Trigger | Runs | Why |
 |---|---|---|
-| `pr.yml` | lint, test, and the artifact jobs that a test cannot cover | Cheapest signal that catches a real break |
+| `pr.yml` | lint, test, and the one artifact job a test cannot cover | Cheapest signal that catches a real break |
 | `main.yml` | the above plus the full artifact set and `prerelease` | The rolling channel has to contain everything a release would |
 | `tag.yml` | everything, plus `release` | This is the run whose output people install |
+
+Concretely, `inputs.artifacts` gates `build_macos`, `build_windows` and `build_docker`; `build_linux` runs on every trigger. That split is the whole cost control, and it is worth stating why it falls where it does rather than the other way round. `build_linux` builds through `Dockerfile.musl`, so running it is the only thing that proves the release container recipe still works, and it runs on the cheapest runner there is. The other three are either a second compile of a platform `test.yml` already covers, or an image tar nothing consumes until a release. On a private repository the gated jobs are also the expensive ones: Windows bills at twice a Linux job and macOS at ten times, so leaving them ungated means a pull request pays for the platforms it least needs.
 
 "An artifact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
 
@@ -57,7 +59,9 @@ jobs:
       contents: write
 ```
 
-**No `needs: build` on `lint` or `test`.** Neither consumes a build artifact: lint configures its own tree, and test builds the binaries it runs. Wiring them behind `build` holds the fastest signal in the pipeline behind the slowest job and buys nothing. Only `release` and `prerelease` genuinely need the artifacts, and they say so.
+**No `needs:` on `lint`, `test` or `build`.** None of the three consumes another's output: lint configures its own tree, test builds the binaries it runs, and build produces artifacts that nothing reads until a release. All three start at once, so the fastest signal is never held behind the slowest job. Only `release` and `prerelease` genuinely need the artifacts, and they say so.
+
+This is what the decoupling in `test.yml` buys, and it is worth protecting. The moment `test` downloads something `build` produced, that edge has to exist, and gating a platform off a pull request then breaks the test matrix rather than just saving money.
 
 Declare `permissions: contents: read` at the top of every caller and widen it on the jobs that need more. A caller with no top-level block inherits the repository default, which may be read and write.
 
@@ -99,7 +103,12 @@ The usual objection is musl's slower allocator. Measure before believing it appl
 name: Build
 
 on:
-  workflow_call
+  workflow_call:
+    inputs:
+      artifacts:
+        description: Build the full release artifact set, not just the cheap subset
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -134,6 +143,12 @@ jobs:
           docker cp "$CONTAINER_ID":/myapp ./${{ matrix.asset }}
           docker rm "$CONTAINER_ID"
 
+      # Run the bytes that will ship. See Smoke-run every artifact.
+      - name: Smoke-run the artifact
+        run: |
+          chmod +x ./${{ matrix.asset }}
+          ./${{ matrix.asset }} --version
+
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
         with:
@@ -142,6 +157,7 @@ jobs:
           retention-days: 1
 
   build_macos:
+    if: inputs.artifacts
     strategy:
       matrix:
         include:
@@ -170,6 +186,9 @@ jobs:
           codesign --verify --verbose build/release/bin/myapp
           mv build/release/bin/myapp ./${{ matrix.asset }}
 
+      - name: Smoke-run the artifact
+        run: ./${{ matrix.asset }} --version
+
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
         with:
@@ -178,6 +197,7 @@ jobs:
           retention-days: 1
 
   build_windows:
+    if: inputs.artifacts
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@vN
@@ -191,6 +211,10 @@ jobs:
             -DMYAPP_BUILD_TESTING=OFF
           cmake --build build/release --config Release
           mv build/release/bin/myapp.exe ./myapp-windows-x86_64.exe
+
+      - name: Smoke-run the artifact
+        shell: bash
+        run: ./myapp-windows-x86_64.exe --version
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
@@ -227,15 +251,33 @@ Set `MYAPP_BUILD_TESTING=OFF` on the release builds: they ship the binary, and c
 
 `build/release/bin/myapp.exe` rather than `build/release/bin/Release/myapp.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
 
-#### Raw cmake on Windows
+#### Where CI does not go through `make`
 
-This is the one place CI does not go through `make`. The Makefile sets `SHELL := /bin/bash` and its targets rely on `sudo apt-get`, `grep -oP` and `find | xargs`, none of which a Windows runner provides. Calling `cmake` directly there is deliberate; do not add a second Windows-only Makefile to preserve the rule.
+`build.yml` is the exception to the rule that CI calls `make <target>` and never `cmake` directly, and it is the exception on every platform, not only Windows. The Linux jobs build inside a container, so the recipe lives in the Dockerfile; the macOS and Windows jobs invoke `cmake` directly.
+
+Windows has the strongest reason: the Makefile sets `SHELL := /bin/bash` and its targets rely on `find | xargs` and GNU-only flags, none of which a Windows runner provides. macOS could go through `make` and does not, because a release build wants an explicit build type, deployment target and output path rather than the everyday `build/dev` configuration the Makefile is built around.
+
+Do not add a second, platform-specific Makefile to preserve the rule. `lint.yml` and `test.yml` do go through `make`, and those are the workflows the rule is really about, because they run the same checks a developer runs.
 
 #### Stripping a macOS binary requires re-signing
 
 On Apple Silicon every executable must carry at least an ad-hoc signature to run; the linker applies one automatically. `strip` rewrites the Mach-O and invalidates it, and the result is not a warning at build time but `zsh: killed` when anyone tries to run the published binary. `codesign --force --sign -` restores an ad-hoc signature, and the `--verify` line turns a silent regression into a failed build.
 
 Either strip and re-sign, or do neither. What must not happen is stripping without re-signing, because the build stays green and only the shipped artifact is broken.
+
+#### Smoke-run every artifact
+
+Every build job runs the binary it just produced, on the runner that produced it, before uploading it. `--version` is enough: the point is not to test behaviour, which `test.yml` already does, but to prove the artifact starts at all.
+
+This is the whole class of failure a build-only job cannot see, and each member of it ships silently:
+
+- a macOS binary stripped without re-signing, killed on launch by the kernel (see above)
+- a `scratch` image binary that was not statically linked, so there is no loader and the container exits with `no such file or directory` on a file that plainly exists
+- a binary linked against a library version the runner has and a user does not
+
+It costs seconds on a runner already holding the binary, and it is the reason `test.yml` can build its own binary rather than downloading this one: between them, `test.yml` proves the code is correct and `build.yml` proves the artifact runs.
+
+Where a project's binary has no `--version`, use the cheapest subcommand that exits zero without arguments. A binary with no such entry point should still be executed with `--help`.
 
 #### macOS architectures
 
@@ -245,9 +287,13 @@ Set `CMAKE_OSX_DEPLOYMENT_TARGET` explicitly so the binary is not accidentally f
 
 ### `test.yml`
 
-Runs the test suite against the release binary produced by `build.yml`. The application binary under test is the downloaded release artifact, not a fresh local build; the test binaries themselves are compiled on the runner, because the artifact contains only the shipped executable, not the Catch2 test executables.
+Builds and tests on each platform the project supports. It does not download anything from `build.yml`: it compiles the library, the binary and the test binaries itself, and the functional layer spawns the binary it just built.
 
-The functional tests spawn the release binary as a subprocess, so its path is injected at configure time via `MYAPP_BINARY_PATH_OVERRIDE` (see the tier fragment). Check out with submodules: the test binaries link Catch2 and `subprocess.h`, which are submodules. Each amd64 variant runs on the amd64 runner (a static musl binary runs fine on a glibc host); arm64 variants run on the arm64 runner.
+**`test.yml` never consumes a build artifact, and that is a deliberate decoupling.** Downloading the shipped binary and testing that instead sounds stronger, and it ties the test matrix to whatever `build.yml` happened to produce on this trigger. The moment a platform is gated off a pull request to save runner minutes, its test job has nothing to download and fails, so the test matrix has to start varying by trigger too. Building what it tests keeps `test.yml` identical on every trigger, and leaves gating a decision that only `build.yml` has to know about.
+
+What that gives up is running the functional suite against the exact bytes that ship. `build.yml` covers the part of that which actually breaks by executing each artifact where it was built; see Smoke-run every artifact below.
+
+Check out with submodules: the test binaries link Catch2 and `subprocess.h`, which are submodules.
 
 ```yaml
 name: Test
@@ -259,73 +305,55 @@ permissions:
   contents: read
 
 jobs:
+  # Two compilers and both build types, on the cheapest runner. See the compiler
+  # matrix in cpp/workflows.md for why GCC and clang are both needed; Release is
+  # paired with one of them so NDEBUG and the optimiser are covered without a
+  # third job.
   test_linux:
+    name: test_linux (${{ matrix.compiler }}, ${{ matrix.build_type }})
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - asset: myapp-linux-x86_64
-            runner: ubuntu-24.04
-          - asset: myapp-linux-aarch64
-            runner: ubuntu-24.04-arm
+          - compiler: gcc
+            cxx: g++
+            build_type: Debug
+          - compiler: clang
+            cxx: clang++-18
+            build_type: Release
 
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-24.04
+    # BUILD_TYPE goes in the environment, not on the configure line. `build` and
+    # every test target re-run `configure` through their prerequisite chain, and
+    # an invocation without it would reset the cache to the Debug default, so the
+    # Release entry would quietly test Debug and report green.
+    env:
+      BUILD_TYPE: ${{ matrix.build_type }}
     steps:
       - uses: actions/checkout@vN
         with:
           submodules: true
 
-      - name: Download release binary
-        uses: actions/download-artifact@vN
-        with:
-          name: ${{ matrix.asset }}
-          path: artifact
+      - name: Install clang
+        if: matrix.compiler == 'clang'
+        run: sudo apt-get install -y clang-18
 
-      - name: Stage downloaded binary
-        run: |
-          mv artifact/${{ matrix.asset }} ./myapp-under-test
-          chmod +x ./myapp-under-test
-
-      - name: Configure with the release binary as the functional-test target
-        run: make configure CMAKE_ARGS="-DMYAPP_BINARY_PATH_OVERRIDE=${{ github.workspace }}/myapp-under-test"
-
-      - name: Build test binaries
-        run: make build
-
+      - run: make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -D<PROJECT>_WERROR=ON"
+      - run: make build
       - run: make test
       - run: make test_functional
 
+  # Only where the project ships that platform. Both are opt-in: on a private
+  # repository macOS bills at ten times a Linux job and Windows at twice.
   test_macos:
-    strategy:
-      matrix:
-        include:
-          - runner: macos-15
-            asset: myapp-darwin-aarch64
-          - runner: macos-15-intel
-            asset: myapp-darwin-x86_64
-
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@vN
         with:
           submodules: true
 
-      - name: Download release binary
-        uses: actions/download-artifact@vN
-        with:
-          name: ${{ matrix.asset }}
-          path: artifact
-
-      - name: Stage downloaded binary
-        run: |
-          mv artifact/${{ matrix.asset }} ./myapp-under-test
-          chmod +x ./myapp-under-test
-
-      - name: Configure with the release binary as the functional-test target
-        run: make configure CMAKE_ARGS="-DMYAPP_BINARY_PATH_OVERRIDE=${{ github.workspace }}/myapp-under-test"
-
-      - name: Build test binaries
-        run: make build
-
+      - run: make configure CMAKE_ARGS="-D<PROJECT>_WERROR=ON"
+      - run: make build
       - run: make test
       - run: make test_functional
 
@@ -336,24 +364,15 @@ jobs:
         with:
           submodules: true
 
-      - name: Download release binary
-        uses: actions/download-artifact@vN
-        with:
-          name: myapp-windows-x86_64.exe
-          path: artifact
-
-      - name: Stage downloaded binary
-        shell: bash
-        run: mv artifact/myapp-windows-x86_64.exe ./myapp-under-test.exe
-
-      - name: Configure and build test binaries
+      # Raw cmake: the Makefile needs a POSIX shell. See Where CI does not go
+      # through make.
+      - name: Configure and build
         shell: bash
         run: |
-          workspace="${GITHUB_WORKSPACE//\\//}"
-          cmake -B build/dev -G "Visual Studio 17 2022" -A x64 \
-            -DMYAPP_BINARY_PATH_OVERRIDE="${workspace}/myapp-under-test.exe"
-          cmake --build build/dev --config Release
+          cmake -B build/dev -G "Visual Studio 17 2022" -A x64
+          cmake --build build/dev --config Release --parallel
 
+      # Separate steps so a failure names the layer that broke.
       - name: Run tests
         shell: bash
         run: |
@@ -364,14 +383,14 @@ jobs:
 Three details in there are load-bearing:
 
 - **No clang tools installed.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. Installing them here would also mean a per-runner branch, since the apt packages exist only on the Linux runner.
-- **`GITHUB_WORKSPACE` is rewritten with forward slashes on Windows.** The raw value is a backslash path (`D:\a\repo\repo`), and the binary path is baked into the test binary as a compile definition, where `\a` and friends are read as C escape sequences. `${GITHUB_WORKSPACE//\\//}` is pure bash and needs no `cygpath`.
+- **Both build types are covered, without a third job.** Pairing `Release` with one compiler and `Debug` with the other costs nothing extra and stops `NDEBUG` and the optimiser from being exercised for the first time by a release. Testing only `Debug` leaves the shipped configuration untested; testing both under both compilers doubles the matrix for very little.
 - **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`, so a failure names the layer that broke. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
 
-#### Every artifact runs its own tests
+#### Every platform tests natively
 
-Each matrix entry tests on the runner its binary was built on, so the functional layer always spawns a binary the runner can execute and there is no skip branch anywhere in this workflow.
+Each job tests on the runner it built on, so the functional layer always spawns a binary the runner can execute and there is no skip branch anywhere in this workflow.
 
-That is the argument for building on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artifact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime. A macOS binary stripped without re-signing, for instance, builds cleanly and is killed on launch, which no build-only check can catch.
+That is also the argument for building release artifacts on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artifact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime.
 
 ### `release.yml`
 

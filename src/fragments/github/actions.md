@@ -13,6 +13,23 @@ Pin runners; never use `-latest`. Supported at the time of writing: `ubuntu-24.0
 
 Architecture is part of the label, not a flag: on macOS `macos-15` is Apple Silicon and `macos-15-intel` is Intel, so both architectures build natively and neither needs cross-compiling. Check the current runner list before relying on this one. Images are added and retired on GitHub's schedule, and a spec that freezes the roster goes stale the same way a frozen action version does.
 
+## What a job costs
+
+A private repository is billed per runner-minute, and not every minute costs the same. GitHub applies a multiplier by platform:
+
+| Platform | Multiplier |
+|---|---|
+| Linux | 1x |
+| Windows | 2x |
+| macOS | 10x |
+
+A public repository is not billed at all today. Design as though it might be: the allowance is GitHub's to change, and a project that goes private later should not need its CI rethought to become affordable.
+
+Two rules follow, and they apply to every workflow set here:
+
+- **Do the work on Linux unless the platform is the point.** Two compilers on one Linux runner cost a fifth of one macOS job and find more. Reach for another platform when it is a deployment target, not for extra confidence in the same code.
+- **Cheap by default, expensive by choice.** A new project starts with the smallest set that catches real breaks, and adds platforms and jobs deliberately. Anything that only a release needs is gated behind the trigger that releases, never run on every pull request. A default that costs nothing is one a project can afford to leave alone; a default that bills at 10x is one somebody has to notice.
+
 Canonical action per purpose:
 
 | Purpose | Action |

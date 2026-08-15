@@ -235,10 +235,4 @@ test_functional: build ## Run Catch2 functional tests against the built binary
 
 `test_functional` depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result.
 
-This layer does not change cpp/testing.md's `test` target, which stays the unit layer alone and remains the everyday command. A project that wants both in one go adds:
-
-```makefile
-.PHONY: test_all
-test_all: ## Run every test layer built into the current configure
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
-```
+This layer does not change cpp/testing.md's `test` target, which stays the unit layer alone and remains the everyday command. `test_all` is what runs both in one go, and it is defined once in cpp/testing.md rather than here, so a tier with a functional layer and a tier without see the same target.

@@ -147,13 +147,9 @@ configure_integration: ## Configure with integration tests (requires: INTEGRATIO
 .PHONY: test_integration
 test_integration: ## Run integration tests (requires: configure_integration first)
 	ctest --test-dir build/dev --output-on-failure -L integration
-
-.PHONY: test_all
-test_all: ## Run every test layer built into the current configure
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
 ```
 
-The guard on `INTEGRATION_DATA` fails the configure with an actionable message rather than producing a build whose integration tests all skip. `test_all` runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.
+The guard on `INTEGRATION_DATA` fails the configure with an actionable message rather than producing a build whose integration tests all skip. `test_all`, defined in cpp/testing.md, then runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.
 
 ## CI
 

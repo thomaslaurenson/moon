@@ -180,13 +180,21 @@ REQUIRE_THROWS(ParseVersion("not-a-version"));
 
 ```makefile
 .PHONY: test
-test: ## Run Catch2 unit tests
+test: build ## Run Catch2 unit tests
 	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L unit
 
 .PHONY: test_verbose
-test_verbose: ## Run unit tests with verbose Catch2 output
+test_verbose: build ## Run unit tests with verbose Catch2 output
 	ctest --test-dir build/dev --verbose -L unit
+
+.PHONY: test_all
+test_all: build ## Run every test layer built into the current configure
+	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
 ```
+
+Every test target depends on `build`, and `build` depends on `configure`, so any of them works from a fresh clone with no prior step. That chain is what makes `make ci` runnable on a clean checkout; without it `ctest` fails on a missing `build/dev` with a message about the directory rather than about the missing build. Reconfiguring an existing tree is a no-op that costs under a second, and CMake keeps every cached `-D` from the original `make configure CMAKE_ARGS=...`, so the repeat does not discard a CI job's compiler or `-Werror` setting.
+
+`test_all` is defined here, in the fragment every tier includes, rather than in the layer fragments. It runs whatever the current configure contains, which is the unit layer alone unless another was configured in, so it belongs with the universal targets and not with any one layer.
 
 `test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.
 

@@ -105,7 +105,7 @@ When a harness finds something, it writes the offending input to a `crash-<hash>
 
 ## Makefile targets
 
-`FUZZ_TIME` is declared here; `CLANG_VERSION` and `JOBS` come from the CMake fragment.
+`FUZZ_TIME` is declared here; `CLANG_CXX` and `JOBS` come from the CMake fragment.
 
 ```makefile
 FUZZ_TIME ?= 60
@@ -115,7 +115,8 @@ configure_fuzz: ## Configure build/fuzz with libFuzzer harnesses (requires Clang
 	cmake -B build/fuzz \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DMYLIB_BUILD_FUZZERS=ON \
-	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION)
+	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
+	  $(CMAKE_ARGS)
 
 .PHONY: build_fuzz
 build_fuzz: configure_fuzz ## Configure and build the fuzz harnesses

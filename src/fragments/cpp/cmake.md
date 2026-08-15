@@ -355,7 +355,8 @@ configure_asan: ## Configure build/asan with Address + UB sanitizers
 	cmake -B build/asan \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DMYLIB_ASAN=ON \
-	  -DMYLIB_BUILD_TESTING=ON
+	  -DMYLIB_BUILD_TESTING=ON \
+	  $(CMAKE_ARGS)
 
 .PHONY: test_asan
 test_asan: configure_asan ## Build and run the unit tests under sanitizers
@@ -490,6 +491,7 @@ There is no `install_clang_tools` target. Installing a system toolchain is the e
 ```makefile
 CLANG_VERSION ?= 18
 CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) 2>/dev/null || echo clang-format)
+CLANG_CXX     ?= $(shell command -v clang++-$(CLANG_VERSION) 2>/dev/null || echo clang++)
 CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) 2>/dev/null || echo clang-tidy)
 LLVM_PROFDATA ?= $(shell command -v llvm-profdata-$(CLANG_VERSION) 2>/dev/null || echo llvm-profdata)
 LLVM_COV      ?= $(shell command -v llvm-cov-$(CLANG_VERSION) 2>/dev/null || echo llvm-cov)
@@ -518,8 +520,9 @@ configure_lint: ## Configure $(LINT_DIR) with clang++, so clang-tidy can parse t
 	cmake -B $(LINT_DIR) \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
-	  -DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)"
+	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
+	  -DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)" \
+	  $(CMAKE_ARGS)
 ```
 
 `--gcc-install-dir` tells clang which libstdc++ to use when the two toolchains are installed side by side, which is the normal state on a Linux runner and on most developer machines.
@@ -573,6 +576,15 @@ clean: ## Remove all build directories
 
 # GET
 
+.PHONY: get_version
+get_version: ## Print the project version from CMakeLists.txt (fails if absent)
+	@awk '\
+	  /cmake_minimum_required/ { next } \
+	  match($$0, /VERSION[ \t]+[0-9]+\.[0-9]+\.[0-9]+/) { \
+	    v = substr($$0, RSTART, RLENGTH); sub(/VERSION[ \t]+/, "", v); \
+	    print v; found = 1; exit } \
+	  END { if (!found) exit 1 }' CMakeLists.txt
+
 .PHONY: get_changelog
 get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
@@ -594,6 +606,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 - `ci` is prerequisites only, with no recipe: it names the checks CI runs so a developer can run them in one command before pushing. Through `test` it pulls in `build` and `configure`, so it runs on a clean checkout. A tier with a functional layer adds `test_functional`. It cannot mirror CI exactly, and should not try: CI builds under two compilers and a developer has one, so `ci` reproduces the checks rather than the matrix
 - `clean` removes `build` entirely, not `$(BUILD_DIR)`. There are several build directories (`dev`, `lint`, `asan`, `fuzz`) and a clean that leaves the others behind is the one that gets debugged at the wrong moment
 - `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure
+- `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style.md makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox
 - `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes
 
 Every target a workflow invokes must be defined by one of these fragments. A workflow calling `make <something>` that no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.

@@ -200,7 +200,7 @@ Every test target depends on `build`, and `build` depends on `configure`, so any
 
 ## Coverage
 
-Coverage is measured over the unit layer using clang's source-based instrumentation. It gets its own `build/coverage` directory: the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. `CLANG_VERSION`, `JOBS`, `LLVM_PROFDATA` and `LLVM_COV` are declared once in the CMake fragment and reused here.
+Coverage is measured over the unit layer using clang's source-based instrumentation. It gets its own `build/coverage` directory: the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. `CLANG_CXX`, `JOBS`, `LLVM_PROFDATA` and `LLVM_COV` are declared once in the CMake fragment and reused here.
 
 ```makefile
 .PHONY: configure_coverage
@@ -208,9 +208,10 @@ configure_coverage: ## Configure build/coverage with clang source-based coverage
 	cmake -B build/coverage \
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DMYLIB_BUILD_TESTING=ON \
-	  -DCMAKE_CXX_COMPILER=clang++-$(CLANG_VERSION) \
+	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
 	  -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
-	  -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate"
+	  -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
+	  $(CMAKE_ARGS)
 
 .PHONY: test_coverage
 test_coverage: configure_coverage ## Report unit-test coverage

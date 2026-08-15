@@ -142,7 +142,8 @@ configure_integration: ## Configure with integration tests (requires: INTEGRATIO
 	  -DCMAKE_BUILD_TYPE=Debug \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 	  -DMYLIB_INTEGRATION=ON \
-	  -DMYLIB_INTEGRATION_DATA="$(INTEGRATION_DATA)"
+	  -DMYLIB_INTEGRATION_DATA="$(INTEGRATION_DATA)" \
+	  $(CMAKE_ARGS)
 
 .PHONY: test_integration
 test_integration: ## Run integration tests (requires: configure_integration first)

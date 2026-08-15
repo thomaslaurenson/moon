@@ -96,7 +96,7 @@ inline std::optional<fs::path> IntegrationDataPath() {
     return std::nullopt;
 }
 
-}  // namespace mylib::testing
+} // namespace mylib::testing
 ```
 
 Two sources rather than one because they serve different people: the CMake define suits a developer who configures once and forgets, the environment variable suits a machine where the path is already exported. Never hardcode a path, and never guess at a default install location.

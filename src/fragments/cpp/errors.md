@@ -44,8 +44,8 @@ public:
 class ArchiveOpenError : public ArchiveError {
 public:
     ArchiveOpenError(std::string path, int error_code)
-        : ArchiveError("could not open archive: " + path),
-          path_(std::move(path)), error_code_(error_code) {}
+        : ArchiveError("could not open archive: " + path), path_(std::move(path)),
+          error_code_(error_code) {}
 
     const std::string &path() const { return path_; }
     int error_code() const { return error_code_; }
@@ -55,7 +55,7 @@ private:
     int error_code_;
 };
 
-}  // namespace mylib
+} // namespace mylib
 ```
 
 - Every exception class gets a Doxygen comment saying when it is thrown; see the Doxygen fragment.
@@ -72,7 +72,7 @@ An exception is for a failure the caller did not expect. A result the caller ask
 std::optional<Entry> FindEntry(const std::string &name) const;
 
 // Bad - throwing for a routine miss forces try/catch into normal control flow
-Entry FindEntry(const std::string &name) const;  // throws EntryNotFoundError
+Entry FindEntry(const std::string &name) const; // throws EntryNotFoundError
 ```
 
 Use `std::optional` for "may legitimately be absent", a `bool` return for "worked or did not, and the reason is obvious", and an exception when the reason matters and the caller cannot reasonably continue.

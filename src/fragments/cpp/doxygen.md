@@ -52,9 +52,9 @@ Enum values and public data members get a one-line `///` where the name does not
 ```cpp
 /// How an archive is opened
 enum class OpenMode {
-    READ,       ///< Open an existing archive; fails if it does not exist
-    WRITE,      ///< Create a new archive, truncating any existing file
-    APPEND,     ///< Open an existing archive for adding entries
+    READ,   ///< Open an existing archive; fails if it does not exist
+    WRITE,  ///< Create a new archive, truncating any existing file
+    APPEND, ///< Open an existing archive for adding entries
 };
 ```
 

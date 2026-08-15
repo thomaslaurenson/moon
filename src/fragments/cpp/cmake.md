@@ -595,4 +595,4 @@ Note: `fmt` and `fmt_check` include the `test/` directory; test code is held to 
 
 ### Configuration files
 
-Both `.clang-format` and `.clang-tidy` live at the project root. CMake is pointed at the build directory via `-p build/dev` so clang-tidy can find `compile_commands.json`. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.
+Both `.clang-format` and `.clang-tidy` live at the project root. clang-tidy is pointed at `build/lint` via `-p`, never at `build/dev`, so it reads the `compile_commands.json` produced by the clang-configured build; see Configuring for clang-tidy above. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.

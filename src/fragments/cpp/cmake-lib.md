@@ -133,7 +133,7 @@ An example is not an application, and a library with one is still a library. The
 - `examples/` is a demonstration. It is built on request, has no tests, no Docker image, no release artifact and no badge. Its job is to prove the public API is usable and to give a consumer something to copy. It links the aggregate through its alias, exactly as a consumer would, which is what makes it an honest demonstration rather than a program with special access.
 - `app/` is a shipped binary, and having one makes the project a lib-cli, not a library. That tier adds functional tests, the Docker release matrix and released-binary badges. See cmake-lib-cli.
 
-Default `OFF` because an example is dead weight in a consumer's build. Keep examples compiling: an example that no longer builds is a worse advertisement than no example at all. Build them in CI's normal lint or build job by configuring with the option on, even though nothing runs them.
+Default `OFF` because an example is dead weight in a consumer's build. Keep examples compiling: an example that no longer builds is a worse advertisement than no example at all. CI turns the option on in the existing test job, so they are compiled and nothing runs them; see workflows-lib.md.
 
 ## Generated version header
 

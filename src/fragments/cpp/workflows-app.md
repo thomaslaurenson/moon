@@ -20,7 +20,7 @@ So the caller decides the depth, and `build.yml` takes an input:
 | `main.yml` | the above plus the full artifact set and `prerelease` | The rolling channel has to contain everything a release would |
 | `tag.yml` | everything, plus `release` | This is the run whose output people install |
 
-Concretely, `inputs.artifacts` gates `build_macos`, `build_windows` and `build_docker`; `build_linux` runs on every trigger. That split is the whole cost control, and it is worth stating why it falls where it does rather than the other way round. `build_linux` builds through `Dockerfile.musl`, so running it is the only thing that proves the release container recipe still works, and it runs on the cheapest runner there is. The other three are either a second compile of a platform `test.yml` already covers, or an image tar nothing consumes until a release. On a private repository the gated jobs are also the expensive ones: Windows bills at twice a Linux job and macOS at ten times, so leaving them ungated means a pull request pays for the platforms it least needs.
+Concretely, `inputs.artifacts` gates `build_windows` and `build_docker`; `build_linux` runs on every trigger. That split is the whole cost control, and it is worth stating why it falls where it does rather than the other way round. `build_linux` builds through `Dockerfile.musl`, so running it is the only thing that proves the release container recipe still works, and it runs on the cheapest runner there is. The other three are either a second compile of a platform `test.yml` already covers, or an image tar nothing consumes until a release. On a private repository the gated jobs are also the more expensive ones: a Windows runner bills at twice a Linux one, so leaving it ungated means a pull request pays for the platform it least needs.
 
 "An artifact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
 
@@ -73,9 +73,11 @@ No `secrets: inherit`: every job here authenticates with the automatic `github.t
 
 ### `build.yml`
 
-Builds one release binary per target platform and uploads each as an artifact for the test, release and prerelease workflows to consume. Linux builds go through Docker; macOS and Windows build natively on their own runners, because there is no container route to either.
+Builds one release binary per target platform and uploads each as an artifact for the release and prerelease workflows to consume. Linux builds go through Docker; Windows builds natively on its own runner, because there is no container route to it.
 
-**Which platforms is a decision, not a default.** The jobs below are the full set; a project takes the ones matching where its users actually run the binary. macOS in particular is opt-in: it costs ten times a Linux job on a private repository and proves nothing about a tool nobody runs there. The same test applies as in cpp/workflows.md, that a platform earns a job by being a deployment target rather than by adding confidence.
+**Which platforms is a decision, not a default.** The jobs below are the full set for the platforms these projects target, and a project takes the ones matching where its users actually run the binary. The test is the one in cpp/workflows.md: a platform earns a job by being a deployment target, not by adding confidence.
+
+**No C++ project here targets macOS.** There is no macOS job, no `darwin` asset and no `darwin` entry in `.gpipe.yml`, and that is a decision rather than an omission: nobody runs these tools there, and a macOS runner bills at ten times a Linux one. Adding it later means more than a build job, which is why the absence is recorded here rather than left to be noticed: macOS needs a matching `test.yml` job, `darwin_amd64` and `darwin_arm64` entries in `.gpipe.yml`, two more lines in the release asset list, and a `codesign --force --sign -` step after any `strip`, because stripping invalidates the ad-hoc signature the linker applies and the binary is then killed on launch rather than failing to build.
 
 Once a platform is in, it stays consistent all the way through: a job in `build.yml`, a matching entry in `test.yml`, an asset in `.gpipe.yml`, and a line in the release asset list. A platform built but not tested ships an artifact nothing has run.
 
@@ -87,8 +89,6 @@ Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `a
 |---|---|
 | Linux x86_64 | `myapp-linux-x86_64` |
 | Linux ARM64 | `myapp-linux-aarch64` |
-| macOS x86_64 | `myapp-darwin-x86_64` |
-| macOS ARM64 | `myapp-darwin-aarch64` |
 | Windows x86_64 | `myapp-windows-x86_64.exe` |
 
 This is gpipe's platform vocabulary, so the names map onto `.gpipe.yml` with no translation; the identifiers are the `platforms` keys shown under `release.yml` below, and `gpipe validate` checks a config against them. Pick the naming before the first release: the assets are a public interface, and renaming them later breaks anyone's install script.
@@ -156,46 +156,6 @@ jobs:
           path: ${{ matrix.asset }}
           retention-days: 1
 
-  build_macos:
-    if: inputs.artifacts
-    strategy:
-      matrix:
-        include:
-          - runner: macos-15
-            asset: myapp-darwin-aarch64
-          - runner: macos-15-intel
-            asset: myapp-darwin-x86_64
-
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@vN
-        with:
-          submodules: true
-
-      - name: Build
-        run: |
-          cmake -B build/release \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DMYAPP_BUILD_TESTING=OFF \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-          cmake --build build/release --config Release --parallel 3
-          strip build/release/bin/myapp
-          # strip invalidates the linker's ad-hoc signature; re-sign or the
-          # binary is killed on launch on Apple Silicon. See below.
-          codesign --force --sign - build/release/bin/myapp
-          codesign --verify --verbose build/release/bin/myapp
-          mv build/release/bin/myapp ./${{ matrix.asset }}
-
-      - name: Smoke-run the artifact
-        run: ./${{ matrix.asset }} --version
-
-      - name: Upload binary as artifact
-        uses: actions/upload-artifact@vN
-        with:
-          name: ${{ matrix.asset }}
-          path: ${{ matrix.asset }}
-          retention-days: 1
-
   build_windows:
     if: inputs.artifacts
     runs-on: windows-2022
@@ -253,17 +213,11 @@ Set `MYAPP_BUILD_TESTING=OFF` on the release builds: they ship the binary, and c
 
 #### Where CI does not go through `make`
 
-`build.yml` is the exception to the rule that CI calls `make <target>` and never `cmake` directly, and it is the exception on every platform, not only Windows. The Linux jobs build inside a container, so the recipe lives in the Dockerfile; the macOS and Windows jobs invoke `cmake` directly.
+`build.yml` is the exception to the rule that CI calls `make <target>` and never `cmake` directly, and it is the exception on both platforms rather than only Windows. The Linux jobs build inside a container, so the recipe lives in the Dockerfile; the Windows job invokes `cmake` directly.
 
-Windows has the strongest reason: the Makefile sets `SHELL := /bin/bash` and its targets rely on `find | xargs` and GNU-only flags, none of which a Windows runner provides. macOS could go through `make` and does not, because a release build wants an explicit build type, deployment target and output path rather than the everyday `build/dev` configuration the Makefile is built around.
+Windows has the strongest reason: the Makefile sets `SHELL := /bin/bash` and its targets rely on `find | xargs` and GNU-only flags, none of which a Windows runner provides. A release build also wants an explicit build type and output path rather than the everyday `build/dev` configuration the Makefile is built around, which is the reason that holds on any platform.
 
 Do not add a second, platform-specific Makefile to preserve the rule. `lint.yml` and `test.yml` do go through `make`, and those are the workflows the rule is really about, because they run the same checks a developer runs.
-
-#### Stripping a macOS binary requires re-signing
-
-On Apple Silicon every executable must carry at least an ad-hoc signature to run; the linker applies one automatically. `strip` rewrites the Mach-O and invalidates it, and the result is not a warning at build time but `zsh: killed` when anyone tries to run the published binary. `codesign --force --sign -` restores an ad-hoc signature, and the `--verify` line turns a silent regression into a failed build.
-
-Either strip and re-sign, or do neither. What must not happen is stripping without re-signing, because the build stays green and only the shipped artifact is broken.
 
 #### Smoke-run every artifact
 
@@ -271,19 +225,12 @@ Every build job runs the binary it just produced, on the runner that produced it
 
 This is the whole class of failure a build-only job cannot see, and each member of it ships silently:
 
-- a macOS binary stripped without re-signing, killed on launch by the kernel (see above)
 - a `scratch` image binary that was not statically linked, so there is no loader and the container exits with `no such file or directory` on a file that plainly exists
 - a binary linked against a library version the runner has and a user does not
 
 It costs seconds on a runner already holding the binary, and it is the reason `test.yml` can build its own binary rather than downloading this one: between them, `test.yml` proves the code is correct and `build.yml` proves the artifact runs.
 
 Where a project's binary has no `--version`, use the cheapest subcommand that exits zero without arguments. A binary with no such entry point should still be executed with `--help`.
-
-#### macOS architectures
-
-Both architectures build natively, on `macos-15` for Apple Silicon and `macos-15-intel` for Intel. Pick the runner, not `CMAKE_OSX_ARCHITECTURES`: a cross-compiled binary cannot run on the machine that produced it, so its tests can only be skipped, and a build-verified-only artifact is the one most likely to be broken on arrival.
-
-Set `CMAKE_OSX_DEPLOYMENT_TARGET` explicitly so the binary is not accidentally floored to the runner's current macOS version.
 
 ### `test.yml`
 
@@ -305,58 +252,13 @@ permissions:
   contents: read
 
 jobs:
-  # Two compilers and both build types, on the cheapest runner. See the compiler
-  # matrix in cpp/workflows.md for why GCC and clang are both needed; Release is
-  # paired with one of them so NDEBUG and the optimiser are covered without a
-  # third job.
-  test_linux:
-    name: test_linux (${{ matrix.compiler }}, ${{ matrix.build_type }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - compiler: gcc
-            cxx: g++
-            build_type: Debug
-          - compiler: clang
-            cxx: clang++-18
-            build_type: Release
-
-    runs-on: ubuntu-24.04
-    # BUILD_TYPE goes in the environment, not on the configure line. `build` and
-    # every test target re-run `configure` through their prerequisite chain, and
-    # an invocation without it would reset the cache to the Debug default, so the
-    # Release entry would quietly test Debug and report green.
-    env:
-      BUILD_TYPE: ${{ matrix.build_type }}
-    steps:
-      - uses: actions/checkout@vN
-        with:
-          submodules: true
-
-      - name: Install clang
-        if: matrix.compiler == 'clang'
-        run: sudo apt-get install -y clang-18
-
-      - run: make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -D<PROJECT>_WERROR=ON"
-      - run: make build
-      - run: make test
-      - run: make test_functional
-
-  # Only where the project ships that platform. Both are opt-in: on a private
-  # repository macOS bills at ten times a Linux job and Windows at twice.
-  test_macos:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@vN
-        with:
-          submodules: true
-
-      - run: make configure CMAKE_ARGS="-D<PROJECT>_WERROR=ON"
-      - run: make build
-      - run: make test
-      - run: make test_functional
-
+  # test_linux and test_asan are the shared jobs from cpp/workflows.md, with one
+  # line added: a tier that ships a binary runs the functional layer too.
+  #
+  #   - run: make test_functional
+  #
+  # Only where the project ships a Windows binary: on a private repository a
+  # Windows runner bills at twice a Linux one.
   test_windows:
     runs-on: windows-2022
     steps:
@@ -425,7 +327,7 @@ jobs:
           merge-multiple: true
 
       - name: Extract release notes from CHANGELOG.md
-        run: make get_changelog TAG=${GITHUB_REF_NAME} > /tmp/release-notes.md
+        run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
 
       - uses: thomaslaurenson/gpipe@vN
         with:
@@ -494,12 +396,6 @@ platforms:
   linux_arm64:
     path: ./dist/myapp-linux-aarch64
     name: myapp-linux-aarch64
-  darwin_amd64:
-    path: ./dist/myapp-darwin-x86_64
-    name: myapp-darwin-x86_64
-  darwin_arm64:
-    path: ./dist/myapp-darwin-aarch64
-    name: myapp-darwin-aarch64
   windows_amd64:
     path: ./dist/myapp-windows-x86_64.exe
     name: myapp-windows-x86_64.exe

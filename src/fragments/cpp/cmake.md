@@ -345,7 +345,7 @@ The compiler branch is not optional on a project that builds on Windows. `-fsani
 
 This is the one legitimate use of the directory-scoped `add_compile_options` rather than `target_compile_options`. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
 
-Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job.
+Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job: that job is `test_asan` in cpp/workflows.md, and the reason it is separate is the same 2x.
 
 ### Makefile targets
 

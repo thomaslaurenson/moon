@@ -72,7 +72,19 @@ No `needs:` between `lint` and `test`. Neither consumes the other's output, so w
 
 ## `test.yml`
 
-The job body is the two-compiler matrix in cpp/workflows.md, unchanged. A library needs nothing added to it: there is no downloaded artifact to point the tests at and no functional layer to run against a binary, so `configure`, `build` and `test` in one job is the whole workflow.
+The job bodies are the shared `test_linux` matrix and `test_asan` from cpp/workflows.md, unchanged. A library needs nothing added to them: there is no functional layer to run against a binary, so `configure`, `build` and `test` is the whole of it.
+
+A library that ships examples turns them on here, and nowhere else:
+
+```yaml
+      - run: |
+          make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -D<PROJECT>_WERROR=ON -D<PROJECT>_BUILD_EXAMPLES=ON"
+```
+
+`make build` then compiles them along with everything else, and nothing runs them. That is the whole of what cmake-lib.md asks for when it says to keep examples compiling: an example is the code a consumer copies, so one that no longer builds is worse than none, and the only way to notice is to build it. The option gates whether the targets exist rather than how they are built, so they belong in the same `build/dev` as everything else; see the build directory rules in cpp/cmake.md.
+
+It costs one extra compile of a handful of small programs on a job that is already running, which is why this is a flag on the existing job rather than a job of its own.
 
 ```yaml
 name: Test
@@ -111,13 +123,18 @@ jobs:
       # and gh release create uses the API, so neither needs git history.
       - uses: actions/checkout@vN
 
+      - name: Extract release notes from CHANGELOG.md
+        run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
+
       - name: Publish release
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --notes "$(make get_changelog TAG=${{ github.ref_name }})"
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file /tmp/release-notes.md
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
 ```
+
+Two details match the application flow rather than diverging from it, and both are worth keeping in step. The notes go through a file and `--notes-file`, never `--notes "$(...)"`: command substitution strips trailing newlines and re-splits the changelog through the shell, so an entry containing a backtick or a `$` is mangled or executed. And the token is `GH_TOKEN`, the name `gh` documents; `GITHUB_TOKEN` also works today, which is exactly why a project ends up with both spellings in different workflows and nobody can say which is required. See github/actions.md.
 
 If broader platform confidence is wanted later, add more runners to the `test.yml` job directly rather than reaching for the application's Docker/matrix pattern, which exists specifically for producing distributable binaries.

@@ -29,7 +29,7 @@ Every layer lives under `test/`, including fuzz harnesses. A project with module
 ```
 test/
   CMakeLists.txt
-  data/                   # checked-in static inputs; tests read, never write
+  data/                   # static inputs; tests read, never write
   fixtures/               # shared fixture headers, one per fixture, used by every layer
     synthetic_archive.h
     temp_dir.h
@@ -51,6 +51,7 @@ extern/
 
 - One unit test file per source file, named `test_<source>.cpp`, in a directory mirroring the module. The other layers mirror behaviour rather than source files and do not follow this rule.
 - Fixtures live in `test/fixtures/`, one header per fixture, and are shared by every layer.
+- `test/data/` holds inputs a test reads and never writes. Most are small enough to commit, and a fuzz crash reproducer always is. Inputs an integration layer needs may be too large, too proprietary or too numerous to commit, in which case they are gitignored and the project says how to obtain them; see testing-integration.md. Which of the two a given file is does not change where it lives.
 
 ## Catch2 setup
 

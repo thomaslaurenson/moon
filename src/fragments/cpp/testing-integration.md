@@ -1,10 +1,10 @@
 # C++ integration testing
 
-The layer that tests against real data: a real dataset install, a live server, a populated API. Assumes cpp/testing.md and the tier fragment.
+The layer that tests against something real that the repository does not contain: a handful of genuine input files, an installed product, a live server, a populated API. Assumes cpp/testing.md and the tier fragment.
 
-An integration test links the library target exactly as a unit test does. What separates it is not that it touches the filesystem (a unit test may do that freely with its own fixtures) but that it depends on an environment it cannot construct. A test is an integration test when the point of it is that the data is real: the actual production dataset rather than a synthetic one, a running server's real handshake rather than a recorded blob.
+An integration test links the library target exactly as a unit test does. What separates it is not that it touches the filesystem (a unit test may do that freely with its own fixtures) but that it depends on an environment it cannot construct. A test is an integration test when the point of it is that the input is real: a file produced by the software this one has to interoperate with rather than one a fixture assembled, a running server's real handshake rather than a recorded blob.
 
-That dependency is also why the layer is opt-in. CI has no dataset install and no server, so integration tests are excluded from the build entirely unless asked for, and skip cleanly at runtime when the environment is missing.
+That dependency is also why the layer is opt-in. CI has none of those things, so integration tests are excluded from the build entirely unless asked for, and skip cleanly at runtime when what they need is missing.
 
 ## Which tiers need it
 
@@ -17,8 +17,8 @@ Never use this layer as a dumping ground for tests that are awkward to write. If
 The root `CMakeLists.txt` declares a project-scoped option to build the layer, plus a cache variable naming the data it needs:
 
 ```cmake
-option(MYLIB_INTEGRATION "Build integration tests (requires a real dataset)" OFF)
-set(MYLIB_INTEGRATION_DATA "" CACHE PATH "Path to the real dataset (file or directory) for integration tests")
+option(MYLIB_INTEGRATION "Build integration tests (requires the real inputs)" OFF)
+set(MYLIB_INTEGRATION_DATA "" CACHE PATH "Path to the real inputs (file or directory) for integration tests")
 ```
 
 Default `OFF`: the integration binary is not built at all in a normal configure, so a developer without the data never sees it and never has to skip it. Project-scoped names, as always, so a consumer's own `INTEGRATION` flag cannot reach in here.
@@ -99,7 +99,9 @@ inline std::optional<fs::path> IntegrationDataPath() {
 } // namespace mylib::testing
 ```
 
-Two sources rather than one because they serve different people: the CMake define suits a developer who configures once and forgets, the environment variable suits a machine where the path is already exported. Never hardcode a path, and never guess at a default install location.
+Two sources rather than one because they serve different people: the CMake define suits a developer who configures once and forgets, the environment variable suits a machine where the path is already exported.
+
+Whether that variable has a default, and what it is, is the project's decision. The test that matters is whether the default means the same thing on every machine. A path inside the repository does: a conventional directory the project sets aside for inputs it cannot commit is the same path for everyone who clones it, so defaulting to it makes the layer work with no configuration once the files are in place. A path outside the repository does not: an install location varies by machine, by operating system and by how the thing was installed, so a default pointing there is a guess that is wrong more often than right. Guess at neither, and never hardcode a path in a test.
 
 `fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable: an `MYLIB_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
 
@@ -125,7 +127,7 @@ TEST_CASE("reads entries from a real dataset archive", "[archive]") {
 
 Skip on a missing environment, never on a missing *feature*: a test that skips because the code under test is broken is a test that never runs. Once the data is present, the test is a normal test and a failure is a failure.
 
-Distinguish required from optional data inside a fixture. Data that every real install has is required, and its absence throws rather than skips: a chain that silently builds smaller lets tests pass while verifying less.
+Resolve the whole set of inputs a test needs before asserting on any of them, and skip once if any is missing rather than degrading to a smaller check. A test that quietly verifies less when half its inputs are absent reports success for a run that proved almost nothing, which is worse than a skip because nothing in the output says so.
 
 ## Makefile targets
 
@@ -151,10 +153,23 @@ test_integration: ## Run integration tests (requires: configure_integration firs
 	ctest --test-dir build/dev --output-on-failure -L integration
 ```
 
-The guard on `INTEGRATION_DATA` fails the configure with an actionable message rather than producing a build whose integration tests all skip. `test_all`, defined in cpp/testing.md, then runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.
+The guard belongs in a project whose variable has no default: it fails the configure with an actionable message rather than producing a build whose integration tests all skip. A project that does default the variable drops the guard, because the condition can never be true and a check that cannot fire is one more thing to read. `test_all`, defined in cpp/testing.md, then runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.
 
 ## CI
 
 Integration tests do not run in CI. The data is proprietary, large, or a live service, and none of that belongs in a workflow. CI runs `make test`, which is the unit layer; the integration layer is a local tool for the developer who has the data.
 
-Never work around this by committing the dataset, downloading it in a workflow, or standing up the service in a container. If a behaviour needs covering in CI, synthesise the input and write a unit test.
+Never work around this by committing the inputs, fetching them in a workflow, or standing up the service in a container. If a behaviour needs covering in CI, synthesise the input and write a unit test.
+
+## Obtaining the inputs
+
+How the inputs reach a developer's machine is the project's business, and it differs every time: placed by hand, downloaded from somewhere public, copied off a device, generated by another tool, or a service that has to be running. What moon requires is that the project **says** which it is. A layer nobody outside the author can run is a layer that rots, and the symptom is a skip that every contributor sees and nobody can act on.
+
+Document it in the README, next to how to run the tests. Where the inputs can be fetched without a human deciding anything, put that behind a Makefile target named `fetch_integration_data`, so the answer is the same command in every project that has one:
+
+```makefile
+.PHONY: fetch_integration_data
+fetch_integration_data: ## Download the integration inputs into $(INTEGRATION_DATA)
+```
+
+That target is offered, not required. A project whose inputs are proprietary, licensed, or simply not downloadable has nothing to put in it, and the README carries the whole answer instead. Note that this is a developer running a command deliberately, which is a different thing from the workflow fetch ruled out above: the ban is on CI reaching for the data, not on a person doing so.

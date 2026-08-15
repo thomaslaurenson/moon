@@ -23,6 +23,7 @@ Define a single root exception so a consumer can catch everything the library th
 ```cpp
 // include/mylib/errors.h
 #pragma once
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 
@@ -43,15 +44,15 @@ public:
 /// Thrown when an archive cannot be opened
 class ArchiveOpenError : public ArchiveError {
 public:
-    ArchiveOpenError(std::string path, int error_code)
-        : ArchiveError("could not open archive: " + path), path_(std::move(path)),
+    ArchiveOpenError(std::filesystem::path path, int error_code)
+        : ArchiveError("could not open archive: " + path.string()), path_(std::move(path)),
           error_code_(error_code) {}
 
-    const std::string &path() const { return path_; }
+    const std::filesystem::path &path() const { return path_; }
     int error_code() const { return error_code_; }
 
 private:
-    std::string path_;
+    std::filesystem::path path_;
     int error_code_;
 };
 
@@ -61,6 +62,7 @@ private:
 - Every exception class gets a Doxygen comment saying when it is thrown; see the Doxygen fragment.
 - Public API functions throw the library's own types, never a bare `std::runtime_error`, `std::invalid_argument`, or a third-party library's exception. Catch a dependency's exception at the boundary and rethrow as your own with `std::throw_with_nested` where the original matters.
 - Carry structured data as members (`path()`, `error_code()`), not just a formatted string. A caller that wants to retry needs the path, not prose.
+- A path member is a `std::filesystem::path`, for the same reason a path parameter is; see the C++ style fragment. Building the message then needs an explicit `path.string()`, because there is no `operator+` between a string literal and a path. That conversion is the one place the narrow form is correct: the message is prose for a human, not something anyone reopens the file with.
 - Exception types live in `include/<lib>/errors.h` so a consumer imports them from one place.
 
 ## What is not an exception

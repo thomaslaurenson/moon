@@ -21,7 +21,7 @@ Use `///` triple-slash. The first line is a single summary sentence with no full
 /// @param mode Whether to open for reading or writing.
 /// @return A handle to the opened archive.
 /// @throws mylib::ArchiveOpenError If the file does not exist or cannot be read.
-Archive OpenArchive(const std::string &path, OpenMode mode);
+Archive OpenArchive(const std::filesystem::path &path, OpenMode mode);
 ```
 
 The `@throws` lines are part of the contract, not a nicety: an exception a consumer cannot discover from the header is an exception they will not catch. Keep them in step with the error hierarchy (see the error handling fragment).

@@ -62,6 +62,8 @@ The failure reaches users and not CI: runner paths are always ASCII, so a Window
 
 Build paths with `operator/` rather than string concatenation, so the separator is the platform's own.
 
+Where a path has to become text, for a log line or an exception message, call `path.string()`. Never `std::string{path}`: that reaches `path::operator string_type()`, and `string_type` is `std::wstring` on Windows, so the conversion compiles everywhere the rule was not needed and fails on the one platform it was written for. `path.string()` returns a `std::string` on every platform. The same applies to `+`, which has no overload for a literal and a path at all, so a message built by concatenation needs the explicit call.
+
 ## Namespaces
 
 Everything a project compiles into a library goes in a namespace named after the library, in `snake_case`:
@@ -97,7 +99,7 @@ The core conventions govern implementation comments; this narrows them for heade
 ///
 /// @param path Path to the archive file.
 /// @return A handle to the opened archive.
-Archive OpenArchive(const std::string &path);
+Archive OpenArchive(const std::filesystem::path &path);
 ```
 
 A project with a public API under `include/` documents it in full as a consumer contract; see the Doxygen fragment for the rules that apply there.

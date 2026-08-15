@@ -1,9 +1,9 @@
 # C++ library - full project (code + testing + build + tooling + CI). A reusable static
 # library with a public API under include/ and no binary of its own. Consumers use git
 # submodule + add_subdirectory, so there is no install()/export()/find_package()
-# packaging and no Docker release matrix; see cmake-lib and workflows-lib. Testing stops
-# at unit + integration: with no binary to spawn there is no functional layer, which is
-# why integration is not optional here. Use cpp-lib-cli if the project also ships a CLI.
+# packaging and no Docker release matrix; see cmake-lib and workflows-lib. There is no
+# functional layer, having no binary to spawn; unit is always present, and integration
+# and fuzz apply where the project earns them. Use cpp-lib-cli if it also ships a CLI.
 @include cpp-lib-code
 cpp/cmake.md
 cpp/cmake-lib.md

@@ -287,7 +287,7 @@ Linking the bar is not optional and not per-target judgement. A target that omit
 
 - `-Wall -Wextra`: the baseline every project starts from
 - `-Wpedantic`: rejects compiler extensions, which is what keeps one compiler's build from being the only one that works
-- `-Wconversion`: implicit narrowing. The highest-value flag in this list for anything parsing a binary format, where a silent `uint32_t` to `uint16_t` truncation is a data bug rather than a compile error
+- `-Wconversion`: implicit narrowing. The highest-value flag in this list for any code where the width of a number carries meaning: a silent `uint32_t` to `uint16_t` truncation is a wrong answer rather than a compile error, and a size, an offset or a count is as easy to lose that way as a parsed field
 - `-Wshadow`: a declaration hiding an outer name, where an edit then changes the wrong variable
 - `-Wnon-virtual-dtor`: deleting through a base pointer with no virtual destructor; only fires on polymorphic types, and is a leak when it does
 - `-Wold-style-cast`: forces C++ cast syntax. The value is not style: it makes `reinterpret_cast` greppable, so the genuinely dangerous conversions stop hiding behind `(uint32_t)`

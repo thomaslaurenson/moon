@@ -30,9 +30,9 @@ See cpp/testing.md for why the label rather than `-R`, and why the skip code mat
 
 ## Subprocess helper
 
-Every project that has functional tests includes a cross-platform subprocess helper: `test/subprocess_helper.h` and `test/subprocess_helper.cpp`. This helper is not written from scratch each time; copy it from an existing project that already uses this pattern.
+Functional tests have to start a process and capture what it did, and the standard library gives you no way to do that. The layer therefore rests on a small helper, `test/subprocess_helper.h` and `test/subprocess_helper.cpp`.
 
-The helper exposes a `run()` function that returns a `RunResult` containing `stdout_output`, `stderr_output`, `returncode`, and `timed_out`. A `RunOptions` struct controls optional stdin input and working directory.
+**The interface is fixed; the implementation is not.** Every test in the layer is written against `run()`, so that shape is the rule: it takes a binary path and an argument list, and returns a `RunResult` carrying `stdout_output`, `stderr_output`, `returncode` and `timed_out`, with a `RunOptions` for optional stdin input and a working directory. How those are obtained is a project's own business. These projects build the helper on `subprocess.h` (below), which is the part that handles the platform differences; anything presenting the same interface serves equally well.
 
 Usage in a functional test:
 

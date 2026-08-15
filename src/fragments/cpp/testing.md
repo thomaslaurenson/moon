@@ -20,7 +20,13 @@ Deciding where a test goes:
 - Needs argv, an exit code, or something on stdout: **functional**.
 - Feeds arbitrary bytes to a parser looking for a crash: **fuzz**.
 
-Which layers a project has follows from its tier. A library has unit, integration and fuzz, and cannot have functional, having no binary to spawn. An application and a lib-cli have unit and functional, and add integration and fuzz where they apply. See the tier fragment.
+Which layers a project has follows partly from its tier and partly from what it does, and only one of the four is universal.
+
+- **unit** is always present, in every tier.
+- **functional** needs a binary to spawn, so the tiers that ship one always have it and a library cannot.
+- **integration** and **fuzz** are earned, not assigned. Integration where the project has real inputs it cannot construct; fuzz where it parses input it did not create.
+
+A library that computes rather than parses, and needs no input it cannot build itself, has a unit layer and nothing else. That is a complete test suite for it, not a gap: a fuzz harness over code that never sees untrusted bytes has nothing to find, and an integration layer with no real data to point at is a directory of skips. See the tier fragment.
 
 ## Structure
 

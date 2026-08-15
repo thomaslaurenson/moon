@@ -2,7 +2,7 @@
 # under include/) plus a thin app/ binary that links it. Combines the library tier's API
 # split with the application tier's release machinery: because it ships a distributable
 # binary it keeps the functional test layer, the Docker release matrix and workflows-app,
-# which cpp-lib does not have. All three test layers apply. Use cpp-lib when there is no
+# which cpp-lib does not have. All four test layers can apply. Use cpp-lib when there is no
 # binary to ship, cpp-app when there is no reusable library behind a public API.
 @include cpp-lib-cli-code
 cpp/cmake.md

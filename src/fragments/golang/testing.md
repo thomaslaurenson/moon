@@ -33,16 +33,6 @@ func TestNormalisePath(t *testing.T) {
 - Use `httptest.NewServer`/`NewTLSServer` for HTTP tests; no external network calls.
 - Build a fresh instance per test with the package's constructor. A package that instead shares one instance forces tests to reset it between runs, which makes them order-dependent and rules out `t.Parallel()`; the fix is the constructor, not a `ResetForTesting()` helper to wipe the shared copy (see the style fragment).
 
-Add `Example` functions in `<file>_test.go`, or a dedicated `example_test.go`, for anything whose use is easier to show than to describe. They compile, run as part of `go test`, and are rendered in the generated documentation, so unlike a code block in a comment they cannot fall out of date without failing:
-
-```go
-func ExampleParseConfig() {
-    cfg, _ := ParseConfig(strings.NewReader("name: my-app"))
-    fmt.Println(cfg.Name)
-    // Output: my-app
-}
-```
-
 ## Test inputs and golden files
 
 Prefer inputs the test builds and throws away. A file constructed a few lines above the assertion is visible to the reader, cannot go stale, and cannot be broken by an edit somewhere else in the tree.

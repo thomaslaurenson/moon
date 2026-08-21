@@ -29,7 +29,7 @@ func TestNormalisePath(t *testing.T) {
 - Mark helper functions that call `t.Fatal`/`t.Error` with `t.Helper()` so failures point to the call site.
 - Use `t.TempDir()` for filesystem isolation. It is per-test, parallel-safe, and cleans up automatically.
 - `t.Setenv()` and `t.Chdir()` mutate process-wide state, so Go panics when the test, or any ancestor of it, is parallel. A test calling either one omits `t.Parallel()`, and so does its parent when the subtests call them. Prefer removing the need entirely: read the environment in `cmd/` and pass values down (see the style fragment), so `internal/` tests stay parallel.
-- Assert errors with `errors.Is()` (sentinels) and `errors.As()` (typed), never string matching.
+- Assert errors with `errors.Is()` (sentinels) and `errors.As()` (typed), never string matching; see the errors fragment for how they are constructed.
 - Use `httptest.NewServer`/`NewTLSServer` for HTTP tests; no external network calls.
 - Build a fresh instance per test with the package's constructor. A package that instead shares one instance forces tests to reset it between runs, which makes them order-dependent and rules out `t.Parallel()`; the fix is the constructor, not a `ResetForTesting()` helper to wipe the shared copy (see the style fragment).
 

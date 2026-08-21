@@ -5,6 +5,7 @@ Go-specific style. Assumes the core conventions.
 ## Doc comments
 
 - Every package has a package comment immediately before `package`, starting `// Package <name>` followed by a summary sentence.
+- A `package main` starts `// Command <binary>` instead. It documents a program to run rather than a package to import, and `// Package main` names something nobody can import.
 - Exported functions, methods, and types have a doc comment starting with the identifier name, as a complete sentence on a single opening line. Add a blank comment line before further paragraphs.
 - Unexported functions do not require doc comments; add one when the purpose is not obvious.
 - For interfaces, describe what the type represents rather than listing its methods.
@@ -15,6 +16,11 @@ package parser
 
 // ParseConfig reads a configuration file from path and returns a Config.
 func ParseConfig(path string) (*Config, error) {
+```
+
+```go
+// Command mytool converts configuration files between formats.
+package main
 ```
 
 ## Naming

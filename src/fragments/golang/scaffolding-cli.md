@@ -51,5 +51,6 @@ Follow the shared Makefile conventions. Standard targets:
 - `get_changelog`: extract release notes for a tag from `CHANGELOG.md` to stdout (strip the `v` prefix; git tags use `v1.0.0`, CHANGELOG uses `1.0.0`). Fail non-zero when no entry matches, so a release never publishes empty notes.
 - `check`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a plain Go project with nothing embedded.
 - `ci`: `fmt_check mod_check vet test`
+- `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list. A pure library has no release artefacts, so `dist/` and `coverage.out` are the whole of it.
 
 Tests always include `-race -count=1`, including coverage. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.

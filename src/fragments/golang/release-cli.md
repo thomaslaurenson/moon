@@ -41,6 +41,19 @@ Three-step release pattern: goreleaser builds binaries (`args: build --clean`, d
 
 The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It installs its own Go from its `go.mod`, independently of the `actions/setup-go` this workflow already runs for goreleaser.
 
+## Release artefacts
+
+goreleaser writes binaries into `dist/`. gpipe writes four more files into the repository root, and these are the complete set a release publishes alongside the binaries:
+
+| File | Written by |
+|---|---|
+| `install.sh` | gpipe |
+| `install.ps1` | gpipe |
+| `checksums.txt` | gpipe |
+| `checksums.txt.sigstore.json` | gpipe, only with `cosign_sign: true` |
+
+All five paths are build output, so every one belongs in the `clean` target. The signing bundle is the one most often missed, because it only appears once signing is switched on and its name does not match a `checksums.txt` entry. List the files rather than reaching for a `checksums.txt*` glob: a glob quietly widens as gpipe gains outputs, and `clean` should only ever remove what this project can rebuild.
+
 ## Prerelease process
 
 The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums, or cosign signing (those are release-only, via `gpipe`). `id-token: write` is not needed for `prerelease.yml`, only `contents: write`.

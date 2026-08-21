@@ -80,5 +80,5 @@ ci: fmt_check mod_check vet test check ## Run all CI checks
 
 .PHONY: clean
 clean: ## Remove the binary and generated bundles
-	@rm -rf dist coverage.out
+	@rm -rf dist install.sh install.ps1 checksums.txt checksums.txt.sigstore.json coverage.out
 	@printf '[*] cleaned\n'

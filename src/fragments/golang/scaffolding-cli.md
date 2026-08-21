@@ -23,16 +23,35 @@ README.md
 
 ## Cobra
 
-The root command (`cmd/root.go`) sets `SilenceErrors` and `SilenceUsage` (the entry point handles error output) and `Version`:
+The root command is built by a constructor in `cmd/root.go`, never a package-level variable configured by `init()` (see the style fragment). The constructor takes the dependencies the command tree needs, which is what lets a test supply its own writers and a fake filesystem:
 
 ```go
-var rootCmd = &cobra.Command{
-    Use:           "<binary>",
-    SilenceErrors: true,
-    SilenceUsage:  true,
-    Version:       Version,
+// App holds the dependencies shared by every subcommand.
+type App struct {
+    e *engine.Engine
+}
+
+// NewRootCmd builds the command tree, writing output to out and errw.
+func NewRootCmd(fsys fs.FS, out, errw io.Writer) *cobra.Command {
+    a := &App{e: engine.New(fsys)}
+
+    root := &cobra.Command{
+        Use:           "<binary>",
+        SilenceErrors: true,
+        SilenceUsage:  true,
+        Version:       Version,
+    }
+    root.SetOut(out)
+    root.SetErr(errw)
+
+    root.AddCommand(a.newShowCmd())
+    return root
 }
 ```
+
+`SilenceErrors` and `SilenceUsage` are both set because the entry point owns error output (see the errors fragment). `SetOut` and `SetErr` are what make `cmd.OutOrStdout()` work inside subcommands, so nothing has to reach for the `os` globals (see the logging fragment).
+
+Subcommands are constructors too, as methods on `App` where they need shared dependencies and plain functions where they do not. Flags are registered inside the constructor, bound to a field or a local, never to a package-level variable.
 
 Every CLI includes a `version` subcommand in `cmd/version.go`. `Version` is declared there with a `"dev"` fallback and injected at build time via ldflags; this is the canonical location, never `internal/`. The ldflags path must match: `-X <module>/cmd.Version={{.Version}}`. If the root uses `PersistentPreRunE`, override it on the version command so `version` never triggers that logic.
 

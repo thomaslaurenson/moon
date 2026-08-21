@@ -38,6 +38,7 @@ package main
 - Assert satisfaction at compile time when a type exists to satisfy an interface: `var _ Scanner = (*fileScanner)(nil)`. It costs nothing at runtime and turns a mismatch into a build error at the point of definition.
 - Make the zero value useful where you can, so `var buf bytes.Buffer` works without a constructor. Where it cannot be, give the type a `New` function and keep the zero value obviously unusable rather than subtly wrong.
 - Write `any`, never `interface{}`.
+- Generics are for code whose implementation is identical across types; where behaviour varies, use an interface. Do not write a type parameter until you have written the same function twice with matching bodies. For slice and map helpers, use the stdlib `slices` and `maps` packages rather than writing your own.
 
 ## Control flow
 

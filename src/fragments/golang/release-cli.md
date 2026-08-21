@@ -1,6 +1,6 @@
 # Go CLI release process
 
-How a CLI project builds and publishes release binaries. Applies only to projects that ship a compiled binary; a pure library has no equivalent (see the library scaffolding fragment).
+How a CLI project builds and publishes release binaries. Applies to every Go project in these specs, since all of them ship a compiled binary.
 
 ## GoReleaser config
 

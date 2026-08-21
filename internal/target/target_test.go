@@ -15,7 +15,7 @@ func TestGlobForBundle(t *testing.T) {
 		{"python-lib-code", "**/*.py"},
 		{"python-lib", "**"},
 		{"go-cli", "**"},
-		{"go-lib-code", "**/*.go"},
+		{"go-cli-code", "**/*.go"},
 		{"cpp-app", "**"},
 		{"cpp-app-code", "**/*.{cpp,cc,h,hpp}"},
 		{"bash-script", "**/*.sh"},

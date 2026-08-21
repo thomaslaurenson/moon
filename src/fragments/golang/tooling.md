@@ -2,6 +2,10 @@
 
 No third-party linters or formatters. Do not use `golangci-lint` under any circumstances. `gofmt` and `go vet` are the standard toolchain, and a single-author project of this size gains nothing from a second opinion on style that it then has to configure and silence.
 
+This is a rule about tooling, not about dependencies. Ordinary libraries are fine, starting with cobra for the command tree. What is banned is narrow, and each case is named in the fragment that owns it: linters and formatters here, test frameworks in the testing fragment, logging packages in the logging fragment. Every one of them replaces something the standard library or the standard toolchain already does well enough.
+
+Treat `golang.org/x/*` as standard library for this purpose. Those modules are maintained by the Go team and are where capabilities that do not belong in the standard library proper live: `x/term` to ask whether a stream is a terminal, `x/sync` for goroutine coordination, `x/vuln` for the scan below.
+
 | Tool | Purpose |
 |---|---|
 | `gofmt` | Format source files |
@@ -41,7 +45,7 @@ Dependabot does not bump the `go` directive; it updates module requirements only
 
 ## Vulnerability scanning
 
-`govulncheck` is the one permitted exception to the no-third-party rule. It is maintained by the Go team, has no configuration, and answers a question no other tool here can.
+`govulncheck` is the one permitted addition to the toolchain table above. It is maintained by the Go team, has no configuration, and answers a question no other tool here can.
 
 Dependabot covers dependencies and cannot see the standard library, since the toolchain is not a go.mod requirement. On a project with a handful of dependencies the standard library is most of the attack surface, so the small dependency count argues for the scan rather than against it.
 

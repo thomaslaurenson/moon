@@ -2,6 +2,7 @@
 @include go-cli-code
 golang/tooling.md
 golang/testing.md
+golang/testing-integration.md
 tools/makefile.md
 golang/make.md
 golang/scaffolding-cli.md

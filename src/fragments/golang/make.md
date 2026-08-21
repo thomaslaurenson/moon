@@ -5,9 +5,10 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `fmt`: `gofmt -w .`
 - `fmt_check`: capture `gofmt -l .` and fail if non-empty (`out="$(gofmt -l .)"; test -z "$out"`). Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and always exits 0, so that form can never fail.
 - `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
-- `vet`: `go vet ./...`
-- `test`: `go test -race -count=1 ./...`
-- `test_coverage`: run `go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
+- `vet`: `go vet ./...` followed by `go vet -tags=integration ./...`. The second run is what compiles the integration files; without it a tagged test can stop building and nothing notices (see the integration testing fragment).
+- `test`: `go test -race -count=1 ./...`. Build-tagged integration tests are excluded automatically.
+- `test_integration`: `go test -race -count=1 -tags=integration ./...`. Never run in CI.
+- `test_coverage`: run `go test -race -count=1 -tags=integration -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
 - `build`: `go build -ldflags="-s -w -X <module>/cmd.Version=$(VERSION)" -o dist/<binary> .`
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `check`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a project with nothing embedded.
@@ -15,7 +16,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `ci`: `fmt_check mod_check vet test`
 - `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list.
 
-Tests always include `-race -count=1`, including coverage. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.
+Tests always include `-race -count=1`, including coverage. Coverage runs with `-tags=integration` so the figure covers everything the project can exercise, which means it depends on the machine having the resources those tests need; see the integration testing fragment. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.
 
 ## get_changelog
 

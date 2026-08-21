@@ -24,11 +24,20 @@ Embedded content needs a `check` target in the Makefile. The compiler proves onl
 
 ## The go directive
 
-CI installs the version named by the `go` directive, exactly, patch included, because the workflows pass `go-version-file: go.mod` (see the workflows fragment). The published binary therefore carries that release's standard library.
+The workflows pass `go-version-file: go.mod` (see the workflows fragment), so the `go` directive decides which toolchain builds the release, and therefore which standard library the published binary carries. The form of the directive decides whether security patches reach users on their own:
 
-Locally Go treats the directive as a minimum and a newer installed toolchain wins, so a developer never sees the pin. Only the released artifact is pinned, and `go version -m <binary>` is what reveals it.
+| Directive | CI installs | Standard library patches |
+|---|---|---|
+| `go 1.27` | the newest 1.27.x available | arrive automatically |
+| `go 1.27.0` | exactly 1.27.0 | frozen until the line is edited |
 
-Dependabot does not bump the `go` directive; it updates module requirements only. Keep the directive at the current stable patch release and bump it deliberately, because a standard library fix reaches users only when that line changes.
+**Write the minor-only form.** A patch release of Go is security and bug fixes for the same language version, and pinning one holds a signed public binary on a standard library that is known to be superseded. Verify with `go version -m <binary>` against a published artifact rather than assuming; the directive alone does not tell you what shipped.
+
+The trade-off is that rebuilding an old tag later may use a newer toolchain and produce a different binary. That is the right way round: a rebuild should pick up the fixes.
+
+Locally the directive is only a minimum, and a newer installed toolchain always wins. A developer therefore never sees the pin, and the released artifact is the only place it takes effect.
+
+Dependabot does not bump the `go` directive; it updates module requirements only. Raise the minor version deliberately when moving to a new Go release.
 
 ## Vulnerability scanning
 

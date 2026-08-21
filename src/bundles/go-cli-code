@@ -1,3 +1,4 @@
 # Go - code-authoring rules. Point an agent here when writing or reviewing Go code.
 _core.md
 golang/style.md
+golang/errors.md

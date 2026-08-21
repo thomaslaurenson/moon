@@ -41,6 +41,10 @@ mod_check: ## Fail if go.mod/go.sum are not tidy
 vet: ## Run go vet
 	@go vet ./...
 
+.PHONY: vuln
+vuln: ## Scan for known vulnerabilities reachable from this code
+	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
 # TEST
 .PHONY: test
 test: ## Run tests with the race detector

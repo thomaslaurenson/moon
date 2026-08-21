@@ -40,12 +40,11 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   vuln:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@vN
       - uses: actions/setup-go@vN

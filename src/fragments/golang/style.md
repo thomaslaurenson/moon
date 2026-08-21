@@ -31,11 +31,6 @@ package main
 - Acronyms are consistent case, all upper or all lower: `userID`, `parseURL`, `HTTPClient` (exported), `httpClient` (unexported). Never `userId` or `HttpClient`.
 - Single-method interfaces take an `-er` suffix (`Reader`, `Closer`).
 
-## Errors
-
-- Sentinel error variables are prefixed `Err`: `var ErrNotFound = errors.New("not found")`.
-- Custom error types end in `Error` and implement `Error() string`.
-
 ## Environment and process state
 
 Read environment variables once at the wiring boundary in `cmd/`, and pass the values down as parameters. Packages under `internal/` take what they need as arguments and never call `os.Getenv` themselves. Treat the working directory the same way: resolve paths in `cmd/` rather than calling `os.Chdir`.

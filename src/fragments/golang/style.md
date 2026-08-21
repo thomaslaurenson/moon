@@ -76,6 +76,8 @@ func init() {
 
 Package-level variables that are never written to are fine: a lookup table, a compiled regular expression, a sentinel error, an `embed.FS`. The rule is about mutable state, not about the keyword.
 
+The one sanctioned `init()` is the version stamp in `cmd/version.go`, where the value has to be settled before any command runs and every alternative silently discards what the linker wrote (see the scaffolding fragment). It qualifies because it derives a single fact from the binary itself, not from configuration a test would want to vary.
+
 Cobra's own generator emits the `init()` form, so it is common in examples. It predates the practice of injecting writers and contexts, and cannot support either.
 
 

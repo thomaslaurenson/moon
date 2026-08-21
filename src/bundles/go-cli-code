@@ -3,3 +3,4 @@ _core.md
 golang/style.md
 golang/errors.md
 golang/context.md
+golang/logging.md

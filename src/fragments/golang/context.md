@@ -21,7 +21,8 @@ func main() {
     ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
     defer stop()
 
-    if err := cmd.ExecuteContext(ctx); err != nil {
+    root := cmd.NewRootCmd(os.Stdout, os.Stderr)
+    if err := root.ExecuteContext(ctx); err != nil {
         // see the errors fragment for the rest of this block
     }
 }
@@ -118,7 +119,7 @@ Ask the context, not the returned error. A cancelled operation usually reports i
 The check belongs in `main`, because that is where the cancellable context was created, and it comes before the other exit-code decisions (see the errors fragment):
 
 ```go
-if err := cmd.ExecuteContext(ctx); err != nil {
+if err := root.ExecuteContext(ctx); err != nil {
     if errors.Is(ctx.Err(), context.Canceled) {
         os.Exit(130)
     }

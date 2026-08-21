@@ -63,11 +63,12 @@ Recover only at a goroutine boundary you own, and only to turn a panic into an e
 
 ## The top-level error path
 
-The root command sets `SilenceErrors` and `SilenceUsage` (see the scaffolding fragment), so cobra prints nothing and `main` owns all error output. Every CLI ends the same way:
+The root command sets `SilenceErrors` and `SilenceUsage` (see the scaffolding fragment), so cobra prints nothing and `main` owns all error output. `main` builds the command tree, runs it, and turns whatever comes back into an exit code:
 
 ```go
 func main() {
-    if err := cmd.Execute(); err != nil {
+    root := cmd.NewRootCmd(os.Stdout, os.Stderr)
+    if err := root.Execute(); err != nil {
         var ec *cmd.ExitCodeError
         if errors.As(err, &ec) {
             os.Exit(ec.Code)
@@ -78,6 +79,10 @@ func main() {
 }
 ```
 
+A command that needs a context adds signal handling above this and calls `ExecuteContext`; see the contexts fragment. The error handling is the same either way.
+
+- `main` builds the tree through `NewRootCmd` rather than a package-level `Execute` wrapper, so production and tests construct it exactly one way (see the scaffolding and functional testing fragments). A wrapper that only forwards its arguments is a second construction path that can drift from the one the tests use.
+- `main` imports `cmd` and the standard library, nothing else. A sentinel it has to match on, such as one meaning the user backed out of a prompt, is exported from `cmd` rather than reached for in `internal/`.
 - The prefix is the binary name, never `error:`. It tells someone reading a wall of shell output which program spoke.
 - Exit 1 for every ordinary failure.
 - `ExitCodeError` covers the cases where 1 is the wrong code: propagating a wrapped process's exit status, or signalling findings from a scan. Its `Error()` returns the empty string, so a command that has already written its own output returns `&ExitCodeError{Code: 1}` and exits non-zero without a second message.

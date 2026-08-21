@@ -51,6 +51,8 @@ func NewRootCmd(fsys fs.FS, out, errw io.Writer) *cobra.Command {
 
 `SilenceErrors` and `SilenceUsage` are both set because the entry point owns error output (see the errors fragment). `SetOut` and `SetErr` are what make `cmd.OutOrStdout()` work inside subcommands, so nothing has to reach for the `os` globals (see the logging fragment).
 
+`main` calls `NewRootCmd` directly and executes the result; there is no package-level `Execute` wrapper. The parameters are whatever the tree actually needs, and the writers are always among them: a tool with no embedded assets drops `fsys` and takes `(out, errw io.Writer)` alone. This is the same constructor the functional tests call, which is the point of it (see the errors and functional testing fragments).
+
 Subcommands are constructors too, as methods on `App` where they need shared dependencies and plain functions where they do not. Flags are registered inside the constructor, bound to a field or a local, never to a package-level variable.
 
 Every CLI includes a `version` subcommand in `cmd/version.go`. `Version` is declared there with a `"dev"` fallback and injected at build time via ldflags; this is the canonical location, never `internal/`. The ldflags path must match: `-X <module>/cmd.Version={{.Version}}`. If the root uses `PersistentPreRunE`, override it on the version command so `version` never triggers that logic.

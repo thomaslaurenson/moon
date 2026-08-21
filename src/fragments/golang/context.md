@@ -41,7 +41,7 @@ func main() {
 Prefer handing the context to something that already understands it over checking it by hand:
 
 ```go
-cmd := exec.CommandContext(ctx, "sh", "-c", script)
+c := exec.CommandContext(ctx, "sh", "-c", script)
 req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 ```
 
@@ -70,6 +70,8 @@ Always `defer cancel()`. Skipping it leaks the timer until the parent context is
 Every goroutine a command starts takes the context and has a defined way to exit. Fire-and-forget is the failure mode: the process ends while the goroutine is mid-write, and nothing waits for it or reports what it was doing.
 
 ```go
+errs := make(chan error, len(targets))
+
 var wg sync.WaitGroup
 for _, t := range targets {
     wg.Add(1)
@@ -81,7 +83,16 @@ for _, t := range targets {
     }()
 }
 wg.Wait()
+close(errs)
+
+var failures []error
+for err := range errs {
+    failures = append(failures, err)
+}
+return errors.Join(failures...)
 ```
+
+The buffer has to hold every send the loop can make. Size it below that, or leave the channel unbuffered with nothing reading, and the first goroutine to fail blocks on the send, `wg.Done` never runs, and `wg.Wait` never returns: the command hangs rather than reporting. Close after `wg.Wait` so the drain terminates, and `errors.Join` returns nil when nothing failed.
 
 A goroutine with no exit path other than the process ending is a leak, whether or not it is reported as one.
 
@@ -100,15 +111,24 @@ Cleanup must be safe to run twice: an interrupt during shutdown is normal, not e
 
 ## Reporting an interrupt
 
-A user who pressed Ctrl-C does not need an error message about it. Do not print `context canceled` as a failure; it is the requested outcome. Exit non-zero without a message, using the shell convention of 128 plus the signal number, so 130 for SIGINT:
+A user who pressed Ctrl-C does not need an error message about it. Do not print `context canceled` as a failure; it is the requested outcome. Exit non-zero without a message, using the shell convention of 128 plus the signal number, so 130 for SIGINT.
+
+Ask the context, not the returned error. A cancelled operation usually reports its own symptom rather than the cancellation: `exec.CommandContext` returns `signal: killed`, and an interrupted read returns whatever it was part-way through. Matching on the error therefore misses the common cases, and the interrupt is reported as a failure with a confusing message. Only the context knows why the work stopped.
+
+The check belongs in `main`, because that is where the cancellable context was created, and it comes before the other exit-code decisions (see the errors fragment):
 
 ```go
-if errors.Is(err, context.Canceled) {
-    return &ExitCodeError{Code: 130}
+if err := cmd.ExecuteContext(ctx); err != nil {
+    if errors.Is(ctx.Err(), context.Canceled) {
+        os.Exit(130)
+    }
+    // ... the remaining exit-code decisions
 }
 ```
 
-A deadline is different. `context.DeadlineExceeded` means the work did not finish in the time allowed, which the user did not ask for and should be told about.
+`signal.NotifyContext` does not report which signal arrived, so 130 covers SIGTERM as well as SIGINT. A command that has to tell them apart keeps a channel-based handler for the distinction (see below).
+
+A deadline is different. `context.DeadlineExceeded` means the work did not finish in the time allowed, which the user did not ask for and should be told about, so it travels up as an ordinary error and `main` prints it. Wrap it where the deadline was set, so the message names the operation that ran out of time instead of reporting a bare `context deadline exceeded`.
 
 ## Signals beyond shutdown
 

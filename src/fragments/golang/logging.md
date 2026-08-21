@@ -11,6 +11,17 @@ The test is simple. Redirect stdout to a file and the file should contain the an
 
 A progress indicator belongs on stderr, and should be suppressed when stderr is not a terminal: nobody reads a spinner from a log file.
 
+Whether stderr is a terminal is a fact about the process, so it is settled at the wiring boundary along with every other one (see the style fragment). `cmd/` asks once and hands down a writer that already carries the answer:
+
+```go
+progress := io.Discard
+if term.IsTerminal(int(os.Stderr.Fd())) {
+    progress = cmd.ErrOrStderr()
+}
+```
+
+`internal/` then writes progress to the `io.Writer` it was given without knowing or caring, and a redirected run discards it. Do not push the question downwards by type-asserting the writer back to an `*os.File`: the assertion fails the moment anything wraps the writer, and it puts the decision in the one place that is meant not to know about the process.
+
 ## Writers, not globals
 
 Packages under `internal/` never touch `os.Stdout` or `os.Stderr`. They take an `io.Writer` and write to it, exactly as they take a context and an error path rather than owning the process.
@@ -65,7 +76,7 @@ logger.Debug(fmt.Sprintf("expanded bundle %s with %d fragments", name, n))
 
 Every CLI has a persistent `--debug` flag on the root command.
 
-- Default level is **Warn**. A successful run prints nothing to stderr, which is what makes the tool usable in a script.
+- Default level is **Warn**. A successful run logs nothing, which is what makes the tool usable in a script. A progress indicator is not a log line, and is already suppressed off a terminal, so a scripted run sees neither.
 - `--debug` sets the level to **Debug**.
 
 Two levels are what a user can actually select, so write for two. Anything that is not a warning is Debug: if it were something the user needed in normal operation, it would be part of the answer and belong on stdout.

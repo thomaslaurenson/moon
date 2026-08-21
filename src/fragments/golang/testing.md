@@ -33,6 +33,8 @@ func TestNormalisePath(t *testing.T) {
 - Use `httptest.NewServer`/`NewTLSServer` for HTTP tests; no external network calls.
 - Build a fresh instance per test with the package's constructor. A package that instead shares one instance forces tests to reset it between runs, which makes them order-dependent and rules out `t.Parallel()`; the fix is the constructor, not a `ResetForTesting()` helper to wipe the shared copy (see the style fragment).
 
+No fuzz targets. Fuzzing earns its place against a hand-rolled parser of untrusted input, and these tools delegate parsing to the standard library. Add a `FuzzXxx` when one of them grows a parser of its own.
+
 ## Test inputs and golden files
 
 Prefer inputs the test builds and throws away. A file constructed a few lines above the assertion is visible to the reader, cannot go stale, and cannot be broken by an edit somewhere else in the tree.

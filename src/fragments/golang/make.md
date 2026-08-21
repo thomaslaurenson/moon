@@ -6,6 +6,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `fmt_check`: capture `gofmt -l .` and fail if non-empty (`out="$(gofmt -l .)"; test -z "$out"`). Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and always exits 0, so that form can never fail.
 - `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...` followed by `go vet -tags=integration ./...`. The second run is what compiles the integration files; without it a tagged test can stop building and nothing notices (see the integration testing fragment).
+- `build_check`: `GOOS=windows go build ./...` then `GOOS=darwin go build ./...`. Compiles the platform-specific files that a Linux runner otherwise never sees; see the workflows fragment.
 - `test`: `go test -race -count=1 ./...`. Build-tagged integration tests are excluded automatically.
 - `test_integration`: `go test -race -count=1 -tags=integration ./...`. Never run in CI.
 - `test_coverage`: run `go test -race -count=1 -tags=integration -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.

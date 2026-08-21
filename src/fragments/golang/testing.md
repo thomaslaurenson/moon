@@ -37,10 +37,25 @@ Add `Example` functions in `<file>_test.go`, or a dedicated `example_test.go`, f
 
 ```go
 func ExampleParseConfig() {
-    cfg, _ := ParseConfig("testdata/config.yaml")
+    cfg, _ := ParseConfig(strings.NewReader("name: my-app"))
     fmt.Println(cfg.Name)
     // Output: my-app
 }
 ```
+
+## Test inputs and golden files
+
+Prefer inputs the test builds and throws away. A file constructed a few lines above the assertion is visible to the reader, cannot go stale, and cannot be broken by an edit somewhere else in the tree.
+
+- `fstest.MapFS` for a read-only tree the code only reads.
+- `t.TempDir()` for real files on disk, cleaned up automatically.
+
+Commit an input only when constructing it is not reasonable: a binary blob, a large sample from the real world that you did not author, or a fuzz seed corpus. When that happens the file goes in `testdata/` beside the package that reads it, never in a `fixtures/` or `test/` directory invented per project. The Go toolchain ignores `testdata/`, and tests run with the working directory set to the package, so `os.ReadFile("testdata/sample.bin")` works with no path juggling.
+
+Golden files follow the same rule. If a test compares against a large expected output, that output belongs in `testdata/`, committed and reviewed in the diff, because an unexpected change to it is the test failing. Reserve them for output big enough that inlining it would bury the assertion; a handful of lines stays in the table.
+
+- Regenerate goldens behind an explicit flag: `go test ./... -update`.
+- A test must never write to `testdata/` during an ordinary run. That dirties the working tree and breaks parallel tests. Scratch output goes to `t.TempDir()`; only `-update` writes a golden.
+- Do not create an empty `testdata/`, and do not add a `.gitkeep`. The directory appears when there is a file to put in it, and `go test -fuzz` creates `testdata/fuzz/` itself when it finds a failing input.
 
 Coverage is measured over `./internal/...` only, with `cmd/` and the root package excluded as wiring; see the Makefile targets fragment.

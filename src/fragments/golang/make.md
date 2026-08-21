@@ -11,6 +11,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `build`: `go build -ldflags="-s -w -X <module>/cmd.Version=$(VERSION)" -o dist/<binary> .`
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `check`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a project with nothing embedded.
+- `vuln`: `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`. Deliberately not a prerequisite of `ci`: it needs network access and answers a question that is not about this commit, so it runs on a schedule instead (see the tooling and workflows fragments).
 - `ci`: `fmt_check mod_check vet test`
 - `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list.
 

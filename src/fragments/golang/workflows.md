@@ -27,3 +27,39 @@ Setup (before any `make` call). Always use `go-version-file: go.mod`; never hard
 `@vN` means pin the current major of the action at authoring time (for example `@v6`); Dependabot keeps the pin current from there. Do not copy a version number from this document as the target to match.
 
 `lint.yml` runs `make fmt_check`, `make mod_check`, `make vet`. `test.yml` runs `make test`. Neither needs `fetch-depth: 0`.
+
+## vuln.yml
+
+A fourth workflow, scheduled rather than triggered by a change, runs `make vuln`. It is the exception to the reusable-workflow split: it has exactly one caller, so separating body from caller would add a file and no reuse.
+
+```yaml
+name: Vuln
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vuln:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@vN
+      - uses: actions/setup-go@vN
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: make vuln
+```
+
+No `paths:` filter and no concurrency group: it is not responding to a change, and a vulnerability disclosed against unchanged code is the case it exists to catch.
+
+`go-version-file: go.mod` matters here for the same reason it does in the release workflow. The scan must run against the standard library the release is built with, not whatever is newest.
+
+Keep `workflow_dispatch` so the scan can be run by hand after bumping the `go` directive, without waiting for the next Monday.
+
+GitHub disables scheduled workflows after 60 days without repository activity, so a dormant project stops scanning silently. Re-enable it from the Actions tab, or run it by hand, when returning to one.
+

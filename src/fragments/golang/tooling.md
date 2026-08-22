@@ -24,7 +24,7 @@ A binary that needs data files at runtime embeds them with `//go:embed` rather t
 - Expose a subdirectory with `fs.Sub` so callers use paths relative to it rather than repeating the embedded prefix at every call site.
 - Add every embedded tree to the CI paths filter. A change under one is a change to the compiled binary; see the workflows fragment.
 
-Embedded content needs a `check` target in the Makefile. The compiler proves only that the files exist, never that their contents are valid, so nothing otherwise stops a broken asset being compiled in and failing at runtime. What the target runs is project-specific: validating an embedded document graph, or linting embedded shell and PowerShell templates with the tooling for those languages. A project that embeds nothing omits the target.
+Embedded content needs a `check_embed` target in the Makefile. The compiler proves only that the files exist, never that their contents are valid, so nothing otherwise stops a broken asset being compiled in and failing at runtime. What the target runs is project-specific: validating an embedded document graph, or linting embedded shell and PowerShell templates with the tooling for those languages. A project that embeds nothing omits the target.
 
 ## The go directive
 

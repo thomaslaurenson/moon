@@ -2,19 +2,20 @@
 
 Targets common to every Go project (see the Makefile conventions fragment for structure).
 
-- `fmt`: `gofmt -w .`
-- `fmt_check`: capture `gofmt -l .` and fail if non-empty: `out="$$(gofmt -l .)"; test -z "$$out"`. Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and exits 0 whatever it finds, so that form can never fail.
-- `mod_check`: `go mod tidy && git diff --exit-code go.mod go.sum`
+- `format`: `gofmt -w .`
+- `check_format`: capture `gofmt -l .` and fail if non-empty: `out="$$(gofmt -l .)"; test -z "$$out"`. Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and exits 0 whatever it finds, so that form can never fail.
+- `check_mod`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...` followed by `go vet -tags=integration ./...`. The second run is what compiles the integration files; without it a tagged test can stop building and nothing notices (see the integration testing fragment).
-- `build_check`: `GOOS=windows go build ./...` then `GOOS=darwin go build ./...`. Compiles the platform-specific files that a Linux runner otherwise never sees; see the workflows fragment.
+- `check_build`: `GOOS=windows go build ./...` then `GOOS=darwin go build ./...`. Compiles the platform-specific files that a Linux runner otherwise never sees; see the workflows fragment.
 - `test`: `go test -race -count=1 ./...`. Build-tagged integration tests are excluded automatically.
 - `test_integration`: `go test -race -count=1 -tags=integration ./...`. Never run in CI.
 - `test_coverage`: run `go test -race -count=1 -tags=integration -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
 - `build`: `go build -ldflags="-s -w -X <module>/cmd.Version=$(VERSION)" -o dist/<binary> .`
 - `snapshot`: `goreleaser release --snapshot --clean`
-- `check`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a project with nothing embedded.
+- `check_embed`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a project with nothing embedded.
 - `vuln`: `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`. Deliberately not a prerequisite of `ci`: it needs network access and answers a question that is not about this commit, so it runs on a schedule instead (see the tooling and workflows fragments).
-- `ci`: `fmt_check mod_check vet test`
+- `check_all`: `check_format check_mod vet check_build`, plus `check_embed` where the project embeds anything. This is the only place the static checks are listed. `lint.yml` calls it and `ci` composes it, so there is no second copy to fall out of step.
+- `ci`: `check_all test`
 - `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list.
 
 Tests always include `-race -count=1`, including coverage. Coverage runs with `-tags=integration` so the figure covers everything the project can exercise, which means it depends on the machine having the resources those tests need; see the integration testing fragment. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.

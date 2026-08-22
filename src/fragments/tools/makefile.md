@@ -5,7 +5,8 @@ Language-agnostic Makefile conventions. Language-specific targets live in the re
 - `make` is a task runner, not a build system (unless the project has no better option).
 - Every target is a verb (`build`, `test`, `lint`), never a noun.
 - CI steps call `make <target>`, never raw commands.
-- Target names use underscores: `fmt_check`, `test_coverage`.
+- Target names use underscores: `check_format`, `test_coverage`.
+- Related targets share a prefix, so tab completion lists the family: `check_format`, `check_mod`, `check_build`; `get_changelog`, `get_version`. A family prefix is never also a bare target, since completing it would stop at the bare one instead of offering the family. `test` is the one deliberate exception, because `make test` is a convention across every ecosystem and worth more than the ambiguity.
 - Keep lines to 100 characters.
 
 Non-negotiable:
@@ -29,5 +30,5 @@ help: ## Show this help message
 - Declare variables in `UPPER_SNAKE_CASE` at the top, `:=` by default, `?=` only for command-line overrides.
 - A shell expansion in a recipe needs `$$`: make consumes a single `$` before the shell ever sees it. `out="$$(cmd)"; test -z "$$out"` is a shell command substitution; `out="$(cmd)"` is make expanding a variable or function named `cmd`, which yields the empty string and a test that no longer means anything. A `$` intended for make, such as `$(MAKEFILE_LIST)` or a `$(VERSION)` declared at the top, stays single.
 - Use a comment separator before each logical group (`# BUILD`, `# LINT`, `# TEST`, `# GET`). Omit empty sections.
-- Include a `ci` target naming the checks the lint and test workflows run, and a `clean` target after it. The language fragment defines both, since their recipes are language-specific. `ci` is prerequisites only: it exists so a developer can run the same checks in one command before pushing, and it reproduces the checks rather than any matrix CI runs them under.
+- Include a `ci` target so a developer can run everything CI runs in one command before pushing, and a `clean` target after it. The language fragment defines both, since their recipes are language-specific. `ci` is prerequisites only, and it composes the same aggregate targets the workflows call rather than restating their contents, so the two cannot drift. It reproduces the checks rather than any matrix CI runs them under.
 - All version and changelog extraction goes through `# GET` targets (`get_changelog`, `get_version`), so workflows never embed raw bash or awk.

@@ -26,11 +26,11 @@ Setup (before any `make` call). Always use `go-version-file: go.mod`; never hard
 
 `@vN` means pin the current major of the action at authoring time (for example `@v6`); Dependabot keeps the pin current from there. Do not copy a version number from this document as the target to match.
 
-`lint.yml` runs `make fmt_check`, `make mod_check`, `make vet`, `make build_check`. `test.yml` runs `make test`. Neither needs `fetch-depth: 0`.
+`lint.yml` runs `make check_all`. `test.yml` runs `make test`. Calling the aggregate rather than listing its members is what keeps the workflow and the `ci` target from drifting apart. Neither needs `fetch-depth: 0`.
 
 ## Cross-platform coverage
 
-CI runs on `ubuntu-24.04` only, while releases ship linux, darwin, and windows binaries. `make build_check` closes the gap that matters: it cross-compiles for windows and darwin on the Linux runner, so a file behind `//go:build windows` cannot stop compiling without CI noticing. Platform-specific source is where this bites, since a Linux-only build never looks at it.
+CI runs on `ubuntu-24.04` only, while releases ship linux, darwin, and windows binaries. `make check_build` closes the gap that matters: it cross-compiles for windows and darwin on the Linux runner, so a file behind `//go:build windows` cannot stop compiling without CI noticing. Platform-specific source is where this bites, since a Linux-only build never looks at it.
 
 Tests themselves stay on Linux. A macOS or Windows leg would run the same unit tests against the same pure logic, and anything genuinely platform-dependent (mounting, ssh, subprocess behaviour) is integration-tagged and excluded from CI regardless. The leg would cost queue time and catch almost nothing.
 

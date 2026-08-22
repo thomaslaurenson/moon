@@ -6,7 +6,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `check_format`: capture `gofmt -l .` and fail if non-empty: `out="$$(gofmt -l .)"; test -z "$$out"`. Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and exits 0 whatever it finds, so that form can never fail.
 - `check_mod`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...` followed by `go vet -tags=integration ./...`. The second run is what compiles the integration files; without it a tagged test can stop building and nothing notices (see the integration testing fragment).
-- `check_build`: `GOOS=windows go build ./...` then `GOOS=darwin go build ./...`. Compiles the platform-specific files that a Linux runner otherwise never sees; see the workflows fragment.
+- `check_cross`: `GOOS=windows go vet ./...` then `GOOS=darwin go vet ./...`. Type-checks the platform-specific files a Linux runner otherwise never sees; see the workflows fragment. Use `go vet` rather than `go build`: `go build` skips test files, so a test behind `//go:build windows` can stop compiling with nothing to report it.
 - `test`: `go test -race -count=1 ./...`. Build-tagged integration tests are excluded automatically.
 - `test_integration`: `go test -race -count=1 -tags=integration ./...`. Never run in CI.
 - `test_coverage`: run `go test -race -count=1 -tags=integration -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
@@ -14,7 +14,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `snapshot`: `goreleaser release --snapshot --clean`
 - `check_embed`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a project with nothing embedded.
 - `vuln`: `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`. Deliberately not a prerequisite of `ci`: it needs network access and answers a question that is not about this commit, so it runs on a schedule instead (see the tooling and workflows fragments).
-- `check_all`: `check_format check_mod vet check_build`, plus `check_embed` where the project embeds anything. This is the only place the static checks are listed. `lint.yml` calls it and `ci` composes it, so there is no second copy to fall out of step.
+- `check_all`: `check_format check_mod vet check_cross`, plus `check_embed` where the project embeds anything. This is the only place the static checks are listed. `lint.yml` calls it and `ci` composes it, so there is no second copy to fall out of step.
 - `ci`: `check_all test`
 - `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list.
 

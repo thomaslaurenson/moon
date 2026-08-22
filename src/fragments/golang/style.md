@@ -24,6 +24,23 @@ func ParseConfig(path string) (*Config, error) {
 package main
 ```
 
+## Imports
+
+Three groups, separated by a blank line and in this order: standard library, external modules, this module.
+
+```go
+import (
+    "errors"
+    "io"
+
+    "github.com/spf13/cobra"
+
+    "github.com/owner/mytool/internal/scanner"
+)
+```
+
+`gofmt` will not do this. It sorts every import into one alphabetical block, so the grouping is invisible to `check_format` and drifts the moment two people edit the same file. `goimports -local <module>` produces the layout above and is what the `format` target runs (see the Makefile targets fragment).
+
 ## Naming
 
 - Exported identifiers use `CamelCase`; unexported use `mixedCase`. Never underscores (except `_test` package suffixes).

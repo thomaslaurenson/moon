@@ -2,8 +2,8 @@
 
 Targets common to every Go project (see the Makefile conventions fragment for structure).
 
-- `format`: `gofmt -w .`
-- `check_format`: capture `gofmt -l .` and fail if non-empty: `out="$$(gofmt -l .)"; test -z "$$out"`. Do not write `gofmt -l . && git diff --exit-code`: `gofmt -l` never changes files and exits 0 whatever it finds, so that form can never fail.
+- `format`: `$(GOIMPORTS) -w .`, where `GOIMPORTS := go run golang.org/x/tools/cmd/goimports@latest -local <module>`. It formats exactly as `gofmt` does and groups imports as well (see the style fragment).
+- `check_format`: capture `$(GOIMPORTS) -l .` and fail if non-empty: `out="$$($(GOIMPORTS) -l .)"; test -z "$$out"`. Do not write `... -l . && git diff --exit-code`: `-l` never changes files and exits 0 whatever it finds, so that form can never fail.
 - `check_mod`: `go mod tidy && git diff --exit-code go.mod go.sum`
 - `vet`: `go vet ./...` followed by `go vet -tags=integration ./...`. The second run is what compiles the integration files; without it a tagged test can stop building and nothing notices (see the integration testing fragment).
 - `check_cross`: `GOOS=windows go vet ./...` then `GOOS=darwin go vet ./...`. Type-checks the platform-specific files a Linux runner otherwise never sees; see the workflows fragment. Use `go vet` rather than `go build`: `go build` skips test files, so a test behind `//go:build windows` can stop compiling with nothing to report it.

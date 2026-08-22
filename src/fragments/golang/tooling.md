@@ -20,7 +20,7 @@ Treat `golang.org/x/*` as standard library for this purpose. Those modules are m
 
 A binary that needs data files at runtime embeds them with `//go:embed` rather than shipping files alongside it. The declaration lives in the package that owns the data, directly above an `embed.FS` variable, and the embedded tree must sit at or below that package's directory.
 
-- Use the `all:` prefix when the tree contains files beginning with `_` or `.`, which the default pattern skips: `//go:embed all:src`. It skips them silently, so the build still succeeds and the file is simply absent at runtime.
+- Use the `all:` prefix when the tree contains files beginning with `_` or `.`, which the default pattern skips: `//go:embed all:templates`. It skips them silently, so the build still succeeds and the file is simply absent at runtime.
 - Expose a subdirectory with `fs.Sub` so callers use paths relative to it rather than repeating the embedded prefix at every call site.
 - Add every embedded tree to the CI paths filter. A change under one is a change to the compiled binary; see the workflows fragment.
 

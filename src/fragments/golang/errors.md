@@ -17,7 +17,7 @@ Packages under `internal/` report failure and stop there. They never decide what
 - Wrap with `%w` when adding context: `fmt.Errorf("read config %q: %w", path, err)`. This keeps `errors.Is` and `errors.As` working for every caller above.
 - Use `%v` only to break the chain deliberately, where the underlying error is an implementation detail no caller should be able to match on. Breaking the chain is a decision, and a rare one.
 - Add a layer only when it adds a fact the caller does not already have. An error you are passing straight back is returned unchanged, not wrapped in a restatement of itself.
-- One wrap per boundary. A path that wraps at every frame produces `bundle: read: open: no such file or directory`, which says the same thing four times.
+- One wrap per boundary. A path that wraps at every frame produces `report: read: open: no such file or directory`, which says the same thing four times.
 
 ## Error strings
 
@@ -27,10 +27,10 @@ Packages under `internal/` report failure and stop there. They never decide what
 
 ```go
 // Good
-fmt.Errorf("parse bundle %q: %w", name, err)
+fmt.Errorf("parse config %q: %w", path, err)
 
 // Bad: capitalised, punctuated, drops the chain, and the prefix carries nothing
-fmt.Errorf("Failed to parse bundle: %v.", err)
+fmt.Errorf("Failed to parse config: %v.", err)
 ```
 
 ## Sentinels and typed errors
@@ -102,7 +102,7 @@ Add the type only once a command returns one. A CLI whose every failure is exit 
 `defer f.Close()` is fine for a file opened for reading: there is no buffered state to lose. Anything written to is different, because `Close` is where a buffered write can still fail, and discarding that error silently truncates output. Capture it with a named return:
 
 ```go
-func writeBundle(path string, b []byte) (err error) {
+func writeReport(path string, b []byte) (err error) {
     f, err := os.Create(path)
     if err != nil {
         return fmt.Errorf("create %q: %w", path, err)

@@ -13,7 +13,7 @@ paths:
   - Makefile
 ```
 
-If the binary embeds non-Go assets (via `go:embed`), add those trees to the filter too. A change under an embedded directory is a change to the compiled binary, so CI must run for it even though no `.go` file changed. For example, a tool that embeds `src/` and `bundles/` adds `"src/**"` and `"bundles/**"`.
+If the binary embeds non-Go assets (via `go:embed`), add those trees to the filter too. A change under an embedded directory is a change to the compiled binary, so CI must run for it even though no `.go` file changed. For example, a tool that embeds `templates/` and `schemas/` adds `"templates/**"` and `"schemas/**"`.
 
 Setup (before any `make` call). Always use `go-version-file: go.mod`; never hardcode a version:
 

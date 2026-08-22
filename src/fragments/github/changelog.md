@@ -39,24 +39,24 @@ One bullet names an area and the class of change in it. A set of similar fixes a
 
 ```markdown
 # Good - one bullet, names the area
-- Fix cmake, SavedVariables, and fmt_check recipe issues across language fragments
+- Fix path handling on Windows across the config loader and the installer
 
 # Bad - one bullet per file, restating the diff
-- Fix the cmake fragment's source paths
-- Fix the SavedVariables fragment's path handling
-- Fix fmt_check in the Python fragment
-- Fix fmt_check in the Go fragment
+- Fix the config loader's path separator
+- Fix the installer's path separator
+- Fix path quoting in the archive extractor
+- Fix path quoting in the checksum reader
 ```
 
 Two changes that a reader would think of as one thing share a bullet, joined by a comma:
 
 ```markdown
-- Adopt PEP 735 dependency groups, expand structlog and CI workflow fragments
+- Add JSON output to the list command, sort its results by name
 ```
 
 ## Leave out
 
-- **Rationale.** Say what changed, not why the old way was wrong. Not "Use PROJECT_SOURCE_DIR over CMAKE_SOURCE_DIR, which resolved to the consumer's root under add_subdirectory and pointed the public include path at the wrong tree", but "Fix variable scope in the cmake fragments".
-- **Mechanism.** The flag, option, or function that implements the change is detail. "Fix skip handling in the testing fragments", not "Set SKIP_RETURN_CODE 4 on every discovered test target".
-- **File paths.** Name the area ("the Python fragments", "the cpp cmake fragments"), not the file (`python/errors.md`). Name a symbol only when the symbol is the thing a user interacts with.
+- **Rationale.** Say what changed, not why the old way was wrong. Not "Resolve the config path against the executable rather than the working directory, which read the wrong file when the tool was run from a subdirectory", but "Fix config lookup from a subdirectory".
+- **Mechanism.** The flag, option, or function that implements the change is detail. "Retry on a dropped connection", not "Set MaxRetries to 3 on the HTTP client".
+- **File paths.** Name the area ("the config loader", "the release workflow"), not the file (`internal/config/load.go`). Name a symbol only when the symbol is the thing a user interacts with.
 - **Anything a user cannot observe.** A refactor with no visible effect gets no entry. If nothing about the project's behaviour, interface, or output changed, the log already records it and the changelog does not need to.

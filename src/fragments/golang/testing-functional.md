@@ -13,11 +13,11 @@ c.Flags().BoolVarP(&long, "long", "l", false, "...")
 c.Flags().BoolVar(&asJSON, "json", false, "...")
 
 RunE: func(cmd *cobra.Command, _ []string) error {
-    return a.bundleList(cmd.OutOrStdout(), long, asJSON)
+    return a.listTargets(cmd.OutOrStdout(), long, asJSON)
 },
 ```
 
-Two adjacent `bool` parameters passed positionally. Swap them and it still compiles, every unit test of `bundleList` still passes because they call it directly, and `--long` starts emitting JSON. Only a test that goes through the command layer can see it.
+Two adjacent `bool` parameters passed positionally. Swap them and it still compiles, every unit test of `listTargets` still passes because they call it directly, and `--long` starts emitting JSON. Only a test that goes through the command layer can see it.
 
 ## Shape
 
@@ -50,12 +50,12 @@ Not every combination of flags. The point is proving each one is connected, not 
 
 ## Asserting
 
-Assert on properties, not exact bytes. "parses as JSON", "has two columns", "mentions the bundle name" all survive a help-text tweak; a full expected string does not, and turns every wording change into a dozen failures.
+Assert on properties, not exact bytes. "parses as JSON", "has two columns", "mentions the target name" all survive a help-text tweak; a full expected string does not, and turns every wording change into a dozen failures.
 
 Errors are returned, not printed. The root sets `SilenceErrors` (see the scaffolding fragment), so a failing command surfaces through the returned `error` and stderr carries only diagnostics. Assert on `err` for failure, and assert stdout is empty: a command that fails halfway and leaves partial output on stdout has broken the contract that stdout is the answer.
 
 ## Placement and coverage
 
-- Files sit in `cmd/`, named for the command they mirror: `cmd/bundle_test.go`, not one file per source file.
+- Files sit in `cmd/`, named for the command they mirror: `cmd/target_test.go`, not one file per source file.
 - They run under `make test` with no build tag and no build step, so they run on every pull request.
 - Coverage still measures `./internal/...` only. `cmd/` stays excluded deliberately: one functional test through a `RunE` covers most of a command file, so counting it would raise the figure without saying anything about how well the logic underneath is tested.

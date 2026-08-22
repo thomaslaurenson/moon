@@ -7,7 +7,7 @@ A CLI writes to two streams and they carry different things. Getting the split w
 - **stdout** carries exactly what the user asked for, and nothing else. It is the tool's return value: it will be piped, redirected to a file, and parsed by something that was not written yet.
 - **stderr** carries everything else. Progress, warnings, debug output, and errors.
 
-The test is simple. Redirect stdout to a file and the file should contain the answer and nothing more. A progress line, a "wrote 3 bundles" note, or a warning landing in that file means the split is wrong.
+The test is simple. Redirect stdout to a file and the file should contain the answer and nothing more. A progress line, a "wrote 3 files" note, or a warning landing in that file means the split is wrong.
 
 A progress indicator belongs on stderr, and should be suppressed when stderr is not a terminal: nobody reads a spinner from a log file.
 
@@ -66,10 +66,10 @@ Pass attributes rather than interpolating them:
 
 ```go
 // Good: the fields stay separate and quoting is handled
-logger.Debug("expanded bundle", slog.String("name", name), slog.Int("fragments", n))
+logger.Debug("scanned target", slog.String("name", name), slog.Int("findings", n))
 
 // Bad
-logger.Debug(fmt.Sprintf("expanded bundle %s with %d fragments", name, n))
+logger.Debug(fmt.Sprintf("scanned target %s with %d findings", name, n))
 ```
 
 ## The debug flag

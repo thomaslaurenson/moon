@@ -22,9 +22,9 @@ A developer without the setup gets a skip, not a failure. Gate on the environmen
 
 ```go
 func TestMountRemote(t *testing.T) {
-    host := os.Getenv("SMOUNT_TEST_HOST")
+    host := os.Getenv("MYTOOL_TEST_HOST")
     if host == "" {
-        t.Skip("SMOUNT_TEST_HOST not set")
+        t.Skip("MYTOOL_TEST_HOST not set")
     }
     ...
 }

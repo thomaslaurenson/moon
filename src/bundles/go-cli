@@ -9,6 +9,7 @@ golang/make.md
 golang/scaffolding-cli.md
 github/actions.md
 golang/workflows.md
+tools/gpipe.md
 golang/release-cli.md
 github/badges.md
 golang/badges.md

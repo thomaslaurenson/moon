@@ -11,7 +11,7 @@ Every project has two configs: `.goreleaser.yml` (versioned releases via `releas
 - Windows on ARM runs x64 binaries under emulation, so the excluded `windows/arm64` build is a performance optimisation rather than a compatibility requirement. A project that ships `install.ps1` may include it: `Get-Platform` reports `windows_arm64`, and if no such asset exists the installer fails outright rather than falling back to the emulated x64 build. Include it in both goreleaser configs and in `.gpipe.yml`, or in neither.
 - Always set `no_unique_dist_dir: true` so binaries land flat in `dist/`.
 - Prefer `CGO_ENABLED=0` and `mod_timestamp` for reproducible static builds.
-- Checksums, install scripts, and signing are handled by `thomaslaurenson/gpipe` (`cosign_sign: true` for signing) via `.gpipe.yml`, not goreleaser.
+- Checksums, install scripts, and signing are gpipe's job, not goreleaser's; see the gpipe fragment.
 
 ```yaml
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
@@ -35,28 +35,19 @@ The prerelease config is identical plus `snapshot.version_template: "{{ incpatch
 
 ## CI wiring
 
-Add `.goreleaser*.yml` and `.gpipe.yml` to the `pr.yml`/`main.yml` paths filter alongside the shared Go entries.
+Add `.goreleaser*.yml` to the `pr.yml`/`main.yml` paths filter alongside the shared Go entries. The gpipe fragment covers `.gpipe.yml`.
 
-Three-step release pattern: goreleaser builds binaries (`args: build --clean`, does not publish), `gpipe` generates install scripts + checksums + cosign bundle, `gh release create` publishes. `fetch-depth: 0` is required in `release.yml`. Always set `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` so goreleaser does not pick up a `-dev` tag at the same commit. `id-token: write` is required on the workflow and its caller for cosign OIDC signing.
+goreleaser is the build step of the three-step release (see the gpipe fragment): `args: build --clean`, which builds and does not publish. Two things are Go-specific here. `fetch-depth: 0` is required in `release.yml`, because goreleaser reads tags. And `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit.
 
-The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It installs its own Go from its `go.mod`, independently of the `actions/setup-go` this workflow already runs for goreleaser.
+The `actions/setup-go` this workflow runs is for goreleaser. gpipe brings its own.
 
 ## Release artefacts
 
-goreleaser writes binaries into `dist/`. gpipe writes four more files into the repository root, and these are the complete set a release publishes alongside the binaries:
-
-| File | Written by |
-|---|---|
-| `install.sh` | gpipe |
-| `install.ps1` | gpipe |
-| `checksums.txt` | gpipe |
-| `checksums.txt.sigstore.json` | gpipe, only with `cosign_sign: true` |
-
-All five paths are build output, so every one belongs in the `clean` target. The signing bundle is the one most often missed, because it only appears once signing is switched on and its name does not match a `checksums.txt` entry. List the files rather than reaching for a `checksums.txt*` glob: a glob quietly widens as gpipe gains outputs, and `clean` should only ever remove what this project can rebuild.
+goreleaser writes the binaries into `dist/`. Everything else a release publishes is written by gpipe into the repository root; the gpipe fragment lists the files and explains why they all belong in `clean`.
 
 ## Prerelease process
 
-The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums, or cosign signing (those are release-only, via `gpipe`). `id-token: write` is not needed for `prerelease.yml`, only `contents: write`.
+The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums or signing, because gpipe cannot run against a `dev` tag at all (see the gpipe fragment). `prerelease.yml` therefore needs `contents: write` and not `id-token: write`.
 
 `dev` is a real git tag that moves. `prerelease.yml` runs four steps in order:
 

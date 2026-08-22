@@ -41,7 +41,20 @@ The trade-off is that rebuilding an old tag later may use a newer toolchain and 
 
 Locally the directive is only a minimum, and a newer installed toolchain always wins. A developer therefore never sees the pin, and the released artifact is the only place it takes effect.
 
-Dependabot does not bump the `go` directive; it updates module requirements only. Raise the minor version deliberately when moving to a new Go release.
+Dependabot does not bump the `go` directive; it updates module requirements only. Raise the minor version deliberately when moving to a new Go release, and raise it with `go mod edit`:
+
+```
+go mod edit -go=1.27      # writes "go 1.27"
+go get go@1.27            # writes "go 1.27.4", the pinned form above
+```
+
+`go get go@<version>` resolves to a concrete patch and writes it out, so the command that looks like the obvious way to bump the directive produces exactly the form this section rules out. The `go mod edit` form survives `go mod tidy` and `go build` unchanged.
+
+## No toolchain directive
+
+Never commit a `toolchain` line. `actions/setup-go` reads it in preference to `go`, so a `toolchain go1.27.0` sitting beside `go 1.27` pins the release to that exact patch while the `go` line still reads correctly, which defeats the rule above without appearing to. It also earns nothing: the `go` directive alone already makes the toolchain download a new enough Go for a contributor running an older one.
+
+It can arrive without anyone choosing it, since `go get toolchain@go1.27.0` adds one, as does `go get` on a dependency needing a newer Go than the current directive. Delete it and raise the `go` directive instead.
 
 ## Vulnerability scanning
 

@@ -69,7 +69,7 @@ jobs:
 
 No `paths:` filter and no concurrency group: it is not responding to a change, and a vulnerability disclosed against unchanged code is the case it exists to catch.
 
-`go-version-file: go.mod` matters here for the same reason it does in the release workflow. The scan must run against the standard library the release is built with, not whatever is newest.
+`go-version-file: go.mod` matters here for the reason the tooling fragment gives: the scan has to run against the standard library the release is built with.
 
 Keep `workflow_dispatch` so the scan can be run by hand after bumping the `go` directive, without waiting for the next Monday.
 

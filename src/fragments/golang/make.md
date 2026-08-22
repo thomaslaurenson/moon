@@ -18,7 +18,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `ci`: `check_all test`
 - `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list.
 
-Tests always include `-race -count=1`, including coverage. Coverage runs with `-tags=integration` so the figure covers everything the project can exercise, which means it depends on the machine having the resources those tests need; see the integration testing fragment. Coverage is measured over `./internal/...` only; `cmd/` and the root package are excluded as wiring-only. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.
+The testing fragments own the rules these recipes implement: `-race -count=1` on every run, coverage over `./internal/...` only, and coverage including `-tags=integration`. One detail belongs here, because it is about reading the output rather than choosing the flags. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.
 
 ## get_changelog
 

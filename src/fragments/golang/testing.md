@@ -50,4 +50,4 @@ Golden files follow the same rule. If a test compares against a large expected o
 - A test must never write to `testdata/` during an ordinary run. That dirties the working tree and breaks parallel tests. Scratch output goes to `t.TempDir()`; only `-update` writes a golden.
 - Do not create an empty `testdata/`, and do not add a `.gitkeep`. The directory appears when there is a file to put in it, and `go test -fuzz` creates `testdata/fuzz/` itself when it finds a failing input.
 
-Coverage is measured over `./internal/...` only, with `cmd/` and the root package excluded as wiring; see the Makefile targets fragment.
+Coverage is measured over `./internal/...` only, with `cmd/` and the root package excluded as wiring. `test_coverage` in the Makefile targets fragment is where that is spelled out as flags.

@@ -85,6 +85,15 @@ A command that needs a context adds signal handling above this and calls `Execut
 - `main` imports `cmd` and the standard library, nothing else. A sentinel it has to match on, such as one meaning the user backed out of a prompt, is exported from `cmd` rather than reached for in `internal/`.
 - The prefix is the binary name, never `error:`. It tells someone reading a wall of shell output which program spoke.
 - Exit 1 for every ordinary failure.
+
+| Code | Meaning |
+|---|---|
+| 0 | success |
+| 1 | any ordinary failure, with a message on stderr |
+| 130 | interrupted, no message (see the contexts fragment) |
+| other | only via `ExitCodeError`, when the command has a specific code to report |
+
+There is no separate code for a usage error. A mistyped invocation is an ordinary failure, and splitting it out would signal to a script that the user typed it wrong without telling the user anything more than exit 1 already does.
 - `ExitCodeError` covers the cases where 1 is the wrong code: propagating a wrapped process's exit status, or signalling findings from a scan. Its `Error()` returns the empty string, so a command that has already written its own output returns `&ExitCodeError{Code: 1}` and exits non-zero without a second message.
 
 ```go

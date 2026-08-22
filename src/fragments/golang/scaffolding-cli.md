@@ -120,6 +120,15 @@ func isReleaseVersion(module string) bool {
 
 This has to be `init()` rather than an initialiser on `Version` itself. The linker writes an `-X` value into the data segment, and a variable with a runtime initialiser has that value overwritten the moment the initialiser runs, with no build error to say so (see the style fragment). Nothing else about versioning changes: the ldflags path, the goreleaser config and the `build` target all keep their current form, and a local build with no ldflags still reports `dev`.
 
+## Flags
+
+- Long names are kebab-case and lowercase: `--dry-run`, `--log-file`, never `--dryRun` or `--DryRun`.
+- Help text is a lowercase fragment with no trailing full stop, matching the `help for <binary>` line cobra generates beside it.
+- A shorthand means one thing across the whole binary. Giving `-l` to `--long` under one subcommand and `--list` under another teaches a user something that then misfires, and the compiler cannot see it because the two are registered on different commands.
+- Add a shorthand only for a flag typed often enough to earn one. Adding it later costs nothing; removing one breaks whoever learned it.
+
+Where a value can come from more than one place, the order is flag, then environment, then config file, then the built-in default. Resolve it in `cmd/`, where the environment is already read (see the style fragment), and pass the settled value down. A package under `internal/` should never be able to tell which layer an argument came from.
+
 ## Shell completion
 
 Cobra adds a `completion` subcommand to every root, generating scripts for bash, zsh, fish and powershell. Keep it. It costs nothing and it is the only way a user can obtain the script.

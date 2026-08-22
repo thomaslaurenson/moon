@@ -37,9 +37,61 @@ The prerelease config is identical plus `snapshot.version_template: "{{ incpatch
 
 Add `.goreleaser*.yml` to the `pr.yml`/`main.yml` paths filter alongside the shared Go entries. The gpipe fragment covers `.gpipe.yml`.
 
-goreleaser is the build step of the three-step release (see the gpipe fragment): `args: build --clean`, which builds and does not publish. Two things are Go-specific here. `fetch-depth: 0` is required in `release.yml`, because goreleaser reads tags. And `GORELEASER_CURRENT_TAG: ${{ github.ref_name }}` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit.
+goreleaser is the build step of the three-step release (see the gpipe fragment): `args: build --clean`, which builds and does not publish.
 
-The `actions/setup-go` this workflow runs is for goreleaser. gpipe brings its own.
+```yaml
+# release.yml
+name: Release
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@vN
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build binaries
+        uses: goreleaser/goreleaser-action@<sha> # v<version>
+        with:
+          version: "~> v2"
+          args: build --clean
+        env:
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
+
+      - uses: thomaslaurenson/gpipe@vN
+        with:
+          cosign_sign: true
+
+      - name: Get changelog
+        run: make get_changelog TAG=${{ github.ref_name }} > /tmp/release-notes.md
+
+      - name: Create release
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            dist/<name>-* \
+            install.sh install.ps1 \
+            checksums.txt checksums.txt.sigstore.json \
+            --title "${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+```
+
+Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action.
+
+The `actions/setup-go` here is for goreleaser. gpipe brings its own.
 
 ## Release artefacts
 
@@ -49,33 +101,71 @@ goreleaser writes the binaries into `dist/`. Everything else a release publishes
 
 The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums or signing, because gpipe cannot run against a `dev` tag at all (see the gpipe fragment). `prerelease.yml` therefore needs `contents: write` and not `id-token: write`.
 
-`dev` is a real git tag that moves. `prerelease.yml` runs four steps in order:
-
-1. Delete any existing `dev` release, existence-checked; see below.
-2. Force the tag to the current commit and push it: `git tag -f dev` then `git push origin dev --force`, after setting a bot `user.name`/`user.email`.
-3. Build: `goreleaser build --snapshot` with `.goreleaser.prerelease.yml`. The version comes from `snapshot.version_template`, so no `GORELEASER_CURRENT_TAG` is needed.
-4. Publish: `gh release create dev --prerelease dist/<name>-*`.
-
-Require `fetch-depth: 0` and `fetch-tags: true` on checkout so the existing `dev` tag is visible to `git tag -f`.
-
-### Deleting the existing dev release
-
-The delete is existence-checked, and the check separates "there is no release" from "the API could not tell me":
+`dev` is a real git tag that moves, which is why checkout needs both `fetch-depth: 0` and `fetch-tags: true`: `git tag -f` has to see the existing tag.
 
 ```yaml
-- name: Delete any existing dev release
-  run: |
-    if err=$(gh release view "dev" 2>&1 >/dev/null); then
-      gh release delete "dev" --yes --cleanup-tag
-    elif grep -qi "release not found" <<<"$err"; then
-      echo "No existing dev release"
-    else
-      echo "::error::could not determine whether a dev release exists: ${err}"
-      exit 1
-    fi
-  env:
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# prerelease.yml
+name: Prerelease
+
+on:
+  workflow_call:
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@vN
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-go@vN
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Delete any existing dev release
+        run: |
+          if err=$(gh release view "dev" 2>&1 >/dev/null); then
+            gh release delete "dev" --yes --cleanup-tag
+          elif grep -qi "release not found" <<<"$err"; then
+            echo "No existing dev release"
+          else
+            echo "::error::could not determine whether a dev release exists: ${err}"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Tag and push dev
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f dev
+          git push origin dev --force
+
+      - name: Build binaries
+        uses: goreleaser/goreleaser-action@<sha> # v<version>
+        with:
+          version: "~> v2"
+          args: build --snapshot --clean --config .goreleaser.prerelease.yml
+
+      - name: Create dev release
+        run: |
+          gh release create dev \
+            --title "Dev (Pre-release)" \
+            --notes "Built from commit ${{ github.sha }}" \
+            --prerelease \
+            dist/<name>-*
+        env:
+          GH_TOKEN: ${{ github.token }}
 ```
+
+No `GORELEASER_CURRENT_TAG` here: the version comes from `snapshot.version_template`.
+
+### Why the delete is existence-checked
 
 Three outcomes, three behaviours: the release exists, so delete it; `gh` reports it missing, so carry on; `gh` failed for any other reason, so stop. That third branch is the point of the whole step. A rate limit, an expired token or a flaky API all fail the `view`, and treating that as "no release exists" means the job skips the delete and then publishes on top of a release whose state it never established.
 

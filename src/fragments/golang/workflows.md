@@ -26,7 +26,32 @@ Setup (before any `make` call). Always use `go-version-file: go.mod`; never hard
 
 `@vN` means pin the current major at authoring time (for example `@v6`); Dependabot keeps it current from there. Do not copy a version number from this document as the target to match. Majors are for `actions/*` and for actions you publish yourself; every other action pins to a full SHA (see the GitHub Actions fragment).
 
-`lint.yml` runs `make check_all`. `test.yml` runs `make test`. Calling the aggregate rather than listing its members is what keeps the workflow and the `ci` target from drifting apart. Neither needs `fetch-depth: 0`.
+The two reusable workflows fill the skeleton from the GitHub Actions fragment with the Go setup step. Calling the aggregate rather than listing its members is what keeps the workflow and the `ci` target from drifting apart:
+
+```yaml
+# lint.yml
+name: Lint
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@vN
+
+      - uses: actions/setup-go@vN
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - run: make check_all
+```
+
+`test.yml` is the same file with `name: Test`, the job named `test`, and `make test` as its final step. Neither needs `fetch-depth: 0`.
 
 ## Cross-platform coverage
 

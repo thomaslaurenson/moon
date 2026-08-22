@@ -67,3 +67,91 @@ Both are decided by the tier, not by the language. "This language has a compile 
 - `main.yml`: concurrency group `main-${{ github.ref }}`, **`cancel-in-progress: false`**; `paths:` must match `pr.yml` exactly. Never cancel on main. A cancelled pull request run costs nothing but minutes, whereas a cancelled main run can stop midway through publishing, leaving a rolling release whose assets, tag and registry image disagree with each other. The two filters must match because a path that gates a pull request but not the merge lets main go red for a change no pull request ever ran on.
 - `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally. A release that skipped its tests because the tag happened to touch no matching path is worse than a slow one.
 - No `push.yml`.
+
+The callers are the same shape in every language. Only the paths filter and the job list change, and the language workflow fragment supplies both.
+
+```yaml
+# pr.yml
+name: PR
+
+on:
+  pull_request:
+    paths: <language paths filter>
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+  test:
+    uses: ./.github/workflows/test.yml
+```
+
+```yaml
+# main.yml
+name: Main
+
+on:
+  push:
+    branches: [main]
+    paths: <the same filter as pr.yml, character for character>
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+  test:
+    uses: ./.github/workflows/test.yml
+  prerelease:
+    needs: [lint, test]
+    uses: ./.github/workflows/prerelease.yml
+    permissions:
+      contents: write
+```
+
+```yaml
+# tag.yml
+name: Tag
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+  test:
+    uses: ./.github/workflows/test.yml
+  release:
+    needs: [lint, test]
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+      id-token: write
+```
+
+A reusable workflow takes no inputs and declares the least it needs:
+
+```yaml
+name: Lint
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - <language setup step>
+      - run: make check_all
+```
+
+The `permissions` block on a caller job is not decoration. A reusable workflow cannot grant itself more than its caller was given, so a `release.yml` asking for `id-token: write` fails at signing time unless `tag.yml` grants it too. That is why the write permissions appear in the caller and not only in the workflow that uses them.

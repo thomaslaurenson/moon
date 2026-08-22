@@ -49,7 +49,20 @@ func NewRootCmd(fsys fs.FS, out, errw io.Writer) *cobra.Command {
 }
 ```
 
-`SilenceErrors` and `SilenceUsage` are both set because the entry point owns error output (see the errors fragment). `SetOut` and `SetErr` are what make `cmd.OutOrStdout()` work inside subcommands, so nothing has to reach for the `os` globals (see the logging fragment).
+`SilenceErrors` and `SilenceUsage` are both set because the entry point owns error output (see the errors fragment).
+
+`SilenceUsage` is load-bearing rather than a matter of taste, and the reason is worth knowing before anyone switches it off to get a usage hint back. Cobra prints usage-on-error through the *out* writer, not the error writer, so with `SetOut(out)` given `os.Stdout` a failed command would dump its usage onto stdout. That breaks the contract that stdout carries the answer and nothing else (see the logging fragment). The cost is real: a wrong argument produces an error line and no usage. The alternative is worse.
+
+A root whose bare invocation means nothing still has to fail. Cobra's default for a root with subcommands and no `RunE` is to print help to stdout and exit zero, which tells a script the invocation succeeded:
+
+```go
+RunE: func(cmd *cobra.Command, args []string) error {
+    fmt.Fprint(cmd.ErrOrStderr(), cmd.UsageString())
+    return &ExitCodeError{Code: 1}
+},
+```
+
+Usage on stderr, nothing on stdout, exit 1. A root that does have a bare behaviour, such as a tool that prompts when given no argument, has its own `RunE` and needs none of this. `SetOut` and `SetErr` are what make `cmd.OutOrStdout()` work inside subcommands, so nothing has to reach for the `os` globals (see the logging fragment).
 
 `main` calls `NewRootCmd` directly and executes the result; there is no package-level `Execute` wrapper. The parameters are whatever the tree actually needs, and the writers are always among them: a tool with no embedded assets drops `fsys` and takes `(out, errw io.Writer)` alone. This is the same constructor the functional tests call, which is the point of it (see the errors and functional testing fragments).
 

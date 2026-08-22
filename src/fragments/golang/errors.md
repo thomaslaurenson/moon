@@ -95,7 +95,7 @@ type ExitCodeError struct{ Code int }
 func (e *ExitCodeError) Error() string { return "" }
 ```
 
-Add the type only once a command returns one. A CLI whose every failure is exit 1 omits both the type and the `errors.As` branch, and gains them when it first needs them.
+Every CLI with subcommands has the type, because the root returns one for a bare invocation (see the scaffolding fragment). A single-command tool whose every failure is exit 1 can omit both the type and the `errors.As` branch, and gains them when it first needs them.
 
 ## Closing and deferred errors
 

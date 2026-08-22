@@ -27,11 +27,11 @@ Lint job. Ruff lint and format both run, so CI enforces formatting as well as li
 - name: Extract ruff version
   id: ruff-version
   run: echo "version=$(make get_ruff_version)" >> $GITHUB_OUTPUT
-- uses: astral-sh/ruff-action@vN
+- uses: astral-sh/ruff-action@<sha> # v<version>
   with:
     version: ${{ steps.ruff-version.outputs.version }}
     args: check .
-- uses: astral-sh/ruff-action@vN
+- uses: astral-sh/ruff-action@<sha> # v<version>
   with:
     version: ${{ steps.ruff-version.outputs.version }}
     args: format --check .
@@ -47,7 +47,7 @@ Test job:
 - uses: actions/setup-python@vN
   with:
     python-version: ${{ steps.python-version.outputs.version }}
-- uses: astral-sh/setup-uv@vN
+- uses: astral-sh/setup-uv@<sha> # v<version>
 - run: uv sync
 - run: make test
 ```

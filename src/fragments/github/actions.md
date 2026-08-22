@@ -2,7 +2,7 @@
 
 Language-agnostic CI conventions. Per-language paths filters, setup steps, and reusable workflow bodies live in the relevant language workflow fragment.
 
-- Prefer official `actions/*` before third-party alternatives. Use the `gh` CLI for releases by default (`goreleaser-action` is the only exception, Go only).
+- Prefer official `actions/*` wherever one exists, and publish releases with the `gh` CLI rather than a release action. The third-party actions in the table below each do a job no `actions/*` covers. `goreleaser-action` is the one that looks like an exception and is not: it builds binaries and does not publish, so `gh release create` still does the publishing.
 - Create a Makefile target for a workflow step when it is useful locally, appears in more than one workflow, or contains non-trivial logic. Version and changelog extraction must always go through Makefile targets.
 - Minimal permissions: `contents: read` by default; `contents: write` only in release and prerelease workflows. Test workflows never declare `contents: write`.
 - No `fetch-depth: 0` unless a step actually reads git history. Changelog extraction does not: `get_changelog` reads `CHANGELOG.md` out of the working tree, which a default depth-1 checkout has in full. The real cases are tools that inspect history or tags, such as goreleaser, tag-based versioning, and `git tag -f` against an existing tag. A release that only runs `gh release create` needs the default depth.
@@ -28,7 +28,21 @@ Canonical action per purpose:
 | Artifact signing | `sigstore/cosign-installer` |
 | Release pipelines | `thomaslaurenson/gpipe` |
 
-Pin every action to a specific version, never `@latest`; use whichever version is current at the time of authoring. Do not treat any version number that has ever appeared in this doc as the target to match - a frozen version table goes stale faster than this spec gets updated. Dependabot (see below) keeps the pin current from there.
+Never use `@latest`. How tightly to pin below that depends on who publishes the action, because a tag is mutable: whoever owns the repository can move `@v7` to any commit at any time, and repointing a tag is a supply chain attack that has happened in the wild.
+
+- **`actions/*`** pin to the current major (`@v7`). These are GitHub's own, on GitHub's infrastructure, and the mutable tag is an accepted risk in exchange for automatic patch and minor fixes.
+- **Everything else** pins to a full commit SHA, with the version it corresponds to in a trailing comment. A SHA is the only immutable reference an action has.
+
+```yaml
+- uses: actions/checkout@v7
+- uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+```
+
+The comment is not decoration: Dependabot reads it, bumps the SHA and rewrites the comment together, so a SHA pin costs no more to maintain than a tag. Without it the pin is an unreadable hex string that nobody dares touch.
+
+An action published by the same person who owns the repository using it is not third-party in the sense that matters here, since compromising it and compromising the repository are the same event. Pin it to a major like `actions/*`.
+
+Do not treat any version number that has ever appeared in this doc as the target to match - a frozen version table goes stale faster than this spec gets updated. Dependabot (see below) keeps the pin current from there.
 
 Use reusable workflows (`workflow_call`) for all job logic; callers compose them:
 

@@ -2,7 +2,7 @@
 
 Applies to any tier that ships a distributable binary: an application, or a library with a bundled CLI. A plain library has no artifact to build and ships nothing, so it builds and tests in one plain job instead; see workflows-lib.md.
 
-`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
+`@vN` in the examples below means pin the current major at authoring time (for example `@v5`); Dependabot keeps it current. Do not copy a version number from this document as the target to match. Majors are for `actions/*` and for actions you publish yourself; every other action pins to a full SHA (see the GitHub Actions fragment).
 
 ## Paths filter addition
 

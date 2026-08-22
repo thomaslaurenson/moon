@@ -54,7 +54,7 @@ platforms:
 
 - Every `path` must match where the build step actually left the binary. These platform keys are gpipe's vocabulary, so the build has to name its output to suit; the language fragment says how.
 - One platform key maps to exactly one binary. There is no way to express "either of these builds, reader's choice", so a platform that could ship more than one flavour has to pick the one that runs everywhere.
-- Shell completions are not gpipe's job. A binary that ships them installs them from a `post-sh` hook, which has the installed location in `INSTALL_DIR` and the name in `BINARY`.
+- Shell completions are not gpipe's job, and a `post-sh` hook is not the place for them either. An installer that writes outside the install directory does more than the user asked for: it has to guess the shell, pick between several completion directories, and leaves nothing behind to undo it. The binary prints its own script (`<binary> completion bash`) and installing it is the user's call. The hook is for work that belongs to the install itself, and it has the location in `INSTALL_DIR` and the name in `BINARY`.
 
 Validate the config before relying on it in CI. `gpipe validate --repo <owner/repo> --version v0.0.0` checks the schema, the platform identifiers and any hooks, without needing the binaries present.
 

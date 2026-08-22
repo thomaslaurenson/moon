@@ -120,6 +120,27 @@ func isReleaseVersion(module string) bool {
 
 This has to be `init()` rather than an initialiser on `Version` itself. The linker writes an `-X` value into the data segment, and a variable with a runtime initialiser has that value overwritten the moment the initialiser runs, with no build error to say so (see the style fragment). Nothing else about versioning changes: the ldflags path, the goreleaser config and the `build` target all keep their current form, and a local build with no ldflags still reports `dev`.
 
+## Shell completion
+
+Cobra adds a `completion` subcommand to every root, generating scripts for bash, zsh, fish and powershell. Keep it. It costs nothing and it is the only way a user can obtain the script.
+
+What gets completed is up to the commands. One taking a dynamic argument gets a `ValidArgsFunction` returning the candidates and `ShellCompDirectiveNoFileComp`, so the shell offers those names rather than falling back to filenames:
+
+```go
+// completeTargets offers configured target names for a <target> argument.
+func (a *App) completeTargets(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+    names, err := a.e.Targets()
+    if err != nil {
+        return nil, cobra.ShellCompDirectiveError
+    }
+    return filterByPrefix(names, toComplete), cobra.ShellCompDirectiveNoFileComp
+}
+```
+
+These sit together in `cmd/completion.go` rather than beside each command: they are one concern and each is a few lines. Where a bare argument resolves against a user-defined name, take the reserved names off the command tree rather than listing them by hand, since a hand-written list goes stale as soon as someone adds an alias.
+
+Installing the generated script is the user's job. The release tooling deliberately does not do it for them (see the gpipe fragment).
+
 ## Versioning
 
 Follow semantic versioning strictly: `go install` and the module proxy key off the tag directly, so the tag is the interface.

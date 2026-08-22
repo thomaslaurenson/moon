@@ -6,7 +6,6 @@ golang/testing-functional.md
 golang/testing-integration.md
 tools/makefile.md
 golang/make.md
-golang/scaffolding-cli.md
 github/actions.md
 golang/workflows.md
 tools/gpipe.md

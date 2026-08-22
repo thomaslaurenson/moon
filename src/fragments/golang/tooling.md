@@ -4,7 +4,9 @@ No third-party linters or formatters. Do not use `golangci-lint` under any circu
 
 This is a rule about tooling, not about dependencies. Ordinary libraries are fine, starting with cobra for the command tree. What is banned is narrow, and each case is named in the fragment that owns it: linters and formatters here, test frameworks in the testing fragment, logging packages in the logging fragment. Every one of them replaces something the standard library or the standard toolchain already does well enough.
 
-Treat `golang.org/x/*` as standard library for this purpose. Those modules are maintained by the Go team and are where capabilities that do not belong in the standard library proper live: `x/term` to ask whether a stream is a terminal, `x/sync` for goroutine coordination, `x/vuln` for the scan below.
+Treat `golang.org/x/*` as standard library for this purpose, tools as well as libraries. Those modules are published by the Go team against the same releases as the toolchain, and are where capabilities that do not belong in the standard library proper live: `x/term` to ask whether a stream is a terminal, `x/sync` for goroutine coordination, `x/tools` for `goimports`, `x/vuln` for the scan below. A tool from that namespace is not the second opinion on style this section rules out; it is the toolchain, distributed separately.
+
+Standard library first even so. Reach for an `x/` module where the standard library genuinely has no answer, not to save a few lines. `x/term` qualifies because nothing in the standard library reports whether a file descriptor is a terminal. A dependency the Go team maintains is a small cost, but it is not nothing.
 
 | Tool | Purpose |
 |---|---|

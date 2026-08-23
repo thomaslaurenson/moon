@@ -29,9 +29,22 @@ builds:
       - {goos: windows, goarch: arm64}
     ldflags:
       - -s -w -X <module>/cmd.Version={{.Version}}
+git:
+  ignore_tags: ["*-dev", "dev"]
 ```
 
-The prerelease config is identical plus `snapshot.version_template: "{{ incpatch .Version }}-dev"` and `git.ignore_tags: ["*-dev", "dev"]`, so the moving `dev` tag (see below) is never picked up as "the last tag" when computing `incpatch`. The binary naming template maps `amd64` to `x86_64` and `arm64` to `aarch64`; the `.gpipe.yml` platform paths must match exactly.
+`git.ignore_tags` belongs in both configs, not just the prerelease one. The prerelease channel publishes under a moving `dev` tag (see below), so once a developer has fetched tags, goreleaser's own tag discovery names that tag as the last release. A tagged CI release never sees it, because `GORELEASER_CURRENT_TAG` overrides discovery outright, and neither does the prerelease build, which already carried the setting. What it fixes is the local preview:
+
+```
+$ make snapshot        # without it
+dev-SNAPSHOT-120e4d7
+$ make snapshot        # with it
+1.2.3-SNAPSHOT-704f5bc
+```
+
+The `make build` path reaches the same tag through `git describe` and closes it with `--match 'v*'` instead (see the Makefile targets fragment).
+
+The prerelease config is this file plus `snapshot.version_template: "{{ incpatch .Version }}-dev"`, so the ignored `dev` tag is never picked up as "the last tag" when computing `incpatch`. The binary naming template maps `amd64` to `x86_64` and `arm64` to `aarch64`; the `.gpipe.yml` platform paths must match exactly.
 
 ## CI wiring
 

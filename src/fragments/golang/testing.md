@@ -46,8 +46,18 @@ Commit an input only when constructing it is not reasonable: a binary blob, a la
 
 Golden files follow the same rule. If a test compares against a large expected output, that output belongs in `testdata/`, committed and reviewed in the diff, because an unexpected change to it is the test failing. Reserve them for output big enough that inlining it would bury the assertion; a handful of lines stays in the table.
 
-- Regenerate goldens behind an explicit flag: `go test ./... -update`.
+- Regenerate goldens behind an explicit flag, naming the package rather than sweeping the tree: `go test ./internal/report -update`.
 - A test must never write to `testdata/` during an ordinary run. That dirties the working tree and breaks parallel tests. Scratch output goes to `t.TempDir()`; only `-update` writes a golden.
 - Do not create an empty `testdata/`, and do not add a `.gitkeep`. The directory appears when there is a file to put in it, and `go test -fuzz` creates `testdata/fuzz/` itself when it finds a failing input.
+
+Naming the package is not a stylistic preference. `-update` is an ordinary `flag.Bool` registered by the test file that owns the goldens, so it exists only in that package's test binary. Every other package that has tests rejects it, which for a project built to these specs is at least `cmd/`:
+
+```
+$ go test ./... -update
+flag provided but not defined: -update
+FAIL    github.com/owner/mytool/cmd
+```
+
+Where more than one package has goldens, name them together (`go test ./internal/report ./internal/render -update`); each registers its own flag and each accepts it.
 
 Coverage is measured over `./internal/...` only, with `cmd/` and the root package excluded as wiring. `test_coverage` in the Makefile targets fragment is where that is spelled out as flags.

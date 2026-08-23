@@ -2,6 +2,38 @@
 
 Targets common to every Go project (see the Makefile conventions fragment for structure).
 
+## VERSION
+
+`build` stamps `VERSION` into the binary, so it is declared at the top with the other variables:
+
+```make
+VERSION := $(shell git describe --tags --always --dirty --match 'v*' 2>/dev/null || echo dev)
+```
+
+Declaring it at all is the first half. Make expands an undefined `VERSION` to the empty string rather than complaining, so `-X <module>/cmd.Version=` stamps an empty version. That is not the `"dev"` the version block falls back from, so it wins outright and the build-info recovery never runs (see the scaffolding fragment). Cobra then registers no `--version` flag, because it only adds one when `Version` is non-empty:
+
+```
+$ ./mytool version
+                                     # empty
+$ ./mytool --version
+mytool: unknown flag: --version
+```
+
+`make build` succeeds in both cases, so nothing reports it.
+
+Each flag is doing a job. `--always` falls back to a short commit hash where no tag is reachable and `|| echo dev` covers a tree that is not a git checkout at all, which together are what keep the value from ever being empty. `--dirty` marks a build made from uncommitted changes.
+
+`--match 'v*'` is the one that is easy to leave off and wrong to. The prerelease process publishes its channel under a moving `dev` tag (see the release fragment), so as soon as a developer has fetched tags, an unmatched `git describe` names that tag instead of the last release:
+
+```
+$ git describe --tags --always --dirty              # dev tag fetched
+dev-dirty
+$ git describe --tags --always --dirty --match 'v*'
+v1.2.3-1-ga2ee320-dirty
+```
+
+This is the same trap `git.ignore_tags` covers on the goreleaser side, and it has to be closed in both places.
+
 - `format`: `$(GOIMPORTS) -w .`, where `GOIMPORTS := go run golang.org/x/tools/cmd/goimports@latest -local <module>`. It formats exactly as `gofmt` does and groups imports as well (see the style fragment).
 - `check_format`: capture `$(GOIMPORTS) -l .` and fail if non-empty: `out="$$($(GOIMPORTS) -l .)"; test -z "$$out"`. Do not write `... -l . && git diff --exit-code`: `-l` never changes files and exits 0 whatever it finds, so that form can never fail.
 - `check_mod`: `go mod tidy && git diff --exit-code go.mod go.sum`
@@ -17,6 +49,7 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 - `check_all`: `check_format check_mod vet check_cross`, plus `check_embed` where the project embeds anything. This is the only place the static checks are listed. `lint.yml` calls it and `ci` composes it, so there is no second copy to fall out of step.
 - `ci`: `check_all test`
 - `clean`: `rm -rf dist/ coverage.out` plus the release artefacts gpipe writes into the repository root; see the release fragment for the full list.
+- `get_version`: `@echo "$(VERSION)"`. Prints the version `build` would stamp, so it can be checked before a release is cut rather than read back out of the binary afterwards.
 
 The testing fragments own the rules these recipes implement: `-race -count=1` on every run, coverage over `./internal/...` only, and coverage including `-tags=integration`. One detail belongs here, because it is about reading the output rather than choosing the flags. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.
 

@@ -70,7 +70,13 @@ Add `.gpipe.yml` to the `pr.yml` and `main.yml` paths filters: a change to it is
 
 - `version` and `repo` default to `github.ref_name` and `github.repository`. A `tag.yml` that fires only on `v*` therefore needs neither, since `ref_name` is already the semantic version gpipe expects.
 - The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current.
-- It installs its own Go from its own `go.mod`. A caller needs no `actions/setup-go` for its benefit: the runner image ships Go, but not necessarily a version new enough, and a project that never invokes Go directly has no reason to carry the setup step for a tool.
+- It installs no Go of its own. The action sets `GOTOOLCHAIN=local` and builds with whatever Go the runner already has, so gpipe's `go` directive is a floor the runner must meet rather than a toolchain the build downloads to satisfy it. A runner below that floor fails outright:
+
+  ```
+  go: go.mod requires go >= 1.25.0 (running go 1.24.0; GOTOOLCHAIN=local)
+  ```
+
+  GitHub-hosted images ship a current Go, so a caller normally adds nothing. Where a runner is below the floor, or a self-hosted one has no Go at all, put `actions/setup-go` before this step: `GOTOOLCHAIN=local` resolves `go` through `PATH`, so the version setup-go puts there is the version that builds gpipe. A caller that already runs setup-go for its own build, as `release.yml` does for goreleaser, is therefore covered by that step too.
 - `cosign_sign: true` needs `id-token: write` on this job **and** on the caller job in `tag.yml`. Granting it in only one of the two fails at signing time.
 
 ## Not for prereleases

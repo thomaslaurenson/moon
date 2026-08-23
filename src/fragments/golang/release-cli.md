@@ -91,7 +91,7 @@ jobs:
 
 Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action.
 
-The `actions/setup-go` here is for goreleaser. gpipe brings its own.
+The `actions/setup-go` here is for goreleaser, and gpipe rides on it. gpipe installs no Go of its own and builds with whatever is on `PATH`, so this step is what settles the version both of them get (see the gpipe fragment).
 
 ## Release artefacts
 

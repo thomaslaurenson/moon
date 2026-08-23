@@ -43,7 +43,7 @@ This is the same trap `git.ignore_tags` covers on the goreleaser side, and it ha
 - `test_integration`: `go test -race -count=1 -tags=integration ./...`. Never run in CI.
 - `test_coverage`: run `go test -race -count=1 -tags=integration -coverpkg=./internal/... -coverprofile=coverage.out ./...`, then `go tool cover -func=coverage.out` to print the per-function table ending in the aggregate `total:` line, then `rm coverage.out`.
 - `build`: `go build -ldflags="-s -w -X <module>/cmd.Version=$(VERSION)" -o dist/<binary> .`
-- `snapshot`: `goreleaser release --snapshot --clean`
+- `snapshot`: `goreleaser build --snapshot --clean`. `build`, never `release`. `release` runs the archive and checksum stages too, so it leaves tarballs and a goreleaser `checksums.txt` in `dist/` that no real release ever ships, and the local preview stops resembling what `release.yml` produces (see the release and gpipe fragments).
 - `check_embed`: validate embedded content if the binary embeds any (see the tooling fragment); omit for a project with nothing embedded.
 - `vuln`: `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`. Deliberately not a prerequisite of `ci`: it needs network access and answers a question that is not about this commit, so it runs on a schedule instead (see the tooling and workflows fragments).
 - `check_all`: `check_format check_mod vet check_cross`, plus `check_embed` where the project embeds anything. This is the only place the static checks are listed. `lint.yml` calls it and `ci` composes it, so there is no second copy to fall out of step.

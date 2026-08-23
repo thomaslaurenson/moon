@@ -4,7 +4,7 @@ C++-specific style. Assumes the core conventions. Where the project includes the
 
 ## Formatting
 
-Enforced by clang-format; `make fmt` reformats all source. Deviations from LLVM defaults: `IndentWidth: 4`, `ColumnLimit: 100`, `AccessModifierOffset: -4`, `AllowShortFunctionsOnASingleLine: InlineOnly`, `IncludeBlocks: Regroup`. All other settings inherit from LLVM.
+Enforced by clang-format; `make format` reformats all source. Deviations from LLVM defaults: `IndentWidth: 4`, `ColumnLimit: 100`, `AccessModifierOffset: -4`, `AllowShortFunctionsOnASingleLine: InlineOnly`, `IncludeBlocks: Regroup`. All other settings inherit from LLVM.
 
 ## Suppressing clang-format
 

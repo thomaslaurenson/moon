@@ -20,18 +20,18 @@ paths:
 
 `@vN` in the examples below means pin the current major of the action at authoring time (for example `@v6`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
 
-Lint job. Ruff lint and format both run, so CI enforces formatting as well as linting (locally the equivalent is `make lint` and `make fmt_check`). No Python setup is needed:
+Lint job. Ruff lint and format both run, so CI enforces formatting as well as linting (locally the equivalent is `make check_all` and `make check_all`). No Python setup is needed:
 
 ```yaml
 - uses: actions/checkout@vN
 - name: Extract ruff version
   id: ruff-version
   run: echo "version=$(make get_ruff_version)" >> $GITHUB_OUTPUT
-- uses: astral-sh/ruff-action@vN
+- uses: astral-sh/ruff-action@<sha> # v<version>
   with:
     version: ${{ steps.ruff-version.outputs.version }}
     args: check .
-- uses: astral-sh/ruff-action@vN
+- uses: astral-sh/ruff-action@<sha> # v<version>
   with:
     version: ${{ steps.ruff-version.outputs.version }}
     args: format --check .
@@ -47,7 +47,7 @@ Test job:
 - uses: actions/setup-python@vN
   with:
     python-version: ${{ steps.python-version.outputs.version }}
-- uses: astral-sh/setup-uv@vN
+- uses: astral-sh/setup-uv@<sha> # v<version>
 - run: uv sync
 - run: make test
 ```

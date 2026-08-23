@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@vN
+      - uses: astral-sh/setup-uv@<sha> # v<version>
 
       - run: uv build
 

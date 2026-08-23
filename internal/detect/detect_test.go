@@ -49,9 +49,9 @@ func TestDetect(t *testing.T) {
 			wantBundles: []string{"cpp-app"},
 		},
 		{
-			name:        "go project with no main.go anywhere is a library",
+			name:        "go project with no main.go anywhere is a library, and has no bundle",
 			fsys:        fstest.MapFS{"go.mod": {Data: []byte("module x\n")}, "parser.go": {}},
-			wantBundles: []string{"go-lib"},
+			wantBundles: nil,
 		},
 		{
 			name:        "cpp project with a root include/ dir is a library",

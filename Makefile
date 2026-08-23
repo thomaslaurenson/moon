@@ -41,6 +41,10 @@ mod_check: ## Fail if go.mod/go.sum are not tidy
 vet: ## Run go vet
 	@go vet ./...
 
+.PHONY: vuln
+vuln: ## Scan for known vulnerabilities reachable from this code
+	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
 # TEST
 .PHONY: test
 test: ## Run tests with the race detector
@@ -58,16 +62,24 @@ check: ## Validate every bundle: missing fragments, include cycles, orphans
 
 # GET
 .PHONY: get_changelog
-get_changelog: ## Print release notes for a tag: make get_changelog TAG=v1.2.3
-	@[[ -n "$(TAG)" ]] || { printf 'Usage: make get_changelog TAG=v1.2.3\n' >&2; exit 1; }
-	@v="$${TAG#v}"; \
-	notes="$$(awk -v ver="$$v" ' \
-		$$0 ~ "^## " ver "( |$$)" { found=1; next } \
-		found && /^## / { exit } \
-		found { print } \
-	' CHANGELOG.md)"; \
-	[[ -n "$$(printf '%s' "$$notes" | tr -d '[:space:]')" ]] \
-		|| { printf 'no changelog entry for %s\n' "$$TAG" >&2; exit 1; }; \
+get_changelog: ## Print release notes for TAG to stdout (TAG=v1.0.0)
+	@tag="$(TAG)"; tag="$${tag#v}"; \
+	if [[ -z "$$tag" ]]; then \
+	  printf 'get_changelog: TAG is empty; pass TAG=v1.0.0\n' >&2; \
+	  exit 1; \
+	fi; \
+	notes="$$(awk -v tag="$$tag" ' \
+	  /^## / { if (found) exit; if (index($$0,"## "tag" ")==1 || $$0=="## "tag) found=1; next } \
+	  found { lines[n++]=$$0 } \
+	  END { \
+	    s=0; while (s<n && lines[s]~/^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e>=s && lines[e]~/^[[:space:]]*$$/) e--; \
+	    for (i=s;i<=e;i++) print lines[i] \
+	  }' CHANGELOG.md)"; \
+	if [[ -z "$$notes" ]]; then \
+	  printf 'get_changelog: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  exit 1; \
+	fi; \
 	printf '%s\n' "$$notes"
 
 .PHONY: get_version

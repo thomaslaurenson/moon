@@ -4,7 +4,7 @@
 
 ![Release Version](https://img.shields.io/github/v/release/thomaslaurenson/moon?style=flat&logo=github) ![Release downloads](https://img.shields.io/github/downloads/thomaslaurenson/moon/total?label=downloads&logo=github)
 
-![Go Version](https://img.shields.io/github/go-mod/go-version/thomaslaurenson/moon?logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-90.3%25-blue?logo=go)
+![Go Version](https://img.shields.io/github/go-mod/go-version/thomaslaurenson/moon?logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-91.2%25-blue?logo=go)
 
 To the moon! A self-contained binary that composes AI agent instructions from markdown fragments.
 
@@ -45,4 +45,5 @@ moon bundle expand <name>      # list the fragments a bundle expands to
 moon fragment list [filter]    # list fragment paths (optionally filtered)
 moon fragment show <path>      # print a single fragment to stdout
 moon init <target> [bundle...] # populate a repo for claude, agents, or copilot
+moon check                     # validate every bundle, exit non-zero on problems
 ```

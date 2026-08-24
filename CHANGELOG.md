@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 - 2026-08-24
+
+### Added
+
+- Add a bundle expand subcommand, replacing the bundle show list flag
+
+### Changed
+
+- Make a bare invocation print usage to stderr and exit non-zero
+- Render make help with section headings, ordered by everyday use
+- Require the debug flag only for CLIs that emit diagnostics
+- Quote the failing input in error messages
+
+### Fixed
+
+- Fix version reporting for go install builds and local builds near the dev tag
+- Fix the dev release check to treat API failures as failures
+
 ## 0.3.0 - 2026-08-11
 
 ### Added

@@ -549,7 +549,18 @@ check_lint: configure_lint ## Run clang-tidy static analysis
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
 
-# CI
+##@ GET
+
+.PHONY: get_changelog
+get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
+	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
+	@awk -v raw="$(TAG)" '\
+	  BEGIN { v = raw; sub(/^v/, "", v) } \
+	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
+	  found { print } \
+	  END { if (!found) exit 1 }' CHANGELOG.md
+
+##@ CI
 
 .PHONY: check_all
 check_all: check_format check_lint ## Run every static check
@@ -560,17 +571,6 @@ ci: check_all test ## Run the checks CI runs
 .PHONY: clean
 clean: ## Remove all build directories
 	rm -rf build
-
-# GET
-
-.PHONY: get_changelog
-get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
-	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
-	@awk -v raw="$(TAG)" '\
-	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
-	  found { print } \
-	  END { if (!found) exit 1 }' CHANGELOG.md
 ```
 
 - `--quiet` suppresses the "Suppressed N warnings" summary and hint lines

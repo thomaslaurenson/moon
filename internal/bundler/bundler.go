@@ -30,6 +30,8 @@ var (
 	ErrIncludeCycle = errors.New("include cycle detected")
 	// ErrMissingFragment means a bundle references a fragment absent from src/fragments.
 	ErrMissingFragment = errors.New("missing fragment")
+	// ErrUnknownDirective means a bundle line starts with '@' but is not @include.
+	ErrUnknownDirective = errors.New("unknown directive")
 )
 
 // Engine assembles bundles from a filesystem containing src/fragments and src/bundles.
@@ -89,9 +91,9 @@ func (e *Engine) Description(name string) (string, error) {
 	data, err := fs.ReadFile(e.fsys, bundlesDir+"/"+name)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return "", fmt.Errorf("%s: %w", name, ErrUnknownBundle)
+			return "", fmt.Errorf("%q: %w", name, ErrUnknownBundle)
 		}
-		return "", fmt.Errorf("reading bundle %s: %w", name, err)
+		return "", fmt.Errorf("reading bundle %q: %w", name, err)
 	}
 	var lines []string
 	for _, line := range strings.Split(string(data), "\n") {
@@ -134,7 +136,7 @@ func (e *Engine) isFile(p string) bool {
 func (e *Engine) Fragment(path string) ([]byte, error) {
 	data, err := fs.ReadFile(e.fsys, fragmentsDir+"/"+path)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, ErrMissingFragment)
+		return nil, fmt.Errorf("%q: %w", path, ErrMissingFragment)
 	}
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "<!-- Fragment: %s/%s -->\n\n", fragmentsDir, path)
@@ -145,11 +147,11 @@ func (e *Engine) Fragment(path string) ([]byte, error) {
 func (e *Engine) resolve(bundle string, seen []string) ([]string, error) {
 	data, err := fs.ReadFile(e.fsys, bundlesDir+"/"+bundle)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", bundle, ErrUnknownBundle)
+		return nil, fmt.Errorf("%q: %w", bundle, ErrUnknownBundle)
 	}
 	for _, s := range seen {
 		if s == bundle {
-			return nil, fmt.Errorf("%s: %w", bundle, ErrIncludeCycle)
+			return nil, fmt.Errorf("%q: %w", bundle, ErrIncludeCycle)
 		}
 	}
 	seen = append(seen, bundle)
@@ -166,7 +168,7 @@ func (e *Engine) resolve(bundle string, seen []string) ([]string, error) {
 		if line == "@include" || strings.HasPrefix(line, "@include ") || strings.HasPrefix(line, "@include\t") {
 			target := strings.TrimSpace(strings.TrimPrefix(line, "@include"))
 			if target == "" {
-				return nil, fmt.Errorf("%s: @include needs a target bundle", bundle)
+				return nil, fmt.Errorf("%q: @include needs a target bundle", bundle)
 			}
 			sub, err := e.resolve(target, seen)
 			if err != nil {
@@ -176,7 +178,7 @@ func (e *Engine) resolve(bundle string, seen []string) ([]string, error) {
 			continue
 		}
 		if strings.HasPrefix(line, "@") {
-			return nil, fmt.Errorf("%s: unknown directive %q (only @include is recognised)", bundle, line)
+			return nil, fmt.Errorf("%q: %w %q (only @include is recognised)", bundle, ErrUnknownDirective, line)
 		}
 		frags = append(frags, line)
 	}
@@ -230,7 +232,7 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 	}
 	for _, f := range ordered {
 		if _, err := fs.Stat(e.fsys, fragmentsDir+"/"+f); err != nil {
-			return nil, fmt.Errorf("%s/%s (in bundle %s): %w", fragmentsDir, f, origin, ErrMissingFragment)
+			return nil, fmt.Errorf("%q (in bundle %q): %w", fragmentsDir+"/"+f, origin, ErrMissingFragment)
 		}
 	}
 	var buf bytes.Buffer
@@ -239,7 +241,7 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 	for _, f := range ordered {
 		data, err := fs.ReadFile(e.fsys, fragmentsDir+"/"+f)
 		if err != nil {
-			return nil, fmt.Errorf("reading fragment %s: %w", f, err)
+			return nil, fmt.Errorf("reading fragment %q: %w", f, err)
 		}
 		fmt.Fprintf(&buf, "<!-- %s/%s -->\n\n", fragmentsDir, f)
 		buf.Write(bytes.TrimRight(data, "\n"))

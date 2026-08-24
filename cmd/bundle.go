@@ -94,7 +94,7 @@ func (a *App) newBundleShowCmd() *cobra.Command {
 // bundleShow assembles a bundle to out.
 func (a *App) bundleShow(out io.Writer, name string) error {
 	if !a.e.HasBundle(name) {
-		return fmt.Errorf("%s: not a known bundle (run moon bundle list to see them)", name)
+		return fmt.Errorf("%q: not a known bundle (run moon bundle list to see them)", name)
 	}
 	data, err := a.e.Assemble(name)
 	if err != nil {
@@ -120,7 +120,7 @@ func (a *App) newBundleExpandCmd() *cobra.Command {
 // resolved), one per line to out, and a count to errw.
 func (a *App) bundleExpand(out, errw io.Writer, name string) error {
 	if !a.e.HasBundle(name) {
-		return fmt.Errorf("%s: not a known bundle (run moon bundle list to see them)", name)
+		return fmt.Errorf("%q: not a known bundle (run moon bundle list to see them)", name)
 	}
 	frags, err := a.e.Expand(name)
 	if err != nil {

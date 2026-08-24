@@ -42,7 +42,7 @@ func Plan(name string, bundles []Bundle, combined []byte) ([]PlannedFile, error)
 	case "copilot":
 		return planCopilot(bundles), nil
 	default:
-		return nil, fmt.Errorf("unknown init target: %s (known: %s)", name, strings.Join(Names(), ", "))
+		return nil, fmt.Errorf("unknown init target %q (known: %s)", name, strings.Join(Names(), ", "))
 	}
 }
 

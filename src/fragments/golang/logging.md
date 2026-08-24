@@ -74,7 +74,7 @@ logger.Debug(fmt.Sprintf("scanned target %s with %d findings", name, n))
 
 ## The debug flag
 
-Every CLI has a persistent `--debug` flag on the root command.
+Every CLI that emits diagnostics has a persistent `--debug` flag on the root command. A tool with nothing to log ships neither the flag nor a logger: a `--debug` that changes nothing teaches a user the flag is broken, so both arrive together with the first diagnostic rather than ahead of it.
 
 - Default level is **Warn**. A successful run logs nothing, which is what makes the tool usable in a script. A progress indicator is not a log line, and is already suppressed off a terminal, so a scripted run sees neither.
 - `--debug` sets the level to **Debug**.

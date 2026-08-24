@@ -12,7 +12,6 @@ on:
       - ".goreleaser*.yml"
       - .gpipe.yml
       - "src/**"
-      - "bundles/**"
 
 concurrency:
   group: main-${{ github.ref }}

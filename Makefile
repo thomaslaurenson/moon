@@ -20,8 +20,8 @@ run: ## Run without building, e.g. make run ARGS="show python-lib"
 	@go run . $(ARGS)
 
 .PHONY: snapshot
-snapshot: ## Build a full local snapshot release with goreleaser (no publish)
-	@goreleaser release --snapshot --clean
+snapshot: ## Build snapshot binaries with goreleaser, as release.yml would
+	@goreleaser build --snapshot --clean
 
 # LINT
 .PHONY: fmt

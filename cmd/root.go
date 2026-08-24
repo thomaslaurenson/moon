@@ -3,7 +3,7 @@
 package cmd
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 
@@ -23,9 +23,11 @@ New here? Run this sequence:
   moon bundle show <name> -l  see the exact fragments a bundle expands to
   moon bundle show <name>     print the assembled bundle to stdout`
 
-// ErrSilent signals that a command already printed everything the user needs to
-// see; the entry point should exit non-zero without adding its own error line.
-var ErrSilent = errors.New("")
+// ExitCodeError is returned by a command that has already produced its output
+// and needs to set the process exit code itself.
+type ExitCodeError struct{ Code int }
+
+func (e *ExitCodeError) Error() string { return "" }
 
 // App holds the dependencies shared by every subcommand.
 type App struct {
@@ -44,6 +46,10 @@ func NewRootCmd(fsys fs.FS, out, errw io.Writer) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       Version,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Fprint(cmd.ErrOrStderr(), cmd.UsageString())
+			return &ExitCodeError{Code: 1}
+		},
 	}
 	root.SetOut(out)
 	root.SetErr(errw)

@@ -18,7 +18,7 @@ func (a *App) newCheckCmd() *cobra.Command {
 				return err
 			}
 			if !ok {
-				return ErrSilent
+				return &ExitCodeError{Code: 1}
 			}
 			return nil
 		},

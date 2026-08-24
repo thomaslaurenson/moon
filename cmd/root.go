@@ -19,9 +19,9 @@ composition of fragments (src/bundles). Use "moon fragment" to work with the
 individual files, and "moon bundle" to compose them.
 
 New here? Run this sequence:
-  moon bundle list --long     see every bundle with a one-line description
-  moon bundle show <name> -l  see the exact fragments a bundle expands to
-  moon bundle show <name>     print the assembled bundle to stdout`
+  moon bundle list --long    see every bundle with a one-line description
+  moon bundle expand <name>  see the exact fragments a bundle expands to
+  moon bundle show <name>    print the assembled bundle to stdout`
 
 // ExitCodeError is returned by a command that has already produced its output
 // and needs to set the process exit code itself.

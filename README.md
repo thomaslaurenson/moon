@@ -41,7 +41,7 @@ go install github.com/thomaslaurenson/moon@latest
 moon bundle list --long        # see every bundle with a one-line description
 moon bundle list --json        # machine-readable output (also on: fragment list)
 moon bundle show <name>        # print an assembled bundle to stdout
-moon bundle show <name> -l     # list the fragments a bundle expands to
+moon bundle expand <name>      # list the fragments a bundle expands to
 moon fragment list [filter]    # list fragment paths (optionally filtered)
 moon fragment show <path>      # print a single fragment to stdout
 moon init <target> [bundle...] # populate a repo for claude, agents, or copilot

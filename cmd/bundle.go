@@ -15,7 +15,7 @@ func (a *App) newBundleCmd() *cobra.Command {
 		Use:   "bundle",
 		Short: "List or assemble bundles (named compositions of fragments)",
 	}
-	c.AddCommand(a.newBundleListCmd(), a.newBundleShowCmd())
+	c.AddCommand(a.newBundleListCmd(), a.newBundleShowCmd(), a.newBundleExpandCmd())
 	return c
 }
 
@@ -80,37 +80,21 @@ func (a *App) bundleList(out io.Writer, long, asJSON bool) error {
 }
 
 func (a *App) newBundleShowCmd() *cobra.Command {
-	var listOnly bool
-	c := &cobra.Command{
+	return &cobra.Command{
 		Use:               "show <name>",
-		Short:             "Assemble and print a bundle, or with --list show its fragments",
+		Short:             "Assemble and print a bundle",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: a.completeBundles,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.bundleShow(cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0], listOnly)
+			return a.bundleShow(cmd.OutOrStdout(), args[0])
 		},
 	}
-	c.Flags().BoolVarP(&listOnly, "list", "l", false, "list the fragments the bundle expands to, without their content")
-	return c
 }
 
-// bundleShow assembles a bundle to out. With listOnly it instead prints the
-// ordered fragment paths the bundle expands to (with @include resolved), one per
-// line, and a count to errw.
-func (a *App) bundleShow(out, errw io.Writer, name string, listOnly bool) error {
+// bundleShow assembles a bundle to out.
+func (a *App) bundleShow(out io.Writer, name string) error {
 	if !a.e.HasBundle(name) {
 		return fmt.Errorf("%s: not a known bundle (run moon bundle list to see them)", name)
-	}
-	if listOnly {
-		frags, err := a.e.Expand(name)
-		if err != nil {
-			return err
-		}
-		for _, f := range frags {
-			fmt.Fprintln(out, f)
-		}
-		fmt.Fprintf(errw, "(%d fragments)\n", len(frags))
-		return nil
 	}
 	data, err := a.e.Assemble(name)
 	if err != nil {
@@ -118,4 +102,33 @@ func (a *App) bundleShow(out, errw io.Writer, name string, listOnly bool) error 
 	}
 	_, err = out.Write(data)
 	return err
+}
+
+func (a *App) newBundleExpandCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:               "expand <name>",
+		Short:             "Print the ordered fragment paths a bundle expands to",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: a.completeBundles,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return a.bundleExpand(cmd.OutOrStdout(), cmd.ErrOrStderr(), args[0])
+		},
+	}
+}
+
+// bundleExpand prints the ordered fragment paths name expands to (with @include
+// resolved), one per line to out, and a count to errw.
+func (a *App) bundleExpand(out, errw io.Writer, name string) error {
+	if !a.e.HasBundle(name) {
+		return fmt.Errorf("%s: not a known bundle (run moon bundle list to see them)", name)
+	}
+	frags, err := a.e.Expand(name)
+	if err != nil {
+		return err
+	}
+	for _, f := range frags {
+		fmt.Fprintln(out, f)
+	}
+	fmt.Fprintf(errw, "(%d fragments)\n", len(frags))
+	return nil
 }

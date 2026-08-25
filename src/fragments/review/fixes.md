@@ -2,9 +2,17 @@
 
 How an agreed list of changes becomes commits. Written for review findings, and it applies unchanged to any agreed list: a plan, a backlog, a set of review comments.
 
+## Start from the findings table
+
+The input is the table the review produced: numbered findings grouped into phases, in the shape the review-findings bundle specifies. The phase key is the order. Confirm it and work to it rather than deriving a new one, because the phases already encode which findings depend on which.
+
+- Work phases in sequence, and rows in order within a phase.
+- Open every turn by citing the finding's number, so the user can match it against the table without hunting for it.
+- Where there is no table, agree an order once before starting and then treat it exactly as a phase key.
+
 ## One at a time
 
-Agree the order once, then take one finding per turn. Never batch several into a single proposal, and never implement ahead of the discussion.
+Take one finding per turn. Never batch several into a single proposal, and never implement ahead of the discussion.
 
 Batching costs twice. The user is asked to react to several unrelated proposals at once, so the feedback arrives partial and it is unclear which part it applies to; and the resulting commit cannot be reverted one finding at a time, which is the whole reason for reviewing them separately.
 

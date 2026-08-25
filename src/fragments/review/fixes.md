@@ -58,6 +58,9 @@ The project's aggregate check target passes before any commit command is offered
 
 Report what was run and what it said. Do not assert that everything is fine. If the checks cannot be made to pass, say so, say what failed, and stop there rather than handing over a commit that buries a failure.
 
+- Build as well, where the aggregate target does not already do it. A project whose checks are static analysis and tests alone will hand over a commit that does not compile the artefact it ships.
+- Read the output in full. Never pipe a check through `tail`, `head` or a grep that keeps only the summary: those show the last thing that ran, which is precisely not the thing that failed. A check that was run but not read has not been run.
+
 ## Committing
 
 The user runs git. The agent writes the commands and prints them:

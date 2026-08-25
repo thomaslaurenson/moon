@@ -38,16 +38,17 @@ The output is a plan, not an essay: a short phase key, then one table.
 2. Boundary: writers, environment, process ownership
 3. Independent: build, CI, docs
 
-| # | Phase | Finding | Location |
-|---|---|---|---|
-| 1 | 1 | Package-level Execute wrapper blocks writer injection | main.go:15 |
-| 2 | 2 | Mutable package streams and a ResetForTesting helper | internal/ui/ui.go:29 |
-| 3 | 3 | Both CI badges point at the same workflow | README.md:3 |
+| # | Phase | Severity | Finding | Location |
+|---|---|---|---|---|
+| 1 | 1 | high | Package-level Execute wrapper blocks writer injection | main.go:15 |
+| 2 | 2 | high | Mutable package streams and a ResetForTesting helper | internal/ui/ui.go:29 |
+| 3 | 3 | low | Both CI badges point at the same workflow | README.md:3 |
 ```
 
 - Number every finding. The fix loop cites them by number, so the numbers are the interface between the two halves.
 - The finding cell is ten words at most, and names the fault rather than the remedy.
-- Order phases so dependent work follows what it depends on, and put everything independent in the last one. Sort rows by phase, then by significance.
+- Severity is high, medium or low. Three levels only: a finer scale invites argument about the labels without telling the reader anything more.
+- Order phases so dependent work follows what it depends on, and put everything independent in the last one. Phase is the primary sort and severity breaks ties within it, so dependency ordering always wins.
 - Cite `file:line`. Where a finding has no single location, name the area instead.
 
 ## Hard limits
@@ -57,6 +58,6 @@ The table is the report. These are limits rather than targets, and going over is
 - No prose paragraphs before the phase key or between rows.
 - No code blocks, no diffs, no proposed fixes. The remedy belongs to the fix loop's turn, not this one.
 - A closing note of two lines at most: what was verified, and anything notable that passed.
-- Deliberate deviations go in a second table of the same shape, so code that departs from the standard on purpose is not mistaken for a fault.
+- Deliberate deviations go in a second table, dropping the severity column, so code that departs from the standard on purpose is not ranked as a fault.
 
 Everything held back is available the moment it is asked for. A reader who wants the reasoning asks for the finding by number.

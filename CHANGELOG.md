@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 - 2026-08-25
+
+### Added
+
+- Add a review-findings bundle for running a review and reporting what it found
+- Add a review-fixes bundle for working through findings one at a time
+
 ## 0.4.0 - 2026-08-24
 
 ### Added

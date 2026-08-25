@@ -57,7 +57,7 @@ The version is embedded in exactly one source file as a `VERSION` variable; that
 
 Three Makefile targets carry the convention:
 
-- `get_version` extracts the embedded version (all extraction goes through `# GET` targets; see the Makefile conventions).
+- `get_version` extracts the embedded version (all extraction goes through `##@ GET` targets; see the Makefile conventions).
 - `check_version` verifies every file that states the version agrees with the embedded one. It runs in the lint workflow and in `ci`.
 - `check_version_tag TAG=vX.Y.Z` verifies the embedded version matches the tag, leading `v` stripped. The release workflow runs it before building anything, so a release with a mismatched tag fails before an artefact exists.
 

@@ -37,4 +37,5 @@ dev = [{ include-group = "test" }, "ruff>=..."]
 
 Makefile targets (in addition to the common Python targets): a tools project adds no build, coverage, or type-check targets.
 
-- `ci`: `lint fmt_check test`
+- `check_all`: `check_lint check_format`
+- `ci`: `check_all test`

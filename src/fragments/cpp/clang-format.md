@@ -11,19 +11,19 @@ Configuration and usage conventions for clang-format across all C++ projects.
 
 ## Prerequisites
 
-clang-format major version 18 must be installed; how depends on the platform (apt.llvm.org ships `clang-format-18`, Homebrew and the LLVM Windows installer ship a plain `clang-format`). The Makefile resolves whichever is present into `$(CLANG_FORMAT)`; see the clang tooling section of cpp/cmake.md. Keep to the pinned major version, because different majors produce different formatting output and a mismatch fails `fmt_check` on lines nobody edited.
+clang-format major version 18 must be installed; how depends on the platform (apt.llvm.org ships `clang-format-18`, Homebrew and the LLVM Windows installer ship a plain `clang-format`). The Makefile resolves whichever is present into `$(CLANG_FORMAT)`; see the clang tooling section of cpp/cmake.md. Keep to the pinned major version, because different majors produce different formatting output and a mismatch fails `check_format` on lines nobody edited.
 
 ## Running clang-format
 
 ```bash
 # Check for formatting violations (used in CI)
-make fmt_check
+make check_format
 
 # Auto-fix all formatting in place (used locally)
-make fmt
+make format
 ```
 
-`make fmt_check` exits non-zero if any file differs from the formatted output, causing CI to fail. `make fmt` rewrites files in place; run it before committing.
+`make check_format` exits non-zero if any file differs from the formatted output, causing CI to fail. `make format` rewrites files in place; run it before committing.
 
 ## Canonical `.clang-format`
 

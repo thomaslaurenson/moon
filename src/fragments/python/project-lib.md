@@ -58,5 +58,6 @@ Makefile targets (in addition to the common Python targets):
 
 - `build`: `uv build`
 - `test_coverage`: `uv run coverage run -m pytest -m "not integration" && uv run coverage report`
-- `typecheck`: `uv run pyright`
-- `ci`: `lint fmt_check typecheck test`
+- `check_types`: `uv run pyright`
+- `check_all`: `check_lint check_format check_types`
+- `ci`: `check_all test`

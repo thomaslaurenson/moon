@@ -20,9 +20,11 @@ var content embed.FS
 func main() {
 	root := cmd.NewRootCmd(content, os.Stdout, os.Stderr)
 	if err := root.Execute(); err != nil {
-		if !errors.Is(err, cmd.ErrSilent) {
-			fmt.Fprintf(os.Stderr, "moon: %v\n", err)
+		var ec *cmd.ExitCodeError
+		if errors.As(err, &ec) {
+			os.Exit(ec.Code)
 		}
+		fmt.Fprintf(os.Stderr, "moon: %v\n", err)
 		os.Exit(1)
 	}
 }

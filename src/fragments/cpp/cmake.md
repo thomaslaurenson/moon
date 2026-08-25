@@ -477,7 +477,7 @@ Consumers then write `target_link_libraries(mylib_transport PRIVATE asio)` and i
 
 ## Clang tooling
 
-Clang tools are pinned to major version 18 across all projects, because formatting output and check behaviour differ between major versions: a tree formatted with one and checked with another fails `fmt_check` on lines nobody touched.
+Clang tools are pinned to major version 18 across all projects, because formatting output and check behaviour differ between major versions: a tree formatted with one and checked with another fails `check_format` on lines nobody touched.
 
 How that version is installed differs per platform, so the Makefile resolves the binary rather than naming it:
 
@@ -499,7 +499,7 @@ LLVM_COV      ?= $(shell command -v llvm-cov-$(CLANG_VERSION) 2>/dev/null || ech
 
 `llvm-profdata` and `llvm-cov` are resolved here with the rest, rather than beside the coverage target that uses them, so every clang tool the project shells out to is named in one block. They are packaged and versioned exactly like `clang-format`, so they need the same fallback; see the coverage section of cpp/testing.md.
 
-Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make fmt CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
+Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make format CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
 
 CI pins the version explicitly, so drift between a contributor's local major version and the enforced one surfaces there rather than in review.
 
@@ -525,7 +525,7 @@ configure_lint: ## Configure $(LINT_DIR) with clang++, so clang-tidy can parse t
 	  $(CMAKE_ARGS)
 ```
 
-`--gcc-install-dir` tells clang which libstdc++ to use when the two toolchains are installed side by side, which is the normal state on a Linux runner and on most developer machines. It is passed only when `gcc` is present to ask: on a machine with no GCC the shell call yields an empty string, and `--gcc-install-dir=` with nothing after it is rejected by clang, so an unconditional flag would break `make lint_cpp` everywhere GCC is not installed.
+`--gcc-install-dir` tells clang which libstdc++ to use when the two toolchains are installed side by side, which is the normal state on a Linux runner and on most developer machines. It is passed only when `gcc` is present to ask: on a machine with no GCC the shell call yields an empty string, and `--gcc-install-dir=` with nothing after it is rejected by clang, so an unconditional flag would break `make check_lint` everywhere GCC is not installed.
 
 A second directory rather than pinning clang in `configure` itself, because `configure` has to stay compiler-neutral: CI builds under both GCC and clang (see cpp/workflows.md), and `--gcc-install-dir` is a clang flag that `g++` rejects outright. The cost is close to nothing: `configure_lint` only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
 
@@ -551,31 +551,22 @@ configure: ## Configure the cmake build
 build: configure ## Build the project
 	cmake --build build/dev --parallel $(JOBS)
 
-.PHONY: fmt
-fmt: ## Format all source files with clang-format
+.PHONY: format
+format: ## Format all source files with clang-format
 	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) -i
 
-.PHONY: fmt_check
-fmt_check: ## Check formatting without modifying files
+.PHONY: check_format
+check_format: ## Check formatting without modifying files
 	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) --dry-run --Werror
 
-.PHONY: lint_cpp
-lint_cpp: configure_lint ## Run clang-tidy static analysis
+.PHONY: check_lint
+check_lint: configure_lint ## Run clang-tidy static analysis
 	$(CLANG_TIDY) --quiet -p $(LINT_DIR) \
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
 
-# CI
-
-.PHONY: ci
-ci: fmt_check lint_cpp test ## Run the checks CI runs
-
-.PHONY: clean
-clean: ## Remove all build directories
-	rm -rf build
-
-# GET
+##@ GET
 
 .PHONY: get_version
 get_version: ## Print the project version from CMakeLists.txt (fails if absent)
@@ -594,6 +585,18 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
 	  found { print } \
 	  END { if (!found) exit 1 }' CHANGELOG.md
+
+##@ CI
+
+.PHONY: check_all
+check_all: check_format check_lint ## Run every static check
+
+.PHONY: ci
+ci: check_all test ## Run the checks CI runs
+
+.PHONY: clean
+clean: ## Remove all build directories
+	rm -rf build
 ```
 
 - `--quiet` suppresses the "Suppressed N warnings" summary and hint lines
@@ -601,7 +604,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 - `include/` is formatted but not tidied directly: its headers carry no `.cpp` of their own, and clang-tidy reaches them through the `--header-filter` when it analyses the `src/` files that include them
 - `--header-filter="$(CURDIR)/(include|src|app)/.*"` limits diagnostic output to project headers; extern/ headers are already excluded as system headers (see Including extern/ headers in this file) but this provides belt-and-suspenders coverage
 - `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe
-- `lint_cpp` depends on `configure_lint`, so it needs no separate `make configure` first and reads `$(LINT_DIR)/compile_commands.json` rather than the everyday build's
+- `check_lint` depends on `configure_lint`, so it needs no separate `make configure` first and reads `$(LINT_DIR)/compile_commands.json` rather than the everyday build's
 - `configure` is `.PHONY` and always runs, rather than being a rule on `build/dev/CMakeCache.txt`. Keying it to the cache file looks like a saving and is a trap: `make configure CMAKE_ARGS=-DFOO=ON` then does nothing at all on a tree that already configured, silently ignoring the flags, and the reconfigure it avoids takes under a second
 - `build` depends on `configure`, and every test target depends on `build`, so any entry point works from a fresh clone. CMake keeps cached `-D` values across a reconfigure, so the repeat does not discard the compiler or `-Werror` a CI job set with `make configure CMAKE_ARGS=...`
 - `ci` is prerequisites only, with no recipe: it names the checks CI runs so a developer can run them in one command before pushing. Through `test` it pulls in `build` and `configure`, so it runs on a clean checkout. A tier with a functional layer adds `test_functional`. It cannot mirror CI exactly, and should not try: CI builds under two compilers and a developer has one, so `ci` reproduces the checks rather than the matrix
@@ -613,7 +616,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 
 Every target a workflow invokes must be defined by one of these fragments. A workflow calling `make <something>` that no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
 
-Note: `fmt` and `fmt_check` include the `test/` directory; test code is held to the same formatting standard as production code. `lint_cpp` deliberately does not run clang-tidy over `test/`: test files use Catch2 macros and fixture patterns that trip naming and readability checks written for production code. Format tests, but do not tidy them.
+Note: `format` and `check_format` include the `test/` directory; test code is held to the same formatting standard as production code. `check_lint` deliberately does not run clang-tidy over `test/`: test files use Catch2 macros and fixture patterns that trip naming and readability checks written for production code. Format tests, but do not tidy them.
 
 ### Configuration files
 

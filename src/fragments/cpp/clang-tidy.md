@@ -12,7 +12,7 @@ Configuration and usage conventions for clang-tidy across all C++ projects.
 
 ## Prerequisites
 
-clang-tidy requires `compile_commands.json` to resolve include paths, and it must come from a **clang-configured** build. `make lint_cpp` depends on `configure_lint`, which produces one in `build/lint`; nothing else needs running first.
+clang-tidy requires `compile_commands.json` to resolve include paths, and it must come from a **clang-configured** build. `make check_lint` depends on `configure_lint`, which produces one in `build/lint`; nothing else needs running first.
 
 Do not point it at the everyday `build/dev` instead. That build uses whatever compiler is default, usually GCC, and clang-tidy then cannot resolve libstdc++ at all: it reports `'algorithm' file not found` and carries on emitting diagnostics from a broken AST, so the lint output is fiction rather than an error. See cpp/cmake.md for the target and the reasoning.
 
@@ -27,7 +27,7 @@ When clang-tidy processes multiple files it prints a running cumulative count:
 
 This counter reflects warnings found across the entire translation unit, including all `#include`d headers, before any filtering. It is always high and always misleading. It is **not** a count of findings in project code.
 
-The `make lint_cpp` target filters this line from output (`grep -v " warnings generated"`). When no findings exist in project code, a clean run produces only the progress lines and exits zero.
+The `make check_lint` target filters this line from output (`grep -v " warnings generated"`). When no findings exist in project code, a clean run produces only the progress lines and exits zero.
 
 ## Excluding third-party headers
 
@@ -137,9 +137,9 @@ $(CLANG_TIDY) --checks="-*,<check-name>" -p build/lint $(find src app -name "*.c
   | grep -v " warnings generated"
 
 # Run the full current config to confirm a clean baseline
-make lint_cpp
+make check_lint
 ```
 
-`find` rather than a `src/*.cpp` glob, for the same reason `lint_cpp` uses it: the glob stops at the top level and silently skips every nested directory.
+`find` rather than a `src/*.cpp` glob, for the same reason `check_lint` uses it: the glob stops at the top level and silently skips every nested directory.
 
 If a check produces no findings, it is still worth having if it covers a real risk class for the project. If it produces findings, fix them before committing the check to `.clang-tidy`.

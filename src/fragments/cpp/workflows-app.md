@@ -2,7 +2,7 @@
 
 Applies to any tier that ships a distributable binary: an application, or a library with a bundled CLI. A plain library has no artifact to build and ships nothing, so it builds and tests in one plain job instead; see workflows-lib.md.
 
-`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
+`@vN` in the examples below means pin the current major at authoring time (for example `@v5`); Dependabot keeps it current. Do not copy a version number from this document as the target to match. Majors are for `actions/*` and for actions you publish yourself; every other action pins to a full SHA (see the GitHub Actions fragment).
 
 ## Paths filter addition
 
@@ -301,7 +301,7 @@ That is also the argument for building release artifacts on a native runner rath
 
 Publishes a GitHub release: downloads every build artifact, generates install scripts and checksums with gpipe, signs them, and creates the release with changelog notes.
 
-The pattern is three steps: **build -> gpipe -> release**. gpipe is language-agnostic, not Go-only; it consumes built binaries from paths named in `.gpipe.yml` and neither knows nor cares what produced them, so the Go and C++ release flows are the same shape. `gpipe` generates `install.sh`, `install.ps1` and `checksums.txt`, and with `cosign_sign: true` also emits `checksums.txt.sigstore.json`. Do not hand-roll `sha256sum`: gpipe's `checksums.txt` covers the installer scripts themselves as well as the platform binaries, which is what lets a cautious user verify `install.sh` before piping it to a shell.
+This is the build -> gpipe -> release pattern; the gpipe fragment covers what gpipe writes and how it is configured. The C++ specific part is that the build step is `build.yml` rather than a single builder, so the binaries arrive as downloaded artifacts.
 
 ```yaml
 name: Release
@@ -381,13 +381,10 @@ jobs:
 
 A project publishing an image adds `packages: write` to this workflow's `permissions` and to the caller job in `tag.yml`.
 
-`gpipe` needs no `version` or `repo` inputs here: they default to `github.ref_name` and `github.repository`, and `tag.yml` only ever fires on a `v*` tag, so `ref_name` is already the semantic version gpipe expects. `id-token: write` must also be granted by the caller job in `tag.yml`, not just declared here.
-
-The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. It installs its own Go, so a caller needs none of its own: the runner image ships Go, but not necessarily a version new enough for gpipe's `go.mod`, and a project that never invokes Go directly has no reason to carry `actions/setup-go` for a tool's benefit.
 
 #### `.gpipe.yml`
 
-Lives at the project root, and its `path` entries must match where `download-artifact` puts the binaries. With `path: dist` and `merge-multiple: true` every artifact lands flat in `dist/`, so the paths are `./dist/<asset>`:
+The gpipe fragment covers the config surface and the action inputs. What is C++ specific is that the `path` entries must match where `download-artifact` puts the binaries: with `path: dist` and `merge-multiple: true` every artifact lands flat in `dist/`, so the paths are `./dist/<asset>`.
 
 ```yaml
 binary: myapp
@@ -404,19 +401,15 @@ platforms:
     name: myapp-windows-x86_64.exe
 ```
 
-One platform key maps to exactly one binary, which is the other reason Linux ships a single static musl build per architecture: there is no way to express "glibc or musl, reader's choice" here, and the installer has to pick the one that runs everywhere.
-
-`binary`, `platforms` and `hooks` are the whole config surface. Shell completions are not gpipe's job: a binary that ships them installs them from a `post-sh` hook, which has the installed location in `INSTALL_DIR` and the name in `BINARY`.
-
-Validate the config before relying on it in CI: `gpipe validate --repo <owner/repo> --version v0.0.0` checks the schema, the platform identifiers and any hooks without needing the binaries present.
+One platform key maps to exactly one binary, and that is the other reason Linux ships a single static musl build per architecture: there is no way to express "glibc or musl, reader's choice", so the installer has to be given the one that runs everywhere.
 
 ### `prerelease.yml`
 
 A single rolling GitHub prerelease under the literal tag `dev`, rebuilt on every push to main: raw binaries from `build.yml` only, no install scripts, no checksums, no changelog notes.
 
-**gpipe does not appear here, and cannot.** It validates `--version` as a semantic version, so the literal string `dev` is rejected outright; and the installers it generates hardcode `releases/download/<version>/<asset>`, so passing a semver-shaped stand-in like `v1.2.4-dev` produces a script whose every download URL 404s against a release actually tagged `dev`. Install scripts are a release-only artifact. A rolling channel that is deleted and recreated on every push is the wrong thing to hang a stable `curl | bash` URL off anyway.
+**gpipe does not appear here, and cannot**; see the gpipe fragment for why.
 
-This is the same rolling-dev channel the Go flow publishes, and it needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
+This needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
 
 Reuse the same `path: dist, merge-multiple: true` download and the same explicit asset list as `release.yml`. Naming them is deliberate in both places: release assets are a public interface, and a glob attaches whatever happens to match, which is how an image tar sharing the directory ends up published as a binary. Adding a platform is a decision, so let it be an edit.
 

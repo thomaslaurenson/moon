@@ -1,14 +1,16 @@
 SHELL := /bin/bash
 
-BINARY  := moon
-VERSION := $(shell git describe --tags --always 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X github.com/thomaslaurenson/moon/cmd.Version=$(VERSION)
+BINARY    := moon
+VERSION   := $(shell git describe --tags --always --dirty --match 'v*' 2>/dev/null || echo dev)
+LDFLAGS   := -s -w -X github.com/thomaslaurenson/moon/cmd.Version=$(VERSION)
+GOIMPORTS := go run golang.org/x/tools/cmd/goimports@latest -local github.com/thomaslaurenson/moon
 
-# BUILD
+##@ BUILD
+
 .PHONY: help
 help: ## Show this help message
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
+	@awk 'BEGIN {FS = ":.*?## "} /^##@ / {printf "\n%s\n", substr($$0, 5)} \
+		/^[a-zA-Z_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: build
 build: ## Build the moon binary into dist/ (embeds src/fragments and src/bundles)
@@ -20,28 +22,11 @@ run: ## Run without building, e.g. make run ARGS="show python-lib"
 	@go run . $(ARGS)
 
 .PHONY: snapshot
-snapshot: ## Build a full local snapshot release with goreleaser (no publish)
-	@goreleaser release --snapshot --clean
+snapshot: ## Build snapshot binaries with goreleaser, as release.yml would
+	@goreleaser build --snapshot --clean
 
-# LINT
-.PHONY: fmt
-fmt: ## Format all Go source
-	@gofmt -w .
+##@ TEST
 
-.PHONY: fmt_check
-fmt_check: ## Fail if any file is not gofmt-clean
-	@out="$$(gofmt -l .)"; test -z "$$out" || { printf 'not formatted:\n%s\n' "$$out"; exit 1; }
-
-.PHONY: mod_check
-mod_check: ## Fail if go.mod/go.sum are not tidy
-	@go mod tidy
-	@git diff --exit-code -- go.mod go.sum || { printf 'go.mod/go.sum not tidy; commit the diff\n' >&2; exit 1; }
-
-.PHONY: vet
-vet: ## Run go vet
-	@go vet ./...
-
-# TEST
 .PHONY: test
 test: ## Run tests with the race detector
 	@go test -race -count=1 ./...
@@ -52,33 +37,74 @@ test_coverage: ## Run tests with a coverage report (internal/ only; cmd/ is wiri
 	@go tool cover -func=coverage.out
 	@rm coverage.out
 
-.PHONY: check
-check: ## Validate every bundle: missing fragments, include cycles, orphans
+##@ LINT
+
+.PHONY: format
+format: ## Format all Go source and group imports
+	@$(GOIMPORTS) -w .
+
+.PHONY: check_format
+check_format: ## Fail if any file needs formatting
+	@out="$$($(GOIMPORTS) -l .)"; test -z "$$out" || { printf 'not formatted:\n%s\n' "$$out"; exit 1; }
+
+.PHONY: check_mod
+check_mod: ## Fail if go.mod/go.sum are not tidy
+	@go mod tidy
+	@git diff --exit-code -- go.mod go.sum || { printf 'go.mod/go.sum not tidy; commit the diff\n' >&2; exit 1; }
+
+.PHONY: vet
+vet: ## Run go vet
+	@go vet ./...
+
+.PHONY: check_cross
+check_cross: ## Type-check the windows and darwin builds
+	@GOOS=windows go vet ./...
+	@GOOS=darwin go vet ./...
+
+.PHONY: check_embed
+check_embed: ## Validate the embedded bundles: missing fragments, cycles, orphans
 	@go run . check
 
-# GET
+.PHONY: check_all
+check_all: check_format check_mod vet check_cross check_embed ## Run all static checks
+
+.PHONY: vuln
+vuln: ## Scan for known vulnerabilities reachable from this code
+	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+##@ GET
+
 .PHONY: get_changelog
-get_changelog: ## Print release notes for a tag: make get_changelog TAG=v1.2.3
-	@[[ -n "$(TAG)" ]] || { printf 'Usage: make get_changelog TAG=v1.2.3\n' >&2; exit 1; }
-	@v="$${TAG#v}"; \
-	notes="$$(awk -v ver="$$v" ' \
-		$$0 ~ "^## " ver "( |$$)" { found=1; next } \
-		found && /^## / { exit } \
-		found { print } \
-	' CHANGELOG.md)"; \
-	[[ -n "$$(printf '%s' "$$notes" | tr -d '[:space:]')" ]] \
-		|| { printf 'no changelog entry for %s\n' "$$TAG" >&2; exit 1; }; \
+get_changelog: ## Print release notes for TAG to stdout (TAG=v1.0.0)
+	@tag="$(TAG)"; tag="$${tag#v}"; \
+	if [[ -z "$$tag" ]]; then \
+	  printf 'get_changelog: TAG is empty; pass TAG=v1.0.0\n' >&2; \
+	  exit 1; \
+	fi; \
+	notes="$$(awk -v tag="$$tag" ' \
+	  /^## / { if (found) exit; if (index($$0,"## "tag" ")==1 || $$0=="## "tag) found=1; next } \
+	  found { lines[n++]=$$0 } \
+	  END { \
+	    s=0; while (s<n && lines[s]~/^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e>=s && lines[e]~/^[[:space:]]*$$/) e--; \
+	    for (i=s;i<=e;i++) print lines[i] \
+	  }' CHANGELOG.md)"; \
+	if [[ -z "$$notes" ]]; then \
+	  printf 'get_changelog: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  exit 1; \
+	fi; \
 	printf '%s\n' "$$notes"
 
 .PHONY: get_version
 get_version: ## Print the version that would be baked into the binary
 	@echo "$(VERSION)"
 
-# CI
+##@ CI
+
 .PHONY: ci
-ci: fmt_check mod_check vet test check ## Run all CI checks
+ci: check_all test ## Run everything CI runs
 
 .PHONY: clean
 clean: ## Remove the binary and generated bundles
-	@rm -rf dist coverage.out
+	@rm -rf dist install.sh install.ps1 checksums.txt checksums.txt.sigstore.json coverage.out
 	@printf '[*] cleaned\n'

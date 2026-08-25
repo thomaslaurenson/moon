@@ -91,14 +91,12 @@ func Detect(fsys fs.FS) ([]Match, error) {
 		matches = append(matches, Match{Bundle: bundle, Glob: target.GlobForBundle(bundle)})
 	}
 
-	if p.goMod {
-		// A repo-wide absence of main.go is the strongest cheap signal that this
-		// is a library, not a binary: nothing to run means nothing to be a CLI.
-		if p.mainGo {
-			add("go-cli")
-		} else {
-			add("go-lib")
-		}
+	// A repo-wide absence of main.go is the strongest cheap signal that this is a
+	// library, not a binary: nothing to run means nothing to be a CLI. moon models
+	// only the CLI tier for Go, so such a repo matches nothing and the caller names
+	// its bundles explicitly.
+	if p.goMod && p.mainGo {
+		add("go-cli")
 	}
 	if p.cmakeLists {
 		// The C++ tiers turn on two independent questions, each answered by a

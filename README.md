@@ -1,10 +1,10 @@
 # moon
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/thomaslaurenson/moon/tag.yml?style=flat&logo=github) ![Test Status](https://img.shields.io/github/actions/workflow/status/thomaslaurenson/moon/tag.yml?style=flat&label=test&logo=github)
+![Release Build](https://img.shields.io/github/actions/workflow/status/thomaslaurenson/moon/tag.yml?style=flat&label=release&logo=github) ![Main Build](https://img.shields.io/github/actions/workflow/status/thomaslaurenson/moon/main.yml?style=flat&label=main&logo=github)
 
 ![Release Version](https://img.shields.io/github/v/release/thomaslaurenson/moon?style=flat&logo=github) ![Release downloads](https://img.shields.io/github/downloads/thomaslaurenson/moon/total?label=downloads&logo=github)
 
-![Go Version](https://img.shields.io/github/go-mod/go-version/thomaslaurenson/moon?logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-90.3%25-blue?logo=go)
+![Go Version](https://img.shields.io/github/go-mod/go-version/thomaslaurenson/moon?logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-91.2%25-blue?logo=go)
 
 To the moon! A self-contained binary that composes AI agent instructions from markdown fragments.
 
@@ -41,8 +41,9 @@ go install github.com/thomaslaurenson/moon@latest
 moon bundle list --long        # see every bundle with a one-line description
 moon bundle list --json        # machine-readable output (also on: fragment list)
 moon bundle show <name>        # print an assembled bundle to stdout
-moon bundle show <name> -l     # list the fragments a bundle expands to
+moon bundle expand <name>      # list the fragments a bundle expands to
 moon fragment list [filter]    # list fragment paths (optionally filtered)
 moon fragment show <path>      # print a single fragment to stdout
 moon init <target> [bundle...] # populate a repo for claude, agents, or copilot
+moon check                     # validate every bundle, exit non-zero on problems
 ```

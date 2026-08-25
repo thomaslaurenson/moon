@@ -4,7 +4,7 @@ C++-specific style. Assumes the core conventions. Where the project includes the
 
 ## Formatting
 
-Enforced by clang-format; `make fmt` reformats all source. The canonical `.clang-format`, the deviations from LLVM defaults and the reasoning for each are in the clang-format fragment, which is the only place they are written down.
+Enforced by clang-format; `make format` reformats all source. The canonical `.clang-format`, the deviations from LLVM defaults and the reasoning for each are in the clang-format fragment, which is the only place they are written down.
 
 ## Suppressing clang-format
 

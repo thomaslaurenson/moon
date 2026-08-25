@@ -73,7 +73,7 @@ func (a *App) newFragmentShowCmd() *cobra.Command {
 		ValidArgsFunction: a.completeFragments,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !a.e.HasFragment(args[0]) {
-				return fmt.Errorf("%s: not a known fragment (run moon fragment list to see them)", args[0])
+				return fmt.Errorf("%q: not a known fragment (run moon fragment list to see them)", args[0])
 			}
 			data, err := a.e.Fragment(args[0])
 			if err != nil {

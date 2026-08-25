@@ -37,7 +37,7 @@ func (a *App) runInit(out, errw io.Writer, targetName string, bundleNames []stri
 		return err
 	}
 	if !insideGitRepo(root) {
-		return fmt.Errorf("%s is not inside a git repository (no .git found); moon init requires one", root)
+		return fmt.Errorf("%q is not inside a git repository (no .git found); moon init requires one", root)
 	}
 
 	matches, err := a.resolveInitMatches(root, targetName, bundleNames)
@@ -107,7 +107,7 @@ func (a *App) resolveInitMatches(root, targetName string, bundleNames []string) 
 		matches := make([]detect.Match, 0, len(bundleNames))
 		for _, name := range bundleNames {
 			if !a.e.HasBundle(name) {
-				return nil, fmt.Errorf("%s: not a known bundle (run moon bundle list to see bundles)", name)
+				return nil, fmt.Errorf("%q: not a known bundle (run moon bundle list to see bundles)", name)
 			}
 			matches = append(matches, detect.Match{Bundle: name, Glob: target.GlobForBundle(name)})
 		}
@@ -119,7 +119,7 @@ func (a *App) resolveInitMatches(root, targetName string, bundleNames []string) 
 	}
 	if len(detected) == 0 {
 		return nil, fmt.Errorf(
-			"could not detect a language in %s; pass bundle names explicitly, e.g. moon init %s python-lib",
+			"could not detect a language in %q; pass bundle names explicitly, e.g. moon init %s python-lib",
 			root, targetName)
 	}
 	return detected, nil

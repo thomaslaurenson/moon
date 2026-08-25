@@ -237,8 +237,8 @@ func TestResolveRejectsUnknownDirective(t *testing.T) {
 		"src/bundles/typo":       {Data: []byte("@includes _core.md\n")},
 	}
 	e := New(fsys)
-	if _, err := e.Expand("typo"); err == nil || !strings.Contains(err.Error(), "unknown directive") {
-		t.Fatalf("Expand(typo) error = %v, want an 'unknown directive' error", err)
+	if _, err := e.Expand("typo"); !errors.Is(err, ErrUnknownDirective) {
+		t.Fatalf("Expand(typo) error = %v, want errors.Is(_, ErrUnknownDirective)", err)
 	}
 }
 

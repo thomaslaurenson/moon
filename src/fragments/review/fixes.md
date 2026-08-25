@@ -9,6 +9,8 @@ The input is the table the review produced: numbered findings grouped into phase
 - Work phases in sequence, and rows in order within a phase.
 - Open every turn by citing the finding's number, so the user can match it against the table without hunting for it.
 - Where there is no table, agree an order once before starting and then treat it exactly as a phase key.
+- Close each handover with what is left, as a table in the review's own columns, so the user reads one shape throughout. Drop completed rows rather than marking them done; the git log already records those.
+- Say so when a phase completes. That is the point at which reordering what remains is cheap, and the last chance to do it before the next phase depends on it.
 
 ## One at a time
 
@@ -24,11 +26,11 @@ Three parts, then stop:
 2. The proposed solution, in no more than five lines.
 3. A request for feedback, in one line.
 
-These are hard limits, not targets to aim near. A turn that runs over has failed the rule even when every line in it is true and useful.
+These are hard limits, not targets to aim near. A proposal turn that runs over has failed the rule even when every line in it is true and useful.
 
-What is banned from the turn, whatever the temptation:
+What is banned from a proposal turn, whatever the temptation:
 
-- Code blocks, diffs and signatures. Code belongs in the implementation, not the pitch.
+- Code blocks, diffs and signatures. Code belongs in the implementation, not the pitch. The commit handover is the one turn that requires a block; see below.
 - The reasoning behind the proposal, the alternatives weighed, the trade-offs considered.
 - Restating the finding, the standard it came from, or why the standard says it.
 - Listing what is deliberately out of scope, or what a later finding will cover.

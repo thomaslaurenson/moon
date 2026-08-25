@@ -1,0 +1,4 @@
+# Turning agreed review findings into commits, one finding at a time. Point an agent here after a review; pair with review-findings for producing the list.
+review/fixes.md
+github/commits.md
+github/changelog.md

@@ -1,2 +1,4 @@
-# Running a review and reporting what it found: scope, verification, and the shape of a finding. Point an agent here to review; pair with review-fixes for what happens afterwards. Language-agnostic, so load the language's own code bundle alongside it for the standards being reviewed against.
+# Running a review and reporting what it found: scope, verification, and a phased findings table. Point an agent here to review; pair with review-fixes for what happens afterwards. Language-agnostic, so load the language's own code bundle alongside it for the standards being reviewed against.
+_core.md
+tools/markdown.md
 review/findings.md

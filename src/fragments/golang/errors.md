@@ -73,7 +73,7 @@ func main() {
         if errors.As(err, &ec) {
             os.Exit(ec.Code)
         }
-        fmt.Fprintf(os.Stderr, "<binary>: %v\n", err)
+        fmt.Fprintf(os.Stderr, "[!] %v\n", err)
         os.Exit(1)
     }
 }
@@ -83,7 +83,7 @@ A command that needs a context adds signal handling above this and calls `Execut
 
 - `main` builds the tree through `NewRootCmd` rather than a package-level `Execute` wrapper, so production and tests construct it exactly one way (see the scaffolding and functional testing fragments). A wrapper that only forwards its arguments is a second construction path that can drift from the one the tests use.
 - `main` imports `cmd` and the standard library, nothing else. A sentinel it has to match on, such as one meaning the user backed out of a prompt, is exported from `cmd` rather than reached for in `internal/`.
-- The prefix is the binary name, never `error:`. It tells someone reading a wall of shell output which program spoke.
+- The line is marked `[!]`, like every other warning or error the program prints (see the core conventions). Never an `error:` prefix, which carries nothing the marker does not.
 - Exit 1 for every ordinary failure.
 
 | Code | Meaning |

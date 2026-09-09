@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2 - 2026-09-10
+
+### Added
+
+- Add a shared output marker vocabulary for messages a command line tool prints
+
+### Removed
+
+- Remove the binary name prefix from fatal error lines in the Go and bash fragments
+
 ## 0.4.1 - 2026-08-25
 
 ### Added

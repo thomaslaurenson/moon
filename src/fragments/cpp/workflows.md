@@ -147,7 +147,6 @@ jobs:
         run: sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
 
       - run: make check_all
-      - run: make check_all
 ```
 
 ## Changelog extraction

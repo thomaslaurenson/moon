@@ -95,13 +95,40 @@ int main(int argc, char **argv) {
         // parse arguments, call into mylib
         return 0;
     } catch (const mylib::Error &e) {
-        std::cerr << "error: " << e.what() << "\n";
+        std::cerr << "[!] " << e.what() << "\n";
         return 1;
     } catch (const std::exception &e) {
-        std::cerr << "unexpected error: " << e.what() << "\n";
+        std::cerr << "[!] unexpected: " << e.what() << "\n";
         return 2;
     }
 }
 ```
 
-Exit codes are part of the CLI contract and are asserted by functional tests (see the functional testing fragment). Use `0` for success, `1` for an expected failure the user can act on, and `2` for a bug or an unhandled condition. A project needing finer-grained codes documents them in the README and keeps them stable across releases.
+The line is marked `[!]`, like every other warning or error the program prints (see the core conventions). Never an `error:` prefix, which carries nothing the marker does not.
+
+## Exit codes
+
+Exit codes are part of the CLI contract and are asserted by functional tests (see the functional testing fragment).
+
+| Code | Meaning |
+|---|---|
+| 0 | success, including `--help` and `--version` |
+| 1 | an expected failure the user can act on, with a message on stderr |
+| 2 | a bug or an unhandled condition |
+| 100-114, 127 | a CLI11 parse error, returned by `app.exit()` |
+
+The last row is not a choice the project makes. `CLI::ExitCodes` numbers every parse failure from 100 upwards, `app.exit(e)` returns that number, and a `main` that forwards it propagates the whole range:
+
+```cpp
+try {
+    app.parse(argc, argv);
+} catch (const CLI::ParseError &e) {
+    return app.exit(e);
+}
+```
+
+Forward them rather than collapsing them to 1. The code says which parse failure occurred, a functional test can assert on it, and `--help` already comes back as 0 through the same path, so collapsing would have to special-case success as well.
+
+Knowing the range matters when writing a functional test. A test expecting a file error and getting 106 has hit `RequiredError`, which means the argument never reached the code under test; see the portable-input rule in the functional testing fragment.
+
+Leave 3 to 99 unused. A project needing a code of its own takes one from there, documents it in the README, and keeps it stable across releases, which keeps it clear of both the codes above and the shell's own 126 and upwards.

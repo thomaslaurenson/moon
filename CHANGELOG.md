@@ -25,6 +25,23 @@
 
 - Remove macOS from the C++ release path
 
+## 0.4.2 - 2026-09-10
+
+### Added
+
+- Add a shared output marker vocabulary for messages a command line tool prints
+
+### Removed
+
+- Remove the binary name prefix from fatal error lines in the Go and bash fragments
+
+## 0.4.1 - 2026-08-25
+
+### Added
+
+- Add a review-findings bundle for running a review and reporting what it found
+- Add a review-fixes bundle for working through findings one at a time
+
 ## 0.4.0 - 2026-08-24
 
 ### Added

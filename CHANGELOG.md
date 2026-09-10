@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add a C++ output fragment covering the stream split and passing a stream into library code
+- Document the CLI11 exit code range alongside the project's own codes
 - Add C++ coverage and sanitizer targets, and the CI jobs that run them
 - Add a get_version target, and build C++ examples in CI
 

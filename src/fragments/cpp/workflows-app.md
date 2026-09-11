@@ -6,7 +6,7 @@ Applies to any tier that ships a distributable binary: an application, or a libr
 
 ## Paths filter addition
 
-Add `Dockerfile*` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see `release.yml` below).
+Add `Dockerfile*` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see cpp/release-app.md).
 
 ## Depth is a function of the trigger
 
@@ -51,7 +51,7 @@ jobs:
     needs: [build, lint, test]
     permissions:
       contents: write
-      id-token: write                   # cosign keyless signing, see release.yml
+      id-token: write                   # cosign keyless signing, see cpp/release-app.md
   prerelease:                           # main.yml only
     uses: ./.github/workflows/prerelease.yml
     needs: [build, lint, test]
@@ -91,7 +91,7 @@ Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `a
 | Linux ARM64 | `myapp-linux-aarch64` |
 | Windows x86_64 | `myapp-windows-x86_64.exe` |
 
-This is gpipe's platform vocabulary, so the names map onto `.gpipe.yml` with no translation; the identifiers are the `platforms` keys shown under `release.yml` below, and `gpipe validate` checks a config against them. Pick the naming before the first release: the assets are a public interface, and renaming them later breaks anyone's install script.
+This is gpipe's platform vocabulary, so the names map onto `.gpipe.yml` with no translation; the identifiers are the `platforms` keys shown in cpp/release-app.md, and `gpipe validate` checks a config against them. Pick the naming before the first release: the assets are a public interface, and renaming them later breaks anyone's install script.
 
 #### One Linux binary, not two
 
@@ -297,193 +297,4 @@ Each job tests on the runner it built on, so the functional layer always spawns 
 
 That is also the argument for building release artifacts on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artifact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime.
 
-### `release.yml`
-
-Publishes a GitHub release: downloads every build artifact, generates install scripts and checksums with gpipe, signs them, and creates the release with changelog notes.
-
-This is the build -> gpipe -> release pattern; the gpipe fragment covers what gpipe writes and how it is configured. The C++ specific part is that the build step is `build.yml` rather than a single builder, so the binaries arrive as downloaded artifacts.
-
-```yaml
-name: Release
-
-on:
-  workflow_call
-
-# contents: write to create the release and upload assets
-# id-token: write to obtain the OIDC token for cosign keyless signing
-permissions:
-  contents: write
-  id-token: write
-
-jobs:
-  release:
-    runs-on: ubuntu-24.04
-    steps:
-      # Default depth. Nothing here reads git history: get_changelog reads
-      # CHANGELOG.md from the working tree, and gh release create uses the API.
-      - uses: actions/checkout@vN
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@vN
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Extract release notes from CHANGELOG.md
-        run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
-
-      - uses: thomaslaurenson/gpipe@vN
-        with:
-          cosign_sign: true
-
-      # Name every asset. A dist/myapp-* glob is shorter and wrong: with
-      # merge-multiple every artifact lands flat in dist/, so the Docker image
-      # tar matches too and is attached to the release as if it were a binary.
-      - name: Create release
-        run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            dist/myapp-linux-x86_64 \
-            dist/myapp-linux-aarch64 \
-            dist/myapp-windows-x86_64.exe \
-            install.sh install.ps1 \
-            checksums.txt checksums.txt.sigstore.json \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file /tmp/release-notes.md
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-  # Gated on the release: a registry outage then leaves a complete release with
-  # no image, rather than an image with no release. See tools/docker.md.
-  release_docker:
-    needs: release
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download image artifact
-        uses: actions/download-artifact@vN
-        with:
-          name: myapp-docker
-
-      - name: Load image
-        run: docker load -i myapp-docker.tar
-
-      - name: Push to ghcr
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ACTOR: ${{ github.actor }}
-          IMAGE: ghcr.io/${{ github.repository }}
-        run: |
-          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
-          docker tag myapp "$IMAGE:${GITHUB_REF_NAME}"
-          docker tag myapp "$IMAGE:latest"
-          docker push "$IMAGE:${GITHUB_REF_NAME}"
-          docker push "$IMAGE:latest"
-```
-
-A project publishing an image adds `packages: write` to this workflow's `permissions` and to the caller job in `tag.yml`.
-
-
-#### `.gpipe.yml`
-
-The gpipe fragment covers the config surface and the action inputs. What is C++ specific is that the `path` entries must match where `download-artifact` puts the binaries: with `path: dist` and `merge-multiple: true` every artifact lands flat in `dist/`, so the paths are `./dist/<asset>`.
-
-```yaml
-binary: myapp
-
-platforms:
-  linux_amd64:
-    path: ./dist/myapp-linux-x86_64
-    name: myapp-linux-x86_64
-  linux_arm64:
-    path: ./dist/myapp-linux-aarch64
-    name: myapp-linux-aarch64
-  windows_amd64:
-    path: ./dist/myapp-windows-x86_64.exe
-    name: myapp-windows-x86_64.exe
-```
-
-One platform key maps to exactly one binary, and that is the other reason Linux ships a single static musl build per architecture: there is no way to express "glibc or musl, reader's choice", so the installer has to be given the one that runs everywhere.
-
-### `prerelease.yml`
-
-A single rolling GitHub prerelease under the literal tag `dev`, rebuilt on every push to main: raw binaries from `build.yml` only, no install scripts, no checksums, no changelog notes.
-
-**gpipe does not appear here, and cannot**; see the gpipe fragment for why.
-
-This needs no separate `git tag -f`/`git push --force` step: deleting the old release with `--cleanup-tag` removes its git tag too, so the following `gh release create dev --target <sha>` creates a fresh `dev` tag at the built commit on its own. Pass `--target ${{ github.sha }}` explicitly rather than letting `gh` default it to the current default-branch head, which can already have moved on by the time the job publishes.
-
-Reuse the same `path: dist, merge-multiple: true` download and the same explicit asset list as `release.yml`. Naming them is deliberate in both places: release assets are a public interface, and a glob attaches whatever happens to match, which is how an image tar sharing the directory ends up published as a binary. Adding a platform is a decision, so let it be an edit.
-
-Existence-check the delete: three outcomes, not two. Never write `gh release delete dev --yes --cleanup-tag || true`; that collapses "no dev release exists yet" and "the API could not tell me" into the same branch, and the job then publishes over a release state it never established.
-
-```yaml
-name: Prerelease
-
-on:
-  workflow_call
-
-permissions:
-  contents: write
-
-jobs:
-  prerelease:
-    runs-on: ubuntu-24.04
-    # This job never checks out, so gh has no remote to infer the repository
-    # from and GH_REPO has to name it. See github/actions.md.
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@vN
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Delete any existing dev release
-        run: |
-          if err=$(gh release view "dev" 2>&1 >/dev/null); then
-            gh release delete "dev" --yes --cleanup-tag
-          elif grep -qi "release not found" <<<"$err"; then
-            echo "No existing dev release"
-          else
-            echo "::error::could not determine whether a dev release exists: ${err}"
-            exit 1
-          fi
-
-      - name: Create prerelease
-        run: |
-          gh release create dev --prerelease \
-            --target "${{ github.sha }}" \
-            --title "dev" \
-            --notes "Rolling build of ${{ github.sha }}" \
-            dist/myapp-linux-x86_64 \
-            dist/myapp-linux-aarch64 \
-            dist/myapp-windows-x86_64.exe
-
-  prerelease_docker:
-    needs: prerelease
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download image artifact
-        uses: actions/download-artifact@vN
-        with:
-          name: myapp-docker
-
-      - name: Load image
-        run: docker load -i myapp-docker.tar
-
-      # dev only, never latest: latest tracks releases, so pointing it at a
-      # rolling build makes an untagged docker pull return whatever last landed
-      # on the default branch.
-      - name: Push dev tag to ghcr
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ACTOR: ${{ github.actor }}
-          IMAGE: ghcr.io/${{ github.repository }}
-        run: |
-          echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
-          docker tag myapp "$IMAGE:dev"
-          docker push "$IMAGE:dev"
-```
-
-As with `release.yml`, a project publishing an image adds `packages: write` to this workflow's `permissions` and to the `prerelease` job in `main.yml`.
+The workflows that publish these artifacts, `release.yml` and `prerelease.yml`, live in cpp/release-app.md.

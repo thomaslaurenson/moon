@@ -8,3 +8,4 @@ cpp/doxygen.md
 cpp/scaffolding-cli.md
 cpp/errors.md
 cpp/logging.md
+cpp/signals.md

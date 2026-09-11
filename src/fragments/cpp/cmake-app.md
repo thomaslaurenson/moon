@@ -4,25 +4,9 @@ Application-specific CMake conventions. Assumes the universal CMake conventions.
 
 An application ships a binary and has no public API: nothing outside the repository links its code, so there is no `include/` directory and no alias. If external consumers do need the core, it is a lib-cli; see cmake-lib-cli.
 
-## Repository layout additions
+## Layout
 
-```
-src/                   # implementation, built as an internal core library; no main()
-  CMakeLists.txt       # add_library
-app/                   # the CLI: main() plus argument wiring only
-  CMakeLists.txt       # add_executable, links the core
-Dockerfile             # static musl build into scratch; see the C++ Docker fragment
-.dockerignore
-.gpipe.yml             # installer/checksum config; see workflows-app.md
-.github/workflows/
-  build.yml
-  release.yml
-  prerelease.yml
-```
-
-One Dockerfile is required, building a statically linked musl binary into a scratch image; see the C++ Docker fragment for it, and workflows-app.md for why Linux ships a single static binary per architecture rather than a glibc/musl pair. macOS and Windows binaries are built natively on their own runners, not via Docker.
-
-The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `add_subdirectory(app)`, then `add_subdirectory(test)` when testing is on.
+The directories an application adds, `app/`, `completion/` and the release files, are in the CLI scaffolding fragment; this fragment owns the targets that build them. The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `add_subdirectory(app)`, then `add_subdirectory(test)` when testing is on.
 
 ## Targets
 
@@ -64,7 +48,7 @@ The `PUBLIC` include on `myproj_core` is what lets `app/` and the test binaries 
 
 Splitting the core out of the executable is what makes the logic testable. A test binary cannot link an executable, so any code living beside `main()` can only be tested by recompiling its `.cpp` files into the test binary, which is a second build of the same source that drifts from the first. Compiling it once as a library and linking it everywhere removes that whole class of problem.
 
-An app whose implementation is genuinely one `main.cpp` with nothing worth unit testing may skip `src/` and the core library entirely, and define the executable directly in `app/`. Add the split when there is logic to test, not before.
+There is no one-file exemption. The smallest application still has `src/` and a core: the error handling, output and testing fragments all assume that boundary, and a tool that starts as one file rarely stays one. A `main.cpp` with nothing worth testing yet costs one `add_library` to keep the shape.
 
 The binary lands in the build configuration's `bin/` (for example `build/dev/bin/`) via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
 

@@ -1,6 +1,6 @@
 # C++ library workflows
 
-Applies to libraries. A library isn't distributed as a prebuilt binary (consumers pull it in as a git submodule and compile it themselves), so CI is a single plain build-and-test job: no Docker, no libc/arch matrix, no separate build.yml.
+Applies to libraries. A library isn't distributed as a prebuilt binary (consumers pull it in as a git submodule and compile it themselves), so CI is a single plain build-and-test job: no Docker, no libc/arch matrix, no separate build.yml. The release is in release-lib.md.
 
 `@vN` in the examples below means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
 
@@ -101,40 +101,5 @@ jobs:
 ```
 
 That self-containment is why there is no `build.yml` here for anything to wait on.
-
-## Releases
-
-A library's release is a tagged commit; there is no compiled artifact to attach. `release.yml` creates a GitHub Release with changelog notes and nothing else:
-
-```yaml
-name: Release
-
-on:
-  workflow_call
-
-permissions:
-  contents: write
-
-jobs:
-  release:
-    runs-on: ubuntu-24.04
-    steps:
-      # Default depth: get_changelog reads CHANGELOG.md from the working tree
-      # and gh release create uses the API, so neither needs git history.
-      - uses: actions/checkout@vN
-
-      - name: Extract release notes from CHANGELOG.md
-        run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
-
-      - name: Publish release
-        run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file /tmp/release-notes.md
-        env:
-          GH_TOKEN: ${{ github.token }}
-```
-
-Two details match the application flow rather than diverging from it, and both are worth keeping in step. The notes go through a file and `--notes-file`, never `--notes "$(...)"`: command substitution strips trailing newlines and re-splits the changelog through the shell, so an entry containing a backtick or a `$` is mangled or executed. And the token is `GH_TOKEN`, the name `gh` documents; `GITHUB_TOKEN` also works today, which is exactly why a project ends up with both spellings in different workflows and nobody can say which is required. See github/actions.md.
 
 If broader platform confidence is wanted later, add more runners to the `test.yml` job directly rather than reaching for the application's Docker/matrix pattern, which exists specifically for producing distributable binaries.

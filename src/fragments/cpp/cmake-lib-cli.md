@@ -2,24 +2,13 @@
 
 CMake conventions for a project that is a reusable library first and ships a thin CLI binary on top of it. Assumes the universal CMake conventions.
 
-This tier is both of its neighbours at once: a public API behind `include/` like a library, and a shipped binary with functional tests and a release matrix like an application. It is the single tier fragment for a lib-cli project and states the combined shape in full, so nothing here defers to cmake-lib or cmake-app.
+This tier is both of its neighbours at once: a public API behind `include/` like a library, and a shipped binary with functional tests and a release matrix like an application. It is the single CMake fragment for a lib-cli project and states the combined target shape in full, so nothing here defers to cmake-lib or cmake-app for a target; the layout comes from the two scaffolding fragments, one per half.
 
 How it differs from those neighbours: a plain library has no compiled binary to ship or spawn, so it needs no `app/`, no Docker release and no functional test layer. A plain application has a binary but no reusable core behind a public API, so its `src/` builds an internal core library with no `include/` and no alias. A lib-cli has both halves. All real logic lives in the library so it stays unit-testable and reusable by other projects; the executable is a thin wrapper that parses arguments and calls into the library.
 
-## Repository layout additions
+## Layout
 
-```
-include/myproj/         # public headers - the API the library exposes
-src/                   # library implementation (.cpp and private headers); no main()
-  CMakeLists.txt       # add_library
-app/                   # the CLI: main() plus argument wiring only
-  CMakeLists.txt       # add_executable, links the library
-Dockerfile             # static musl build into scratch; see the C++ Docker fragment
-.dockerignore
-.gpipe.yml             # installer/checksum config; see workflows-app.md
-```
-
-`src/` never contains a `main()`; keeping the entry point in `app/` stops it being compiled into the library and keeps the library free of CLI concerns. The release Dockerfile ships the `app/` binary exactly as for an application; see the C++ Docker fragment.
+The library half is laid out as the library scaffolding fragment says, `include/myproj/` mirrored by `src/`, and the app half as the CLI scaffolding fragment says, `app/` beside it with `completion/` and the release files. `src/` never contains a `main()`; keeping the entry point in `app/` stops it being compiled into the library and keeps the library free of CLI concerns. The release Dockerfile ships the `app/` binary exactly as for an application; see the C++ Docker fragment.
 
 The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `add_subdirectory(app)`, then `add_subdirectory(test)` when testing is on.
 

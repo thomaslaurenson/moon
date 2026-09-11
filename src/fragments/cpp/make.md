@@ -276,6 +276,6 @@ clean: ## Remove build output and release artefacts
 ## Which targets a tier has
 
 - Every tier: `configure`, `build`, `test`, `test_verbose`, `test_all`, `configure_asan`, `test_asan`, `configure_coverage`, `test_coverage`, `format`, `check_format`, `configure_lint`, `check_lint`, `get_version`, `get_changelog`, `check_all`, `ci` and `clean`.
-- A tier that ships a binary adds `test_functional`, and adds it to `ci`.
+- A tier that ships a binary adds `test_functional` to `ci` and `check_embed` to `check_all`: every CLI embeds its completion scripts, so every CLI has something to check (see the CLI scaffolding fragment).
 - A project with the layer adds `configure_integration`, `test_integration` and, where the inputs are downloadable, `fetch_integration_data`; one with fuzz harnesses adds `configure_fuzz`, `build_fuzz` and `fuzz`.
-- A project that embeds assets adds `check_embed`, and adds it to `check_all`.
+- A library that embeds a resource of its own adds `check_embed` the same way.

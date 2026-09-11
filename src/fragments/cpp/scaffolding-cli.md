@@ -4,7 +4,28 @@ How `app/` is laid out and wired. Assumes the C++ style, error handling and outp
 
 CLI11 is the argument parser, pinned as a submodule under `extern/CLI11` like every other dependency. It is header-only, it validates arguments declaratively, and it generates help that needs no maintenance. Nothing else here parses argv.
 
-## Layout
+## Repository layout
+
+A tier that ships a binary adds `app/` and the release files to the universal layout in the CMake fragment. In an application `src/` is an internal core with no `include/`; in a library with a bundled CLI it is the library the library scaffolding fragment lays out, and `app/` sits beside it unchanged:
+
+```
+src/                   # the core: every line of logic, built as a library; never main()
+  CMakeLists.txt
+app/                   # the CLI: main() plus argument wiring, and nothing else
+  CMakeLists.txt
+completion/            # one completion script per shell; see Shell completion
+Dockerfile             # static musl build into scratch; see the C++ Docker fragment
+.dockerignore
+.gpipe.yml             # installer and checksum config; see the release fragment
+.github/workflows/
+  build.yml            # the artifacts; see the shipped-binary workflows fragment
+  release.yml
+  prerelease.yml
+```
+
+One Dockerfile, building a statically linked musl binary into a scratch image; the C++ Docker fragment has it, and the shipped-binary workflows fragment says why Linux ships one static binary per architecture. macOS and Windows binaries are built natively on their own runners, not via Docker.
+
+## The app/ directory
 
 `app/` holds the entry point and one file per subcommand, and nothing else:
 
@@ -144,7 +165,7 @@ The convention then costs a path shape and buys nothing. Leaving it on is what m
 
 ## Shell completion
 
-A `completion` subcommand prints the script for a named shell to stdout, and the user installs it. Keep the scripts in a top-level `completion/` directory, one per shell, and embed them at configure time with `configure_file` so the binary needs no files beside it:
+Every C++ CLI ships a `completion` subcommand that prints the script for a named shell to stdout, for bash, zsh, fish and PowerShell, and the user installs it. CLI11 generates none of them, so they are written by hand and kept in a top-level `completion/` directory, one per shell, embedded at configure time with `configure_file` so the binary needs no files beside it:
 
 ```
 completion/
@@ -155,5 +176,7 @@ completion/
 ```
 
 The generated header goes to the build tree, never into `src/` or `completion/`; see the tier fragment for the `configure_file` wiring. Declare the scripts with `CMAKE_CONFIGURE_DEPENDS` so editing one regenerates the header.
+
+The scripts are embedded assets, so every CLI has a `check_embed` target and `check_all` includes it: `bash -n` over the bash script and the matching syntax check for each other shell the runner has. A completion script is code a user runs in their shell, and a syntax error in it compiles into the binary without complaint; see the tooling and Makefile targets fragments.
 
 Installing the script is the user's job. Nothing in the release tooling writes to a user's shell configuration.

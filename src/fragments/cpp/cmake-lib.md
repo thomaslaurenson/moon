@@ -4,29 +4,9 @@ Library-specific CMake conventions. Assumes the universal CMake conventions. Con
 
 A library has no `main()` and ships no binary. If the project also ships a CLI, it is a lib-cli; see cmake-lib-cli.
 
-## Repository layout additions
+## Layout
 
-A library separates its public API from its implementation, and organises both by module:
-
-```
-include/myproj/          # public headers - this is the API consumers see
-  archive/
-    archive.h
-  record/
-    reader.h
-src/                    # implementation (.cpp, and any private headers)
-  common/
-    CMakeLists.txt
-  archive/
-    CMakeLists.txt      # add_library(myproj_archive ...)
-  record/
-    CMakeLists.txt
-examples/               # optional; see below
-```
-
-`include/` mirrors `src/`, so `src/archive/archive.cpp` implements `include/myproj/archive/archive.h` and a consumer writes `#include <myproj/archive/archive.h>`.
-
-The root `CMakeLists.txt` orchestrates: `add_subdirectory(src)`, then `add_subdirectory(test)` when testing is on, then `add_subdirectory(examples/<name>)` when examples are on. It defines no targets of its own: `src/CMakeLists.txt` adds the modules and defines the aggregate.
+The two trees, `include/myproj/` mirrored by `src/`, and the rules that keep them apart are in the library scaffolding fragment; this fragment owns the targets that build them. The root `CMakeLists.txt` orchestrates: `add_subdirectory(src)`, then `add_subdirectory(test)` when testing is on, then `add_subdirectory(examples/<name>)` when examples are on. It defines no project targets of its own: `src/CMakeLists.txt` adds the modules and defines the aggregate.
 
 ## Module targets
 

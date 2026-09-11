@@ -40,7 +40,7 @@ extern "C" void OnInterrupt(int) { interrupted.store(true, std::memory_order_rel
 
 The `static_assert` is what makes this defined rather than merely conventional. Writing an atomic from a handler is safe only when the type is lock-free; a non-lock-free atomic takes a lock internally and is back to the deadlock above. Every real platform satisfies it for `bool`, so the assertion costs nothing and documents the requirement.
 
-This is a namespace-scope mutable variable, which the style fragment otherwise rules out. It qualifies because a signal handler takes no arguments and has nowhere else to write: there is no version of this that threads state through, which is exactly the test that section applies.
+This is a namespace-scope mutable variable, which Global state in the style fragment otherwise rules out. It qualifies because a signal handler takes no arguments and has nowhere else to write: there is no version of this that threads state through, which is exactly the test that section applies.
 
 Install the handler in `main`, before the work starts:
 

@@ -178,7 +178,7 @@ Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin
 
 ## CMakeLists.txt structure
 
-Every directory that produces a target or manages a distinct concern has its own `CMakeLists.txt`. The root never defines targets directly; it orchestrates.
+Every directory that produces a target or manages a distinct concern has its own `CMakeLists.txt`. The root never defines a project target; it orchestrates. The one kind of target it does define is a wrapper for a dependency that ships no `CMakeLists.txt` of its own: the `INTERFACE` library around a header-only dependency, or the `STATIC` target around vendored C sources (see Dependencies). Each sits beside the existence check for the dependency it wraps, which is what keeps it from being mistaken for project code.
 
 ```
 CMakeLists.txt        # project settings, dependencies, add_subdirectory calls
@@ -197,7 +197,7 @@ extern/
 - `cmake_minimum_required` and `project`
 - All required project settings (standard, build type, output directory)
 - Project-wide options via `option()`
-- Submodule existence checks and `add_subdirectory` for dependencies
+- Submodule existence checks and `add_subdirectory` for dependencies, and the wrapper target for a dependency that has no `CMakeLists.txt` to add
 - `enable_testing()`, and `include(Catch)`, when tests are on
 - `add_subdirectory(src)`, then `add_subdirectory(app)` in tiers that have one
 - `add_subdirectory(test)` when testing is on
@@ -334,7 +334,7 @@ Resist adding more. A flag that never fires on the project is decoration that st
 
 **Do not chase parity on MSVC.** `/W4` covers much of `-Wall -Wextra` plus some conversion diagnostics, and `/permissive-` is the conformance analogue of `-Wpedantic`, but there is no MSVC equivalent of `-Wold-style-cast`, and its non-virtual-destructor warning is off by default even under `/W4`. Set the two flags that exist and let the stricter analysis ride on the Linux CI job; a per-compiler warning list maintained to look identical is a maintenance cost that buys nothing.
 
-Vendored C or C++ is exempt. Do not fix a third-party file's warnings, and do not lower the project's bar to accommodate it. Give it its own target, which simply does not link the warnings target:
+Vendored C or C++ is exempt. Do not fix a third-party file's warnings, and do not lower the project's bar to accommodate it. Give it its own target, which simply does not link the warnings target. It is defined where the dependency is wired in: in the root beside its existence check, or in the one module that consumes it when no other does:
 
 ```cmake
 # decoder.c is third-party C from a submodule's contrib/ directory. Its own

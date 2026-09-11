@@ -120,7 +120,7 @@ Install the clang toolchain as a workflow step before running any lint step:
 
 `clang-18` itself, not only the two tools: `make check_all` configures its own clang build directory so clang-tidy can resolve libstdc++ headers (see cpp/cmake.md), which needs the compiler present.
 
-Installing the toolchain is a workflow step, not a Makefile target: it is specific to the runner image, and a `make` target doing it would fail on the macOS and Windows runners. Pin the major version here, so a runner image bump cannot silently change formatting output. CMake 3.21+ ships with `ubuntu-24.04`, so no CMake install step is needed.
+Installing the toolchain is a workflow step, not a Makefile target: it is specific to the runner image, and a `make` target doing it would fail on the macOS and Windows runners. Install the major version the CMake fragment pins under Clang tooling, so a runner image bump cannot silently change formatting output; that fragment owns the number, and the package names here follow it. CMake 3.21+ ships with `ubuntu-24.04`, so no CMake install step is needed.
 
 ## `lint.yml`
 

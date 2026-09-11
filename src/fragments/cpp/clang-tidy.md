@@ -125,7 +125,7 @@ FormatStyle: file
 
 - Comments go above `Checks:`, not inside the multi-line scalar
 - `FormatStyle: file` tells clang-tidy to use the root `.clang-format` for any format-related checks
-- Both `.clang-tidy` and `.clang-format` live at the project root
+- Both `.clang-tidy` and `.clang-format` live at the project root. The one exception is a directory of generated files, which may carry its own `.clang-tidy` with `InheritParentConfig: true` that disables only the checks the generator cannot satisfy, with the comment naming the generator. Hand-written code never gets one; a check that is wrong for hand-written code is suppressed at the root, with the reason, where the next reader sees it
 
 ## Verifying a check before adding it
 

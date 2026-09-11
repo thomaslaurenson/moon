@@ -42,6 +42,8 @@ add_library(myproj::myproj ALIAS myproj_lib)
 - The `myproj::myproj` `ALIAS` gives a consistent namespaced link name whether the library is added by this project or by a consumer's superbuild. Use the alias in every `target_link_libraries`, never the bare target name, so nothing changes if the linking mechanism does.
 - Headers live in `include/myproj/`, not directly in `include/`, so includes read `#include <myproj/parser.h>` and cannot collide with another dependency's `parser.h`.
 
+A library half that has grown modules takes the module and aggregate shape from cmake-lib.md unchanged, with one difference: the aggregate `INTERFACE` target is `myproj_lib`, not `myproj`, because the executable holds the bare name, and the alias stays `myproj::myproj` so nothing that links it changes. The examples option, the `EXCLUDE_FROM_ALL` consumption and the generated header carried by each module all apply as written there.
+
 ## Generated version header
 
 The version comes from `project(myproj VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree, so the library, the CLI, and an outside consumer all read the same compile-time constant through the same include:

@@ -188,17 +188,20 @@ REQUIRE(result.stdout_output.find(expected_size) != std::string::npos);
 
 ## Skipping tests with optional dependencies
 
-Use Catch2's `SKIP()` macro when a test depends on a file or resource that may not be present in all environments:
+A functional test that needs a real input the repository does not hold resolves it the way the integration layer does: through `IntegrationDataPath()` from `test/fixtures/integration_data.h`, skipping with `SKIP()` when it is absent, and the functional target gets the same guarded `target_compile_definitions` for `MYPROJ_INTEGRATION_DATA` that cpp/testing-integration.md gives the integration target. One resolver, so the same environment variable and the same configure flag serve both layers, and the README's one answer for obtaining the inputs covers both:
 
 ```cpp
-TEST_CASE("verify signature", "[verify]") {
-    fs::path data = TestEnvironment::Instance().test_dir / "data" / "sample.dat";
-    if (!fs::exists(data)) {
-        SKIP("Test data not found - see the README for how to obtain it");
+TEST_CASE("info: reads a real patch", "[info]") {
+    auto data = myproj::testing::IntegrationDataPath();
+    if (!data) {
+        SKIP("No integration data found - set MYPROJ_INTEGRATION_DATA");
     }
-    // test body
+    auto result = Run(MYPROJ_BINARY_PATH, {"info", (*data / "sample.dat").string()});
+    REQUIRE(result.returncode == 0);
 }
 ```
+
+Committed inputs under `test/data/` need no skip: they are always there, and a test reaches them through `TestEnvironment::Instance().test_dir`.
 
 This is why the target sets `SKIP_RETURN_CODE 4`: `SKIP()` exits the binary with code 4, and without that property CTest reports the skip as a failure.
 

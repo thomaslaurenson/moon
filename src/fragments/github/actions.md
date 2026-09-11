@@ -85,6 +85,8 @@ Both are decided by what the project ships, not by the language it is written in
 - `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally. A release that skipped its tests because the tag happened to touch no matching path is worse than a slow one.
 - No `push.yml`.
 
+A workflow outside this set is allowed when it responds to something other than a change to the code: a scheduled scan, or a documentation site published from `docs/` on its own trigger. It follows every rule here, pinned runners and actions and least permissions, and it never wires into the three callers or gates a release. Where it has exactly one caller, body and caller share a file, since separating them would add a file and no reuse; the Go vulnerability workflow is the shape.
+
 The callers are the same shape in every language. Only the paths filter and the job list change, and the language workflow fragment supplies both.
 
 ```yaml

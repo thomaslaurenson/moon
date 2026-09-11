@@ -85,6 +85,12 @@ A library that leaves `OpenArchive()` at global scope is broken for its consumer
 
 An application binary's own translation units (`app/`) need no namespace: nothing links against them.
 
+## Global state
+
+Library code has no mutable namespace-scope state. What a function or class needs, it is handed: a stream, a cancellation flag, a configuration struct, as the output and interrupts fragments show. A global can hold one value per process, so a second caller in the same process cannot have different behaviour and a test cannot supply its own; the fix is a parameter or a constructor argument, never a reset function that wipes the shared copy.
+
+Constants, lookup tables and anything `constexpr` are fine: the rule is about mutation, not the keyword. Two exceptions are sanctioned, each because nothing can thread state through to it: the interrupt flag a signal handler writes, in `app/main.cpp` (see the interrupts fragment), and the test environment singleton that holds paths baked in at configure time (see the functional testing fragment).
+
 ## Project version
 
 Declare the version once in the root `CMakeLists.txt` via `project(myproj VERSION 1.2.3)`. Bake it into the target at configure time with `configure_file` and a `version.h.in`, so both a binary and a library's consumers can query it as a compile-time constant. Never hardcode a version string in a `.cpp`, and never read it from `git describe` at runtime. The template, and the constants it defines, are in the CMake fragment under Version header.

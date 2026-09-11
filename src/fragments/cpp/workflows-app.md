@@ -6,11 +6,13 @@ Applies to any tier that ships a distributable binary: an application, or a libr
 
 ## Paths filter addition
 
-Add `Dockerfile` and `.dockerignore` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see cpp/release-app.md).
+Add `Dockerfile` and `.dockerignore` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml`, which the gpipe fragment requires in the filter for its own reason.
 
 ## Depth is a function of the trigger
 
 These tiers add a `build.yml` that produces the distributable artifacts. Running the whole of it on every pull request is the expensive default and buys the least: a pull request needs to know the code compiles and the tests pass, not that a shippable artifact for every platform is correct. A tag needs the second, and only a tag can act on it.
+
+The GitHub Actions fragment warns that a `build.yml` beside tests that build what they test is a second compile of the same sources. It is, and these tiers pay it knowingly: `build.yml` is the only job that exercises the Dockerfile and runs the bytes that ship, and `test.yml` could only do the same by becoming the artifact pipeline it was deliberately decoupled from. The generic rule holds for a library, which is why workflows-lib.md has no `build.yml`.
 
 So the caller decides the depth, and `build.yml` takes an input:
 
@@ -273,7 +275,7 @@ jobs:
       - name: Configure and build
         shell: bash
         run: |
-          cmake -B build/dev -G "Visual Studio 17 2022" -A x64
+          cmake -B build/dev -G "Visual Studio 17 2022" -A x64 -DMYPROJ_WERROR=ON
           cmake --build build/dev --config Release --parallel
 
       # Separate steps so a failure names the layer that broke.
@@ -284,11 +286,12 @@ jobs:
           ctest --test-dir build/dev --output-on-failure -C Release -L functional
 ```
 
-Three details in there are load-bearing:
+Four details in there are load-bearing:
 
 - **No clang tools installed.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. Installing them here would also mean a per-runner branch, since the apt packages exist only on the Linux runner.
 - **Both build types are covered, without a third job.** Pairing `Release` with one compiler and `Debug` with the other costs nothing extra and stops `NDEBUG` and the optimiser from being exercised for the first time by a release. Testing only `Debug` leaves the shipped configuration untested; testing both under both compilers doubles the matrix for very little.
 - **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`, so a failure names the layer that broke. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
+- **`MYPROJ_WERROR` is on here as on Linux.** MSVC's `/W4` is a different bar (see Warnings in cpp/cmake.md), so a project's first MSVC build may leave it off until the tree compiles clean, with a comment saying that is why. It does not stay off: a warning only MSVC reports is still a warning nobody else will see.
 
 #### Every platform tests natively
 

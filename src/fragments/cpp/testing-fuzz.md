@@ -33,30 +33,40 @@ if(MYPROJ_BUILD_FUZZERS)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         message(FATAL_ERROR "MYPROJ_BUILD_FUZZERS requires Clang (-fsanitize=fuzzer)")
     endif()
+
+    # Instrument everything in this build tree, before the first target is
+    # declared. Coverage feedback and ASan only see code compiled with these
+    # flags, so putting them on a harness alone would leave the parser under
+    # test uninstrumented: the fuzzer would run blind and ASan would see nothing.
+    add_compile_options(-fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer -g -O1)
+    add_link_options(-fsanitize=address,undefined)
 endif()
 ```
 
 Never use a bare `BUILD_FUZZERS`; it is as collision-prone as `BUILD_TESTING`, and a vendored dependency with the same idea will pick it up. Default `OFF` keeps the fuzzing runtime out of a normal build entirely.
 
-`-fsanitize=fuzzer` is a Clang feature. Checking the compiler at configure time turns a confusing link error into a sentence that says what to do.
+`-fsanitize=fuzzer` is a Clang feature. Checking the compiler at configure time turns a confusing link error into a sentence that says what to do. A project that compiles C as well checks `CMAKE_C_COMPILER_ID` the same way; see Projects that compile C in cpp/cmake.md.
+
+The instrumentation is global and independent of `MYPROJ_ASAN`, for the reason the sanitizer section of cpp/cmake.md gives: it is not a per-target property. `fuzzer-no-link` compiles every translation unit with libFuzzer's coverage instrumentation without linking its runtime, so the library, its vendored dependencies and the harnesses are all instrumented, and only the harness below links the runtime that supplies `main`. A fuzz build is never a plain configure, which is why it has `build/fuzz` to itself.
 
 ## Harness target
 
-Each harness links its library and the libFuzzer runtime. The sanitizer flags are set on the harness itself and are deliberately independent of the project's global sanitizer option: a fuzzer without ASan finds crashes but not the memory errors that precede them, so it is always instrumented, even in a plain configure.
+Each harness links its library and the libFuzzer runtime. The runtime is the only thing added here; the instrumentation came from the option above and is already on every object the harness links.
 
 ```cmake
 # test/fuzz/CMakeLists.txt
 #
-# libFuzzer harnesses (Clang only). Built with -DMYPROJ_BUILD_FUZZERS=ON.
+# libFuzzer harnesses (Clang only). Built with -DMYPROJ_BUILD_FUZZERS=ON, which
+# instruments the whole tree; this file only adds the libFuzzer runtime.
 # Developer and CI tools, never part of the shipped library.
-
-set(FUZZ_FLAGS -g -O1 -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
 
 function(add_fuzzer name)
     add_executable(myproj_fuzz_${name} fuzz_${name}.cpp)
     target_link_libraries(myproj_fuzz_${name} PRIVATE myproj::myproj myproj::warnings)
-    target_compile_options(myproj_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
-    target_link_options(myproj_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
+    # A harness may drive a parser that is not API, so it sees src/ as the
+    # unit layer does.
+    target_include_directories(myproj_fuzz_${name} PRIVATE "${PROJECT_SOURCE_DIR}/src")
+    target_link_options(myproj_fuzz_${name} PRIVATE -fsanitize=fuzzer)
 endfunction()
 
 add_fuzzer(archive)

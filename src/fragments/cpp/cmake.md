@@ -97,6 +97,36 @@ endforeach()
 - `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
 - The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myproj.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
 
+## Version header
+
+`project(myproj VERSION 1.2.3)` is the one place a version is declared (see cpp/style.md), and every project turns it into a header with `configure_file`, from a template every project has:
+
+```cpp
+// cmake/version.h.in
+#pragma once
+
+namespace myproj {
+
+/// Major version, from project(... VERSION) in the root CMakeLists.txt
+inline constexpr int version_major = @PROJECT_VERSION_MAJOR@;
+
+/// Minor version
+inline constexpr int version_minor = @PROJECT_VERSION_MINOR@;
+
+/// Patch version
+inline constexpr int version_patch = @PROJECT_VERSION_PATCH@;
+
+/// The version as a dotted string, "1.2.3"
+inline constexpr const char *version_string = "@PROJECT_VERSION@";
+
+} // namespace myproj
+```
+
+- Constants in the project's namespace rather than macros, so `myproj::version_string` reads like any other identifier, cannot collide with a consumer's own `VERSION`, and is a `constexpr` the compiler can fold. They follow the naming rule for constants in cpp/style.md.
+- `@ONLY` on the `configure_file` call, so only the `@VAR@` references are substituted and a `${...}` in the header survives; the tier fragments show the call.
+- The template lives in `cmake/`, never in `src/` or `include/`: it is a build input the compiler never sees. The generated header goes to `${PROJECT_BINARY_DIR}/include/myproj/version.h`, so it is included as `<myproj/version.h>` in every tier, beside the public headers where there are any.
+- `get_version` in the Makefile targets fragment reads the same `project()` line, so the tag about to be pushed can be checked against what the build will report.
+
 ## Referring to project paths
 
 Use `PROJECT_SOURCE_DIR` and `PROJECT_BINARY_DIR` to refer to this project's own directories. Never use `CMAKE_SOURCE_DIR` or `CMAKE_BINARY_DIR`:
@@ -298,6 +328,8 @@ Linking the bar is not optional and not per-target judgement. A target that omit
 
 Settle it explicitly on the warnings target, with `-Wsign-conversion` to match clang or `-Wno-sign-conversion` to match GCC. Either is defensible and the choice is the project's, but it has to be made once, in the one place the bar is defined. Leaving it implicit is what produces a green GCC job and a red clang job on identical source, and it is the hardest such failure to read, because nothing in the project's own configuration mentions the flag that differs.
 
+Whichever way it goes, `check_lint` follows without a second copy. clang-tidy takes each file's flags from `compile_commands.json` and reports the compiler's own diagnostics as `clang-diagnostic-*` checks, so a `-Wno-sign-conversion` on the warnings target already silences the diagnostic in the lint run, and a `-Wsign-conversion` already raises it. Do not add a `-clang-diagnostic-sign-conversion` suppression to `.clang-tidy` for it: a suppression there outlives a change to the bar, and the two then disagree silently.
+
 Resist adding more. A flag that never fires on the project is decoration that still has to be mapped for every compiler, and by then the list is long enough that nobody reads it before appending the next one.
 
 **Do not chase parity on MSVC.** `/W4` covers much of `-Wall -Wextra` plus some conversion diagnostics, and `/permissive-` is the conformance analogue of `-Wpedantic`, but there is no MSVC equivalent of `-Wold-style-cast`, and its non-virtual-destructor warning is off by default even under `/W4`. Set the two flags that exist and let the stricter analysis ride on the Linux CI job; a per-compiler warning list maintained to look identical is a maintenance cost that buys nothing.
@@ -343,7 +375,7 @@ endif()
 
 The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable: a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 
-This is the one legitimate use of the directory-scoped `add_compile_options` rather than `target_compile_options`. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
+This, and the fuzz option's instrumentation in cpp/testing-fuzz.md, are the two legitimate uses of the directory-scoped `add_compile_options` rather than `target_compile_options`, for the same reason. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
 
 Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job: that job is `test_asan` in cpp/workflows.md, and the reason it is separate is the same 2x.
 
@@ -486,3 +518,7 @@ Every target the Makefile defines, from `configure` and `build` through `format`
 ### Configuration files
 
 Both `.clang-format` and `.clang-tidy` live at the project root. clang-tidy is pointed at `build/lint` via `-p`, never at `build/dev`, so it reads the `compile_commands.json` produced by the clang-configured build; see Configuring for clang-tidy above. The `FormatStyle: file` setting in `.clang-tidy` tells clang-tidy to use the root `.clang-format` for any formatting checks.
+
+### Projects that compile C
+
+A vendored C dependency built from source, or a project that declares `LANGUAGES C CXX`, has two compilers, and the clang-pinned configurations have to pin both. Pass `-DCMAKE_C_COMPILER=$(CLANG_CC)` beside `-DCMAKE_CXX_COMPILER=$(CLANG_CXX)` in `configure_lint`, `configure_coverage` and `configure_fuzz` (see the Makefile targets fragment), and have the fuzz option check `CMAKE_C_COMPILER_ID` as well as the C++ one. A C object compiled by GCC and linked into a clang sanitizer build carries GCC's instrumentation into a binary that links clang's runtime, and the result is a link error at best and a file that reports nothing at worst. A project with no C sources passes neither flag: CMake warns about a compiler variable nothing used, and the warning outlives the reason.

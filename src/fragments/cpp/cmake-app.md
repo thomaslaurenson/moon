@@ -142,6 +142,9 @@ add_executable(myproj_unit_tests
     unit/test_helpers.cpp
     unit/test_config.cpp
 )
+target_include_directories(myproj_unit_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
 target_link_libraries(myproj_unit_tests PRIVATE
     myproj_core
     myproj::warnings
@@ -154,9 +157,11 @@ add_executable(myproj_functional_tests
     functional/test_create.cpp
     functional/test_list.cpp
 )
-# Project-owned test headers use PRIVATE without SYSTEM.
+# Project-owned test headers use PRIVATE without SYSTEM: the helper beside this
+# file, and the fixtures every layer shares.
 target_include_directories(myproj_functional_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 # extern/subprocess.h is the submodule directory (the repo is literally named
 # "subprocess.h"); mark it SYSTEM so clang-tidy and the compiler ignore it, and
@@ -175,7 +180,7 @@ catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
-The separation is intentional. Unit tests link the core because they call it directly; functional tests link neither the core nor the binary, because they exercise the binary through its CLI as a user would. Mixing them produces a test binary with unclear dependencies and lets a functional test quietly call a function instead of the command.
+The separation is intentional. Unit tests link the core because they call it directly; functional tests link neither the core nor the binary, because they exercise the binary through its CLI as a user would. Mixing them produces a test binary with unclear dependencies and lets a functional test quietly call a function instead of the command. The unit binary sees every header in `src/`, private ones included, through the core's `PUBLIC` include directory; the functional binary sees only `test/`.
 
 `enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.md.
 

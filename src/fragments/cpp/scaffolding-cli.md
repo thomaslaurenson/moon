@@ -37,7 +37,7 @@ One file per subcommand, named for the subcommand. The logic each one calls live
 int main(int argc, char **argv) {
     CLI::App app{"Reads and writes archives"};
     app.require_subcommand(1);
-    app.set_version_flag("--version", MYPROJ_VERSION);
+    app.set_version_flag("--version", myproj::version_string);
 
     RegisterAdd(app);
     RegisterExtract(app);
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 ```
 
 - `require_subcommand(1)` is what makes a bare invocation fail rather than succeeding silently. Without it CLI11 parses nothing, throws nothing, and `main` returns 0, which tells a script the command worked.
-- `set_version_flag` reads the constant from the generated version header, which comes from `project(... VERSION ...)`; see the style and tier fragments. Never a literal here.
+- `set_version_flag` reads `myproj::version_string` from the generated version header, whose template is in cpp/cmake.md and whose value comes from `project(... VERSION ...)`. Never a literal here.
 - The subcommand callbacks run inside `app.parse`, which is why the library's own exceptions are caught around it rather than after. The exit codes are covered in the error handling fragment.
 - The `<myproj/...>` includes are the lib-cli form. An application has no `include/`: its own headers sit in `src/` and `app/` includes them by name, `#include "errors.h"`, through the core's public include directory, while `<myproj/version.h>` is generated into an include tree in both tiers; see cmake-app.md.
 

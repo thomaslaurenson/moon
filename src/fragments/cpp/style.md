@@ -87,7 +87,7 @@ An application binary's own translation units (`app/`) need no namespace: nothin
 
 ## Project version
 
-Declare the version once in the root `CMakeLists.txt` via `project(myproj VERSION 1.2.3)`. Bake it into the target at configure time with `configure_file` and a `version.h.in`, so both a binary and a library's consumers can query it as a compile-time constant. Never hardcode a version string in a `.cpp`, and never read it from `git describe` at runtime.
+Declare the version once in the root `CMakeLists.txt` via `project(myproj VERSION 1.2.3)`. Bake it into the target at configure time with `configure_file` and a `version.h.in`, so both a binary and a library's consumers can query it as a compile-time constant. Never hardcode a version string in a `.cpp`, and never read it from `git describe` at runtime. The template, and the constants it defines, are in the CMake fragment under Version header.
 
 ## Comments
 

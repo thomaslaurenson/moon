@@ -18,6 +18,7 @@ FUZZ_TIME     ?= 60
 INTEGRATION_DATA ?= $(MYPROJ_INTEGRATION_DATA)
 
 CLANG_VERSION ?= 18
+CLANG_CC      ?= $(shell command -v clang-$(CLANG_VERSION) || echo clang)
 CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) || echo clang-format)
 CLANG_CXX     ?= $(shell command -v clang++-$(CLANG_VERSION) || echo clang++)
 CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) || echo clang-tidy)
@@ -34,6 +35,7 @@ GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev
 - The clang tools are resolved rather than named, because how the pinned major version is installed differs per platform (see Clang tooling in the CMake fragment): Debian and Ubuntu install versioned binaries such as `clang-format-18`, while Homebrew and the LLVM Windows installer provide an unversioned `clang-format` from a versioned install. Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make format CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
 - `llvm-profdata` and `llvm-cov` are resolved here with the rest, rather than beside the coverage target that uses them, so every clang tool the project shells out to is named in one block. They are packaged and versioned exactly like `clang-format`, so they need the same fallback.
 - `GCC_INSTALL_DIR` is empty on a machine with no GCC, and `configure_lint` passes the flag only when it is set; see LINT.
+- `CLANG_CC` is used only by a project that compiles C, which adds `-DCMAKE_C_COMPILER=$(CLANG_CC)` beside the C++ compiler in `configure_lint`, `configure_coverage` and `configure_fuzz`; see Projects that compile C in the CMake fragment. It is resolved here regardless, so a C dependency added later is one flag per configure rather than a new variable.
 
 ## BUILD
 

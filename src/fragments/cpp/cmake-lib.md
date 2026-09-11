@@ -172,6 +172,7 @@ add_executable(myproj_unit_tests
 
 target_include_directories(myproj_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    "${PROJECT_SOURCE_DIR}/src"
 )
 
 target_link_libraries(myproj_unit_tests PRIVATE
@@ -193,5 +194,7 @@ Link the aggregate `myproj::myproj` unless a test binary genuinely covers one mo
 `enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.md.
 
 `MYPROJ_TEST_DIR` gives tests the path to their own source directory, so they can find checked-in data under `test/data/` without runtime path discovery.
+
+`src/` is on the unit binary's include path and on no other test binary's. The layer tests logic, and some of it is deliberately not API: a private helper in `src/` gets a unit test like anything else, and the test includes its header by the same path the implementation does. The functional binary never sees `src/`, because it exercises the binary as a user would, and a consumer never does, because the library keeps that directory `PRIVATE`.
 
 The integration and fuzz targets are guarded by their own options and defined alongside this one; see cpp/testing-integration.md and cpp/testing-fuzz.md.

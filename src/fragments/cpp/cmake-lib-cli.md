@@ -106,6 +106,7 @@ add_executable(myproj_unit_tests
 )
 target_include_directories(myproj_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    "${PROJECT_SOURCE_DIR}/src"
 )
 target_link_libraries(myproj_unit_tests PRIVATE
     myproj::myproj
@@ -117,9 +118,11 @@ add_executable(myproj_functional_tests
     subprocess_helper.cpp
     functional/test_create.cpp
 )
-# Project-owned test headers use PRIVATE without SYSTEM.
+# Project-owned test headers use PRIVATE without SYSTEM: the helper beside this
+# file, and the fixtures every layer shares.
 target_include_directories(myproj_functional_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 # extern/subprocess.h is the submodule directory; mark it SYSTEM and keep it in its
 # own call - never combine SYSTEM and non-SYSTEM paths.
@@ -137,7 +140,7 @@ catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
-The unit binary links the library rather than listing `src/*.cpp` again: the library already compiles that source once, and linking it keeps the two builds from drifting. The functional binary links neither the library nor the executable, because it exercises the binary through its CLI as a user would; giving it the library would let a functional test quietly call a function instead of running the command.
+The unit binary links the library rather than listing `src/*.cpp` again: the library already compiles that source once, and linking it keeps the two builds from drifting. It does get `src/` on its include path, and it is the only test binary that does: the layer tests logic, some of which is deliberately not API, and a private helper's test includes its header by the same path the implementation does. The functional binary links neither the library nor the executable, because it exercises the binary through its CLI as a user would; giving it the library would let a functional test quietly call a function instead of running the command.
 
 The split between those two is the tier's main testing question, and it has a default answer: a lib-cli puts its logic in the library, so almost everything is unit-testable without a subprocess. Test the library through the library, and keep the functional layer for what only it can see: argv parsing, exit codes, and stdout.
 

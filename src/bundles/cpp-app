@@ -4,6 +4,7 @@
 # keeps the functional test layer and the Docker release matrix. Use cpp-lib when there is
 # no binary to ship, cpp-lib-cli when the core is also a reusable library behind include/.
 @include cpp-app-code
+cpp/tooling.md
 cpp/cmake.md
 cpp/cmake-app.md
 cpp/clang-format.md

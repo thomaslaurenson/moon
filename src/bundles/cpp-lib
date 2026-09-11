@@ -5,6 +5,7 @@
 # functional layer, having no binary to spawn; unit is always present, and integration
 # and fuzz apply where the project earns them. Use cpp-lib-cli if it also ships a CLI.
 @include cpp-lib-code
+cpp/tooling.md
 cpp/cmake.md
 cpp/cmake-lib.md
 cpp/clang-format.md

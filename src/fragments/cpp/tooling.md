@@ -42,21 +42,21 @@ A binary that needs data at runtime embeds it rather than shipping files alongsi
 
 ```cmake
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/completion/myapp.bash")
-file(READ "${PROJECT_SOURCE_DIR}/completion/myapp.bash" BASH_COMPLETION_SCRIPT)
+    "${PROJECT_SOURCE_DIR}/completion/myproj.bash")
+file(READ "${PROJECT_SOURCE_DIR}/completion/myproj.bash" BASH_COMPLETION_SCRIPT)
 configure_file("${PROJECT_SOURCE_DIR}/cmake/completion_data.h.in"
-               "${PROJECT_BINARY_DIR}/include/myapp/completion_data.h" @ONLY)
+               "${PROJECT_BINARY_DIR}/include/myproj/completion_data.h" @ONLY)
 ```
 
 ```cpp
 // cmake/completion_data.h.in
-// Generated from completion/myapp.bash, do not edit
-static constexpr char BashCompletionScript[] = R"BASH_MYAPP(@BASH_COMPLETION_SCRIPT@)BASH_MYAPP";
+// Generated from completion/myproj.bash, do not edit
+static constexpr char BashCompletionScript[] = R"BASH_MYPROJ(@BASH_COMPLETION_SCRIPT@)BASH_MYPROJ";
 ```
 
 Two details are load-bearing, and both fail quietly when missed.
 
-**Give the raw string literal a delimiter of its own.** A bare `R"(...)"` ends at the first `)"` in the embedded content, which is an ordinary sequence in shell and PowerShell. The result is a file that either fails to compile with an error pointing at the generated header rather than at the script, or, worse, compiles with the asset silently truncated. A project-specific delimiter such as `BASH_MYAPP` cannot appear by accident.
+**Give the raw string literal a delimiter of its own.** A bare `R"(...)"` ends at the first `)"` in the embedded content, which is an ordinary sequence in shell and PowerShell. The result is a file that either fails to compile with an error pointing at the generated header rather than at the script, or, worse, compiles with the asset silently truncated. A project-specific delimiter such as `BASH_MYPROJ` cannot appear by accident.
 
 **Declare the source with `CMAKE_CONFIGURE_DEPENDS`.** `file(READ)` runs at configure time only, so without it an edited script is not re-read and the binary keeps shipping the previous version, with a successful build every time.
 

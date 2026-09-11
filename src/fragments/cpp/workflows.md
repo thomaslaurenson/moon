@@ -78,7 +78,7 @@ jobs:
         if: matrix.compiler == 'clang'
         run: sudo apt-get install -y clang-18
 
-      - run: make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -D<PROJECT>_WERROR=ON"
+      - run: make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DMYPROJ_WERROR=ON"
       - run: make build
       - run: make test
 
@@ -103,7 +103,7 @@ This is the whole of `test.yml` for a library. A tier that ships a binary adds `
 
 Two compilers on one platform is a better use of a budget than one compiler on two platforms. Both run on Linux at the lowest billing rate, where a second platform costs two to ten times as much and mostly re-runs the same compiler. Reach for another platform when it is a deployment target, not for extra confidence in the code.
 
-`<PROJECT>_WERROR` is off by default so a developer upgrading a compiler is not blocked by new warnings, and on in CI so those warnings are never merged; see cpp/cmake.md.
+`MYPROJ_WERROR` is off by default so a developer upgrading a compiler is not blocked by new warnings, and on in CI so those warnings are never merged; see cpp/cmake.md.
 
 ## Clang tools
 

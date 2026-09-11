@@ -27,11 +27,11 @@ test/
 The root `CMakeLists.txt` declares a project-scoped option, default `OFF`, and fails loudly if it is on without Clang:
 
 ```cmake
-option(MYLIB_BUILD_FUZZERS "Build libFuzzer harnesses (requires Clang)" OFF)
+option(MYPROJ_BUILD_FUZZERS "Build libFuzzer harnesses (requires Clang)" OFF)
 
-if(MYLIB_BUILD_FUZZERS)
+if(MYPROJ_BUILD_FUZZERS)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        message(FATAL_ERROR "MYLIB_BUILD_FUZZERS requires Clang (-fsanitize=fuzzer)")
+        message(FATAL_ERROR "MYPROJ_BUILD_FUZZERS requires Clang (-fsanitize=fuzzer)")
     endif()
 endif()
 ```
@@ -47,16 +47,16 @@ Each harness links its library and the libFuzzer runtime. The sanitizer flags ar
 ```cmake
 # test/fuzz/CMakeLists.txt
 #
-# libFuzzer harnesses (Clang only). Built with -DMYLIB_BUILD_FUZZERS=ON.
+# libFuzzer harnesses (Clang only). Built with -DMYPROJ_BUILD_FUZZERS=ON.
 # Developer and CI tools, never part of the shipped library.
 
 set(FUZZ_FLAGS -g -O1 -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
 
 function(add_fuzzer name)
-    add_executable(mylib_fuzz_${name} fuzz_${name}.cpp)
-    target_link_libraries(mylib_fuzz_${name} PRIVATE mylib::mylib mylib::warnings)
-    target_compile_options(mylib_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
-    target_link_options(mylib_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
+    add_executable(myproj_fuzz_${name} fuzz_${name}.cpp)
+    target_link_libraries(myproj_fuzz_${name} PRIVATE myproj::myproj myproj::warnings)
+    target_compile_options(myproj_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
+    target_link_options(myproj_fuzz_${name} PRIVATE ${FUZZ_FLAGS})
 endfunction()
 
 add_fuzzer(archive)
@@ -67,14 +67,14 @@ add_fuzzer(record)
 
 ```cmake
 # test/CMakeLists.txt, after the unit and functional targets
-if(MYLIB_BUILD_FUZZERS)
+if(MYPROJ_BUILD_FUZZERS)
     add_subdirectory(fuzz)
 endif()
 ```
 
 Without that line the harnesses are never configured and `make build_fuzz` builds nothing, with no error to explain it: `test/fuzz/CMakeLists.txt` is simply a file CMake never reads. The guard is on the tier fragment's `test/CMakeLists.txt` rather than the root, because the root adds `test/` as a whole and the fuzz layer is a layer of the test tree like any other.
 
-The function takes the bare harness name and builds both the target name and the source name from it, so `add_fuzzer(archive)` compiles `fuzz_archive.cpp` into `mylib_fuzz_archive`. The prefix is not optional: a target called `fuzz_archive` breaks the rule that every target name carries the project prefix, and a harness is exactly as capable of colliding in a superbuild as a module is. See Target names in cpp/cmake.md.
+The function takes the bare harness name and builds both the target name and the source name from it, so `add_fuzzer(archive)` compiles `fuzz_archive.cpp` into `myproj_fuzz_archive`. The prefix is not optional: a target called `fuzz_archive` breaks the rule that every target name carries the project prefix, and a harness is exactly as capable of colliding in a superbuild as a module is. See Target names in cpp/cmake.md.
 
 Harnesses link the warning bar like any other target the project owns; see Warnings in cpp/cmake.md.
 
@@ -88,16 +88,16 @@ A harness is not registered with `catch_discover_tests`: it runs forever by desi
 // test/fuzz/fuzz_archive.cpp
 #include <cstddef>
 #include <cstdint>
-#include <mylib/archive/archive.h>
-#include <mylib/errors.h>
+#include <myproj/archive/archive.h>
+#include <myproj/errors.h>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     try {
-        auto archive = mylib::archive::Archive::FromMemory(data, size);
+        auto archive = myproj::archive::Archive::FromMemory(data, size);
         for (const auto &entry : archive.Entries()) {
             (void)archive.Read(entry);
         }
-    } catch (const mylib::Error &) {
+    } catch (const myproj::Error &) {
         // Rejecting malformed input is correct behaviour, not a finding
     }
     return 0;
@@ -116,6 +116,6 @@ When a harness finds something, it writes the offending input to a `crash-<hash>
 
 ## Running it
 
-`configure_fuzz`, `build_fuzz` and `fuzz` in the Makefile targets fragment configure `build/fuzz` with clang, build the harnesses, and run one of them for `FUZZ_TIME` seconds. `make fuzz NAME=archive` runs `mylib_fuzz_archive` against `test/fuzz/corpus/archive`, with `NAME` the same bare name `add_fuzzer` takes, and the corpus passed only when the directory exists.
+`configure_fuzz`, `build_fuzz` and `fuzz` in the Makefile targets fragment configure `build/fuzz` with clang, build the harnesses, and run one of them for `FUZZ_TIME` seconds. `make fuzz NAME=archive` runs `myproj_fuzz_archive` against `test/fuzz/corpus/archive`, with `NAME` the same bare name `add_fuzzer` takes, and the corpus passed only when the directory exists.
 
 Fuzzing gets its own `build/fuzz` directory, and this is the clearest case for the rule in cpp/cmake.md. `-fsanitize=fuzzer` is Clang-only (see Option above), and CMake cannot change a build tree's compiler after the first configure without discarding the cache. Pointing `configure_fuzz` at `build/dev` would therefore reconfigure and rebuild everything, not just the harnesses, destroy whatever `build/dev` previously held, and charge the same cost again on the next ordinary configure. Two directories cost one `.gitignore` entry that already exists, and `rm -rf build` still cleans both.

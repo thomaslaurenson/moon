@@ -2,6 +2,8 @@
 
 C++-specific style. Assumes the core conventions. Where the project includes the clang tooling, formatting is enforced by clang-format and naming by clang-tidy (see the clang-format and clang-tidy fragments); the rules below define the intended style and apply whether or not that tooling is wired up.
 
+Throughout the C++ fragments, `myproj` stands for the project's name. It is at once the CMake project, the namespace, the `include/myproj/` directory where the tier has one, the `MYPROJ_` prefix on every option, the prefix on every CMake target except the one a user reaches for, and the binary where the tier ships one. Substitute the real name in every position at once: a project that is one name in its namespace and another in its options has two names, and nothing lines up.
+
 ## Formatting
 
 Enforced by clang-format; `make format` reformats all source. The canonical `.clang-format`, the deviations from LLVM defaults and the reasoning for each are in the clang-format fragment, which is the only place they are written down.
@@ -69,14 +71,14 @@ Where a path has to become text, for a log line or an exception message, call `p
 Everything a project compiles into a library goes in a namespace named after the library, in `snake_case`:
 
 ```cpp
-namespace mylib {
+namespace myproj {
 // ...
-} // namespace mylib
+} // namespace myproj
 ```
 
 A library that leaves `OpenArchive()` at global scope is broken for its consumers: the name collides with any other dependency that had the same idea, and the collision surfaces at link time in someone else's build. The namespace is not decoration, it is what makes the library linkable alongside code you have never seen.
 
-- Close every namespace with a `} // namespace mylib` comment; the opening brace is often hundreds of lines away.
+- Close every namespace with a `} // namespace myproj` comment; the opening brace is often hundreds of lines away.
 - Never use `using namespace` at file scope in a header. It forces the import on every consumer that includes it. Inside a `.cpp`, or inside a function, it is fine.
 - Nest sparingly. One level for the library, plus `detail` for implementation types that must be in a header but are not API. Deep nesting reads as directory structure leaking into code.
 - Prefer an anonymous namespace over `static` for file-local helpers in a `.cpp`; it applies to types as well as functions.
@@ -85,7 +87,7 @@ An application binary's own translation units (`app/`) need no namespace: nothin
 
 ## Project version
 
-Declare the version once in the root `CMakeLists.txt` via `project(MyProject VERSION 1.2.3)`. Bake it into the target at configure time with `configure_file` and a `version.h.in`, so both a binary and a library's consumers can query it as a compile-time constant. Never hardcode a version string in a `.cpp`, and never read it from `git describe` at runtime.
+Declare the version once in the root `CMakeLists.txt` via `project(myproj VERSION 1.2.3)`. Bake it into the target at configure time with `configure_file` and a `version.h.in`, so both a binary and a library's consumers can query it as a compile-time constant. Never hardcode a version string in a `.cpp`, and never read it from `git describe` at runtime.
 
 ## Comments
 

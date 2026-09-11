@@ -23,15 +23,15 @@ Exceptions are the mechanism. `std::expected` is C++23 and the target standard h
 Define a single root exception so a consumer can catch everything the library throws with one handler, and derive specific types so they can catch narrowly when they care. Root the hierarchy at `std::runtime_error`, which gives `what()` for free:
 
 ```cpp
-// include/mylib/errors.h
+// include/myproj/errors.h
 #pragma once
 #include <filesystem>
 #include <stdexcept>
 #include <string>
 
-namespace mylib {
+namespace myproj {
 
-/// Base for every exception thrown by mylib
+/// Base for every exception thrown by myproj
 class Error : public std::runtime_error {
 public:
     explicit Error(const std::string &message) : std::runtime_error(message) {}
@@ -58,14 +58,14 @@ private:
     int error_code_;
 };
 
-} // namespace mylib
+} // namespace myproj
 ```
 
 - Every exception class gets a Doxygen comment saying when it is thrown; see the Doxygen fragment.
 - Public API functions throw the library's own types, never a bare `std::runtime_error`, `std::invalid_argument`, or a third-party library's exception. Catch a dependency's exception at the boundary and rethrow as your own with `std::throw_with_nested` where the original matters.
 - Carry structured data as members (`path()`, `error_code()`), not just a formatted string. A caller that wants to retry needs the path, not prose.
 - A path member is a `std::filesystem::path`, for the same reason a path parameter is; see the C++ style fragment. Building the message then needs an explicit `path.string()`, because there is no `operator+` between a string literal and a path. That conversion is the one place the narrow form is correct: the message is prose for a human, not something anyone reopens the file with.
-- Exception types live in `include/<lib>/errors.h` so a consumer imports them from one place.
+- Exception types live in `include/myproj/errors.h` in a tier with a public API, so a consumer imports them from one place. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app.md).
 
 ## What is not an exception
 
@@ -90,13 +90,13 @@ Never use exceptions for control flow across a loop body; the cost is real and t
 ```cpp
 // app/main.cpp
 #include <iostream>
-#include <mylib/errors.h>
+#include <myproj/errors.h>
 
 int main(int argc, char **argv) {
     try {
-        // parse arguments, call into mylib
+        // parse arguments, call into myproj
         return 0;
-    } catch (const mylib::Error &e) {
+    } catch (const myproj::Error &e) {
         std::cerr << "[!] " << e.what() << "\n";
         return 1;
     } catch (const std::exception &e) {

@@ -22,7 +22,7 @@ extern/
 Register the target with a `functional` label, and with `SKIP_RETURN_CODE` so an optional-data skip is not reported as a failure:
 
 ```cmake
-catch_discover_tests(myapp_functional_tests
+catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
@@ -40,7 +40,7 @@ Usage in a functional test:
 #include "subprocess_helper.h"
 
 TEST_CASE("create: target does not exist", "[create]") {
-    auto result = Run(MYAPP_BINARY_PATH, {"create", "no-such-file"});
+    auto result = Run(MYPROJ_BINARY_PATH, {"create", "no-such-file"});
     REQUIRE(result.returncode == 1);
 }
 ```
@@ -62,7 +62,7 @@ Always pin to an immutable reference: a release tag or a commit hash, never a mo
 
 The general fixture conventions live in cpp/testing.md and apply here unchanged; `test/fixtures/` is shared by every layer.
 
-`test_environment.h` is the one fixture that is not function-scoped: it is a singleton holding the CMake-baked paths (`MYAPP_BINARY_PATH`, `MYAPP_TEST_DIR`). A singleton is right here and nowhere else, because these values are constant for the whole run and cannot vary per test:
+`test_environment.h` is the one fixture that is not function-scoped: it is a singleton holding the CMake-baked paths (`MYPROJ_BINARY_PATH`, `MYPROJ_TEST_DIR`). A singleton is right here and nowhere else, because these values are constant for the whole run and cannot vary per test:
 
 ```cpp
 // test/fixtures/test_environment.h
@@ -79,8 +79,8 @@ struct TestEnvironment {
         return env;
     }
 
-    const fs::path binary_path{MYAPP_BINARY_PATH};
-    const fs::path test_dir{MYAPP_TEST_DIR};
+    const fs::path binary_path{MYPROJ_BINARY_PATH};
+    const fs::path test_dir{MYPROJ_TEST_DIR};
 
 private:
     TestEnvironment() = default;
@@ -116,7 +116,7 @@ Instantiate in a test:
 TEST_CASE("add file to archive", "[add]") {
     TestFiles files;
     auto result =
-        Run(MYAPP_BINARY_PATH, {"add", (files.files_dir / "sample.txt").string(), "out.dat"});
+        Run(MYPROJ_BINARY_PATH, {"add", (files.files_dir / "sample.txt").string(), "out.dat"});
     REQUIRE(result.returncode == 0);
 }
 ```
@@ -214,7 +214,7 @@ TEST_CASE("list with filter", "[list]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/myapp_functional_tests [create]
+./build/dev/bin/myproj_functional_tests [create]
 ```
 
 ## Asserting on the CLI contract
@@ -223,7 +223,7 @@ The functional layer owns the exit-code contract, because it is the only layer t
 
 ```cpp
 TEST_CASE("create: target does not exist", "[create]") {
-    auto result = Run(MYAPP_BINARY_PATH, {"create", "no-such-file"});
+    auto result = Run(MYPROJ_BINARY_PATH, {"create", "no-such-file"});
     REQUIRE(result.returncode == 1);
     REQUIRE_THAT(result.stderr_output, Catch::Matchers::ContainsSubstring("does not exist"));
 }

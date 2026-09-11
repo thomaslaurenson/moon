@@ -15,7 +15,7 @@ BUILD_TYPE    ?= Debug
 CMAKE_ARGS    ?=
 LINT_DIR      ?= build/lint
 FUZZ_TIME     ?= 60
-INTEGRATION_DATA ?= $(MYLIB_INTEGRATION_DATA)
+INTEGRATION_DATA ?= $(MYPROJ_INTEGRATION_DATA)
 
 CLANG_VERSION ?= 18
 CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) || echo clang-format)
@@ -29,7 +29,7 @@ GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev
 - `CPP_DIRS` and `CPP_LINT_DIRS` take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `examples/` is formatted but not tidied, because its programs are only configured when the examples option is on, so a lint configure has no compile commands for them; `test/` is formatted but not tidied for the reason the CMake fragment gives.
 - `JOBS` is declared once and every `cmake --build` and `ctest` below reuses it.
 - `BUILD_TYPE` defaults to `Debug`, the everyday configuration, and is overridable so a CI job can test the shipped one with `make configure BUILD_TYPE=Release`. It is a variable rather than a `CMAKE_ARGS` flag because it is the one setting a developer changes often enough to deserve a name.
-- `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DCMAKE_CXX_COMPILER=clang++-18`, or `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure.
+- `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DCMAKE_CXX_COMPILER=clang++-18`, or `-DMYPROJ_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure.
 - `INTEGRATION_DATA` defaults to the environment variable named after the CMake cache variable, so a machine that already exports it needs nothing on the command line.
 - The clang tools are resolved rather than named, because how the pinned major version is installed differs per platform (see Clang tooling in the CMake fragment): Debian and Ubuntu install versioned binaries such as `clang-format-18`, while Homebrew and the LLVM Windows installer provide an unversioned `clang-format` from a versioned install. Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make format CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
 - `llvm-profdata` and `llvm-cov` are resolved here with the rest, rather than beside the coverage target that uses them, so every clang tool the project shells out to is named in one block. They are packaged and versioned exactly like `clang-format`, so they need the same fallback.
@@ -91,13 +91,13 @@ test_all: build ## Run every test layer built into the current configure
 .PHONY: configure_integration
 configure_integration: ## Configure build/dev with integration tests (requires: INTEGRATION_DATA)
 	@if [ -z "$(INTEGRATION_DATA)" ]; then \
-	  echo "Error: set INTEGRATION_DATA=/path/to/dataset or MYLIB_INTEGRATION_DATA" >&2; exit 1; \
+	  echo "Error: set INTEGRATION_DATA=/path/to/dataset or MYPROJ_INTEGRATION_DATA" >&2; exit 1; \
 	fi
 	cmake -B build/dev \
 	  -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-	  -DMYLIB_INTEGRATION=ON \
-	  -DMYLIB_INTEGRATION_DATA="$(INTEGRATION_DATA)" \
+	  -DMYPROJ_INTEGRATION=ON \
+	  -DMYPROJ_INTEGRATION_DATA="$(INTEGRATION_DATA)" \
 	  $(CMAKE_ARGS)
 
 .PHONY: test_integration
@@ -118,8 +118,8 @@ test_integration: configure_integration ## Build and run the integration layer
 configure_asan: ## Configure build/asan with Address + UB sanitizers
 	cmake -B build/asan \
 	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DMYLIB_ASAN=ON \
-	  -DMYLIB_BUILD_TESTING=ON \
+	  -DMYPROJ_ASAN=ON \
+	  -DMYPROJ_BUILD_TESTING=ON \
 	  $(CMAKE_ARGS)
 
 .PHONY: test_asan
@@ -137,7 +137,7 @@ A sanitized build changes code generation, so it gets its own directory and cann
 configure_coverage: ## Configure build/coverage with clang source-based coverage
 	cmake -B build/coverage \
 	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DMYLIB_BUILD_TESTING=ON \
+	  -DMYPROJ_BUILD_TESTING=ON \
 	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
 	  -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
 	  -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
@@ -145,10 +145,10 @@ configure_coverage: ## Configure build/coverage with clang source-based coverage
 
 .PHONY: test_coverage
 test_coverage: configure_coverage ## Report unit-test coverage
-	cmake --build build/coverage --parallel $(JOBS) --target mylib_unit_tests
-	LLVM_PROFILE_FILE=build/coverage/unit.profraw ./build/coverage/bin/mylib_unit_tests
+	cmake --build build/coverage --parallel $(JOBS) --target myproj_unit_tests
+	LLVM_PROFILE_FILE=build/coverage/unit.profraw ./build/coverage/bin/myproj_unit_tests
 	$(LLVM_PROFDATA) merge -o build/coverage/unit.profdata build/coverage/unit.profraw
-	$(LLVM_COV) report ./build/coverage/bin/mylib_unit_tests \
+	$(LLVM_COV) report ./build/coverage/bin/myproj_unit_tests \
 	  -instr-profile=build/coverage/unit.profdata \
 	  --ignore-filename-regex="extern/|test/"
 ```
@@ -164,7 +164,7 @@ test_coverage: configure_coverage ## Report unit-test coverage
 configure_fuzz: ## Configure build/fuzz with libFuzzer harnesses (requires Clang)
 	cmake -B build/fuzz \
 	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DMYLIB_BUILD_FUZZERS=ON \
+	  -DMYPROJ_BUILD_FUZZERS=ON \
 	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
 	  $(CMAKE_ARGS)
 
@@ -177,10 +177,10 @@ fuzz: build_fuzz ## Run one harness for FUZZ_TIME seconds (requires: NAME=archiv
 	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=archive" >&2; exit 1; fi
 	@corpus=test/fuzz/corpus/$(NAME); \
 	  [ -d "$$corpus" ] || corpus=; \
-	  ./build/fuzz/bin/mylib_fuzz_$(NAME) -max_total_time=$(FUZZ_TIME) $$corpus
+	  ./build/fuzz/bin/myproj_fuzz_$(NAME) -max_total_time=$(FUZZ_TIME) $$corpus
 ```
 
-- `NAME` is the bare harness name, the same string `add_fuzzer` takes, so `make fuzz NAME=archive` runs `mylib_fuzz_archive` against `test/fuzz/corpus/archive`.
+- `NAME` is the bare harness name, the same string `add_fuzzer` takes, so `make fuzz NAME=archive` runs `myproj_fuzz_archive` against `test/fuzz/corpus/archive`.
 - The corpus directory is passed only when it exists. libFuzzer treats a corpus path it was given as mandatory and exits 1 with `ERROR: The required directory ... does not exist`, so hardcoding the path makes a harness unrunnable in a project that has not seeded one, which cpp/testing-fuzz.md allows. Passing nothing is the supported way to run without a corpus, and libFuzzer then generates from scratch.
 - Its own `build/fuzz` directory, because `-fsanitize=fuzzer` is clang-only and a build tree cannot change compiler after its first configure; see cpp/testing-fuzz.md.
 

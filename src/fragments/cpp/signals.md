@@ -65,7 +65,7 @@ Poll it at the top of the loop that does the work, not inside the innermost oper
 ```cpp
 for (const auto &entry : archive.Entries()) {
     if (cancelled.load(std::memory_order_relaxed)) {
-        throw mylib::Interrupted{};
+        throw myproj::Interrupted{};
     }
     Extract(entry, out);
 }
@@ -95,7 +95,7 @@ A user who pressed Ctrl-C does not need to be told. Print nothing, and do not re
 Catch it above the other handlers in `main`, then restore the default disposition and re-raise, so the process dies of the signal rather than returning from `main`:
 
 ```cpp
-} catch (const mylib::Interrupted &) {
+} catch (const myproj::Interrupted &) {
     std::signal(SIGINT, SIG_DFL);
     std::raise(SIGINT);
     return 1; // not reached

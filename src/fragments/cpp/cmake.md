@@ -69,7 +69,7 @@ Every root `CMakeLists.txt` must set these options immediately after `project()`
 ```cmake
 cmake_minimum_required(VERSION 3.21)
 
-project(MyProject VERSION 1.0.0)
+project(myproj VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -95,7 +95,7 @@ endforeach()
 - `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
 - `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
-- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myapp.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
+- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myproj.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
 
 ## Referring to project paths
 
@@ -103,13 +103,13 @@ Use `PROJECT_SOURCE_DIR` and `PROJECT_BINARY_DIR` to refer to this project's own
 
 ```cmake
 # Good - resolves to this project's root, however it is being built
-target_include_directories(mylib PUBLIC "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(myproj PUBLIC "${PROJECT_SOURCE_DIR}/include")
 
 # Bad - resolves to the top-level project's root, which may not be this one
-target_include_directories(mylib PUBLIC "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(myproj PUBLIC "${CMAKE_SOURCE_DIR}/include")
 ```
 
-`CMAKE_SOURCE_DIR` is the root of the *outermost* project, not of the project the file belongs to. The two are the same only while a project is built directly. The moment a consumer pulls this project in as a submodule and calls `add_subdirectory(extern/mylib)`, `CMAKE_SOURCE_DIR` becomes the consumer's root, and `"${CMAKE_SOURCE_DIR}/include"` silently points at the consumer's `include/` directory instead of this library's. Submodule plus `add_subdirectory` is exactly how a library here is meant to be consumed, so this is not a hypothetical.
+`CMAKE_SOURCE_DIR` is the root of the *outermost* project, not of the project the file belongs to. The two are the same only while a project is built directly. The moment a consumer pulls this project in as a submodule and calls `add_subdirectory(extern/myproj)`, `CMAKE_SOURCE_DIR` becomes the consumer's root, and `"${CMAKE_SOURCE_DIR}/include"` silently points at the consumer's `include/` directory instead of this library's. Submodule plus `add_subdirectory` is exactly how a library here is meant to be consumed, so this is not a hypothetical.
 
 `PROJECT_SOURCE_DIR` tracks the nearest enclosing `project()` call and is correct in both cases. Use it everywhere, including in an application, where the two currently coincide: the habit costs nothing and the failure it prevents is a silent one.
 
@@ -120,7 +120,7 @@ Within a single directory's `CMakeLists.txt`, prefer bare relative paths for sou
 All build output goes under `build/`, one subdirectory per configuration, named for whatever makes that configuration different:
 
 ```bash
-cmake -B build/dev -D<PROJECT>_BUILD_TESTING=ON
+cmake -B build/dev -DMYPROJ_BUILD_TESTING=ON
 cmake --build build/dev
 ```
 
@@ -144,7 +144,7 @@ The default directory is `dev`, not `debug`, because it is named for what it is 
 
 That is why `build/release` is described above by what it produces rather than by its build type. Testing the release configuration and shipping it are different jobs: the first is `make configure BUILD_TYPE=Release` in `build/dev`, still with tests on, and the second is an optimised tree with testing off that nothing runs `ctest` against. A developer alternating build types locally does pay a reconfigure and a rebuild, which is the honest cost of one directory rather than two; a CI runner starts empty and pays nothing.
 
-Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myapp` becomes `build/dev/bin/myapp`. clang-tidy does not read this directory: its `compile_commands.json` comes from `build/lint`; see Configuring for clang-tidy below.
+Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myproj` becomes `build/dev/bin/myproj`. clang-tidy does not read this directory: its `compile_commands.json` comes from `build/lint`; see Configuring for clang-tidy below.
 
 ## CMakeLists.txt structure
 
@@ -194,11 +194,11 @@ A modular project puts the module list here rather than in the root for two reas
 Every project declares a project-scoped testing option in the root `CMakeLists.txt`, named `<PROJECT>_BUILD_TESTING` and defaulting to `PROJECT_IS_TOP_LEVEL`:
 
 ```cmake
-option(MYLIB_BUILD_TESTING "Build mylib tests" ${PROJECT_IS_TOP_LEVEL})
+option(MYPROJ_BUILD_TESTING "Build myproj tests" ${PROJECT_IS_TOP_LEVEL})
 
 # enable_testing must be called before any add_subdirectory, so CTest
 # discovers the tests those subdirectories register.
-if(MYLIB_BUILD_TESTING)
+if(MYPROJ_BUILD_TESTING)
     enable_testing()
 
     add_subdirectory(extern/Catch2)
@@ -210,7 +210,7 @@ endif()
 
 # ... module add_subdirectory calls ...
 
-if(MYLIB_BUILD_TESTING)
+if(MYPROJ_BUILD_TESTING)
     add_subdirectory(test)
 endif()
 ```
@@ -220,7 +220,7 @@ Never use the bare `BUILD_TESTING` name for this. It is a single global that CTe
 - A consumer who adds this project via `add_subdirectory` with testing on for their own code silently gets this project's tests built and run as part of theirs.
 - Declaring it as a cache variable here turns every vendored dependency's own `option(BUILD_TESTING ... OFF)` into a no-op, because the cache entry already exists. The dependency inherits this project's `ON` and builds its demos and self-tests into this project's CTest run. Working around that needs a save-force-restore dance around each `add_subdirectory`, and the whole problem disappears with a project-scoped name.
 
-`PROJECT_IS_TOP_LEVEL` (CMake 3.21, the declared minimum here) makes the default correct automatically: on when the project is built directly, off when it is somebody's subdirectory. Do not hand-roll it with a `set(MYLIB_ROOT_BUILD TRUE)` marker.
+`PROJECT_IS_TOP_LEVEL` (CMake 3.21, the declared minimum here) makes the default correct automatically: on when the project is built directly, off when it is somebody's subdirectory. Do not hand-roll it with a `set(MYPROJ_ROOT_BUILD TRUE)` marker.
 
 `enable_testing()` must be called here, in the root, and before the `add_subdirectory` calls that register tests. CTest only writes the test manifest for the directory that enabled testing and its children, so calling it in `test/CMakeLists.txt` leaves `ctest --test-dir build/dev` finding nothing.
 
@@ -232,8 +232,8 @@ Every target name is global to the CMake build, including a consumer's. Prefix e
 
 ```cmake
 # Good - cannot collide with anything
-add_library(mylib_crypto STATIC ...)
-add_library(mylib::crypto ALIAS mylib_crypto)
+add_library(myproj_crypto STATIC ...)
+add_library(myproj::crypto ALIAS myproj_crypto)
 
 # Bad - claims a name any other project might want
 add_library(crypto STATIC ...)
@@ -243,41 +243,43 @@ Unprefixed module names like `crypto`, `common`, `config`, `net` or `parser` are
 
 Consumers link the alias, never the raw name, so the prefix costs nothing at the call site.
 
+The bare project name belongs to the one target a user or consumer reaches for: the aggregate or single library target in a library, and the executable in a tier that ships one. Everything else carries the prefix: `myproj_<module>`, `myproj_core`, `myproj_lib`, `myproj_unit_tests`, `myproj_fuzz_<name>`. That is what lets a library with a bundled CLI call both halves `myproj` without a collision: the executable is `myproj`, the library target is `myproj_lib`, and every link goes through the `myproj::myproj` alias, so the suffix is a name nothing outside `src/CMakeLists.txt` ever writes; see cmake-lib-cli.md.
+
 ## Warnings
 
 The warning bar is defined **once**, as an `INTERFACE` target that every project-owned target links privately:
 
 ```cmake
 # src/CMakeLists.txt, before the module add_subdirectory calls
-# MYLIB_WERROR is declared in the root with the other project-wide options
+# MYPROJ_WERROR is declared in the root with the other project-wide options
 
-add_library(mylib_warnings INTERFACE)
-target_compile_options(mylib_warnings INTERFACE
+add_library(myproj_warnings INTERFACE)
+target_compile_options(myproj_warnings INTERFACE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive->
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wnon-virtual-dtor -Wold-style-cast>
 )
 
-if(MYLIB_WERROR)
-    target_compile_options(mylib_warnings INTERFACE
+if(MYPROJ_WERROR)
+    target_compile_options(myproj_warnings INTERFACE
         $<$<CXX_COMPILER_ID:MSVC>:/WX>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Werror>
     )
 endif()
 
-add_library(mylib::warnings ALIAS mylib_warnings)
+add_library(myproj::warnings ALIAS myproj_warnings)
 ```
 
 Every target the project owns then carries one line:
 
 ```cmake
-target_link_libraries(mylib_archive PRIVATE mylib::warnings)
+target_link_libraries(myproj_archive PRIVATE myproj::warnings)
 ```
 
 Defining the bar once is the point. A modular library that repeats the flag list per module has one copy per module to keep in step, and they drift: the module that hits an inconvenient warning gets a `-Wno-` appended locally, and the project quietly has two bars. One target means raising the bar is one edit.
 
 `PRIVATE`, so the bar applies to this project's code and is never imposed on a consumer. Default `OFF` for `-Werror`, turned on in CI: a new compiler version routinely adds a warning, and a developer whose build breaks because they upgraded clang cannot get any work done.
 
-The `MYLIB_WERROR` option is declared in the root, alongside every other project-wide `option()`, while the target it feeds is declared in `src/`. The two are separated because the root orchestrates and never defines targets, and `src/` is the first place a target appears that needs the bar. Declaring the option in `src/` instead still works, since an `option()` anywhere becomes a cache entry `-D` can set, but it puts one of the project's options somewhere none of the others are.
+The `MYPROJ_WERROR` option is declared in the root, alongside every other project-wide `option()`, while the target it feeds is declared in `src/`. The two are separated because the root orchestrates and never defines targets, and `src/` is the first place a target appears that needs the bar. Declaring the option in `src/` instead still works, since an `option()` anywhere becomes a cache entry `-D` can set, but it puts one of the project's options somewhere none of the others are.
 
 Linking the bar is not optional and not per-target judgement. A target that omits the line is compiled at whatever the compiler defaults to, and nothing reports it: the build is green, CI is green, and the project quietly has an unwarned island. That is the failure this section exists to prevent, so the tier fragments show the link on every target they define.
 
@@ -305,14 +307,14 @@ Vendored C or C++ is exempt. Do not fix a third-party file's warnings, and do no
 ```cmake
 # decoder.c is third-party C from a submodule's contrib/ directory. Its own
 # target, so the project's warning bar does not apply to it.
-add_library(mylib_decoder STATIC "${DECODER_C}")
+add_library(myproj_decoder STATIC "${DECODER_C}")
 
-target_include_directories(mylib_decoder SYSTEM PUBLIC "${DECODER_INCLUDE_DIR}")
+target_include_directories(myproj_decoder SYSTEM PUBLIC "${DECODER_INCLUDE_DIR}")
 
-add_library(mylib::decoder ALIAS mylib_decoder)
+add_library(myproj::decoder ALIAS myproj_decoder)
 
 # ... and the module that uses it:
-target_link_libraries(mylib_archive PRIVATE mylib::decoder)
+target_link_libraries(myproj_archive PRIVATE myproj::decoder)
 ```
 
 A separate target rather than `set_source_files_properties(... COMPILE_OPTIONS "-Wno-...")` on the file. Per-file suppression works only while the suppression list matches the bar, so every flag added to the warnings target means revisiting every vendored file to extend its `-Wno-` list, and the failure mode is a wall of third-party diagnostics in the middle of the project's own build output. A target that never links the bar stays correct no matter how the bar changes.
@@ -324,10 +326,10 @@ Mark its include directory `SYSTEM`, so the third-party headers are exempt where
 Every project declares a project-scoped sanitizer option, applied globally so that every target and every test is instrumented consistently:
 
 ```cmake
-option(MYLIB_ASAN "Build with Address + UB sanitizers" OFF)
+option(MYPROJ_ASAN "Build with Address + UB sanitizers" OFF)
 
 # Applied before any target is declared, so every module and test is instrumented
-if(MYLIB_ASAN)
+if(MYPROJ_ASAN)
     if(MSVC)
         # MSVC has AddressSanitizer but no UndefinedBehaviorSanitizer, and links
         # its runtime automatically, so there is no matching add_link_options.
@@ -386,12 +388,12 @@ Single-header libraries check for the header file directly rather than a `CMakeL
 Use the `SYSTEM` keyword on every `target_include_directories` call that points into `extern/`. This marks those paths as system headers, so clang-tidy and the compiler suppress all warnings from third-party code by default:
 
 ```cmake
-target_include_directories(mytarget SYSTEM PRIVATE
+target_include_directories(myproj_archive SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/ThirdPartyLib/src"
 )
 
 # Project-owned headers (generated files) use PRIVATE without SYSTEM:
-target_include_directories(mytarget PRIVATE
+target_include_directories(myproj_archive PRIVATE
     "${PROJECT_BINARY_DIR}"
 )
 ```
@@ -454,7 +456,7 @@ target_compile_definitions(asio INTERFACE
 )
 ```
 
-Consumers then write `target_link_libraries(mylib_transport PRIVATE asio)` and inherit the include path, the `SYSTEM` marking, and any required compile definitions together. Those definitions are the real argument for this: a project that repeats the include path at five targets and the definitions at four has a bug waiting in the fifth.
+Consumers then write `target_link_libraries(myproj_transport PRIVATE asio)` and inherit the include path, the `SYSTEM` marking, and any required compile definitions together. Those definitions are the real argument for this: a project that repeats the include path at five targets and the definitions at four has a bug waiting in the fifth.
 
 ## Clang tooling
 

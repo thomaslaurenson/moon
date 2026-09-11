@@ -45,15 +45,15 @@ jobs:
         with:
           cosign_sign: true
 
-      # Name every asset. A dist/myapp-* glob is shorter and wrong: with
+      # Name every asset. A dist/myproj-* glob is shorter and wrong: with
       # merge-multiple every artifact lands flat in dist/, so the Docker image
       # tar matches too and is attached to the release as if it were a binary.
       - name: Create release
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            dist/myapp-linux-x86_64 \
-            dist/myapp-linux-aarch64 \
-            dist/myapp-windows-x86_64.exe \
+            dist/myproj-linux-x86_64 \
+            dist/myproj-linux-aarch64 \
+            dist/myproj-windows-x86_64.exe \
             install.sh install.ps1 \
             checksums.txt checksums.txt.sigstore.json \
             --title "${GITHUB_REF_NAME}" \
@@ -70,10 +70,10 @@ jobs:
       - name: Download image artifact
         uses: actions/download-artifact@vN
         with:
-          name: myapp-docker
+          name: myproj-docker
 
       - name: Load image
-        run: docker load -i myapp-docker.tar
+        run: docker load -i myproj-docker.tar
 
       - name: Push to ghcr
         env:
@@ -82,8 +82,8 @@ jobs:
           IMAGE: ghcr.io/${{ github.repository }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
-          docker tag myapp "$IMAGE:${GITHUB_REF_NAME}"
-          docker tag myapp "$IMAGE:latest"
+          docker tag myproj "$IMAGE:${GITHUB_REF_NAME}"
+          docker tag myproj "$IMAGE:latest"
           docker push "$IMAGE:${GITHUB_REF_NAME}"
           docker push "$IMAGE:latest"
 ```
@@ -98,18 +98,18 @@ The `release_docker` job is the Docker fragment's publishing pattern, repeated h
 The gpipe fragment covers the config surface and the action inputs. What is C++ specific is that the `path` entries must match where `download-artifact` puts the binaries: with `path: dist` and `merge-multiple: true` every artifact lands flat in `dist/`, so the paths are `./dist/<asset>`.
 
 ```yaml
-binary: myapp
+binary: myproj
 
 platforms:
   linux_amd64:
-    path: ./dist/myapp-linux-x86_64
-    name: myapp-linux-x86_64
+    path: ./dist/myproj-linux-x86_64
+    name: myproj-linux-x86_64
   linux_arm64:
-    path: ./dist/myapp-linux-aarch64
-    name: myapp-linux-aarch64
+    path: ./dist/myproj-linux-aarch64
+    name: myproj-linux-aarch64
   windows_amd64:
-    path: ./dist/myapp-windows-x86_64.exe
-    name: myapp-windows-x86_64.exe
+    path: ./dist/myproj-windows-x86_64.exe
+    name: myproj-windows-x86_64.exe
 ```
 
 One platform key maps to exactly one binary, and that is the other reason Linux ships a single static musl build per architecture: there is no way to express "glibc or musl, reader's choice", so the installer has to be given the one that runs everywhere.
@@ -167,9 +167,9 @@ jobs:
             --target "${{ github.sha }}" \
             --title "dev" \
             --notes "Rolling build of ${{ github.sha }}" \
-            dist/myapp-linux-x86_64 \
-            dist/myapp-linux-aarch64 \
-            dist/myapp-windows-x86_64.exe
+            dist/myproj-linux-x86_64 \
+            dist/myproj-linux-aarch64 \
+            dist/myproj-windows-x86_64.exe
 
   prerelease_docker:
     needs: prerelease
@@ -178,10 +178,10 @@ jobs:
       - name: Download image artifact
         uses: actions/download-artifact@vN
         with:
-          name: myapp-docker
+          name: myproj-docker
 
       - name: Load image
-        run: docker load -i myapp-docker.tar
+        run: docker load -i myproj-docker.tar
 
       # dev only, never latest: latest tracks releases, so pointing it at a
       # rolling build makes an untagged docker pull return whatever last landed
@@ -193,7 +193,7 @@ jobs:
           IMAGE: ghcr.io/${{ github.repository }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
-          docker tag myapp "$IMAGE:dev"
+          docker tag myproj "$IMAGE:dev"
           docker push "$IMAGE:dev"
 ```
 

@@ -83,13 +83,13 @@ Once a platform is in, it stays consistent all the way through: a job in `build.
 
 #### Asset naming
 
-Name every artifact `<app>-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows. The table is the naming for whichever platforms a project builds, not a list of platforms it must:
+Name every artifact `myproj-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows. The table is the naming for whichever platforms a project builds, not a list of platforms it must:
 
 | Platform | Asset |
 |---|---|
-| Linux x86_64 | `myapp-linux-x86_64` |
-| Linux ARM64 | `myapp-linux-aarch64` |
-| Windows x86_64 | `myapp-windows-x86_64.exe` |
+| Linux x86_64 | `myproj-linux-x86_64` |
+| Linux ARM64 | `myproj-linux-aarch64` |
+| Windows x86_64 | `myproj-windows-x86_64.exe` |
 
 This is gpipe's platform vocabulary, so the names map onto `.gpipe.yml` with no translation; the identifiers are the `platforms` keys shown in cpp/release-app.md, and `gpipe validate` checks a config against them. Pick the naming before the first release: the assets are a public interface, and renaming them later breaks anyone's install script.
 
@@ -122,10 +122,10 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            asset: myapp-linux-x86_64
+            asset: myproj-linux-x86_64
             runner: ubuntu-24.04
           - arch: arm64
-            asset: myapp-linux-aarch64
+            asset: myproj-linux-aarch64
             runner: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.runner }}
@@ -137,12 +137,12 @@ jobs:
       - name: Build Docker image (${{ matrix.arch }})
         run: |
           docker build --platform linux/${{ matrix.arch }} \
-            -t myapp-${{ matrix.arch }} .
+            -t myproj-${{ matrix.arch }} .
 
       - name: Extract binary from Docker image
         run: |
-          CONTAINER_ID=$(docker create myapp-${{ matrix.arch }})
-          docker cp "$CONTAINER_ID":/myapp ./${{ matrix.asset }}
+          CONTAINER_ID=$(docker create myproj-${{ matrix.arch }})
+          docker cp "$CONTAINER_ID":/myproj ./${{ matrix.asset }}
           docker rm "$CONTAINER_ID"
 
       # Run the bytes that will ship. See Smoke-run every artifact.
@@ -170,19 +170,19 @@ jobs:
         shell: bash
         run: |
           cmake -B build/release -G "Visual Studio 17 2022" -A x64 \
-            -DMYAPP_BUILD_TESTING=OFF
+            -DMYPROJ_BUILD_TESTING=OFF
           cmake --build build/release --config Release
-          mv build/release/bin/myapp.exe ./myapp-windows-x86_64.exe
+          mv build/release/bin/myproj.exe ./myproj-windows-x86_64.exe
 
       - name: Smoke-run the artifact
         shell: bash
-        run: ./myapp-windows-x86_64.exe --version
+        run: ./myproj-windows-x86_64.exe --version
 
       - name: Upload binary as artifact
         uses: actions/upload-artifact@vN
         with:
-          name: myapp-windows-x86_64.exe
-          path: myapp-windows-x86_64.exe
+          name: myproj-windows-x86_64.exe
+          path: myproj-windows-x86_64.exe
           retention-days: 1
 
   # Only where the project publishes an image. The tar is what release and
@@ -196,22 +196,22 @@ jobs:
           submodules: true
 
       - name: Build image
-        run: docker build --platform linux/amd64 -t myapp .
+        run: docker build --platform linux/amd64 -t myproj .
 
       - name: Save image as a tar
-        run: docker save myapp -o myapp-docker.tar
+        run: docker save myproj -o myproj-docker.tar
 
       - name: Upload image as artifact
         uses: actions/upload-artifact@vN
         with:
-          name: myapp-docker
-          path: myapp-docker.tar
+          name: myproj-docker
+          path: myproj-docker.tar
           retention-days: 1
 ```
 
-Set `MYAPP_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artifact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
+Set `MYPROJ_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artifact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
 
-`build/release/bin/myapp.exe` rather than `build/release/bin/Release/myapp.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
+`build/release/bin/myproj.exe` rather than `build/release/bin/Release/myproj.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
 
 #### Where CI does not go through `make`
 

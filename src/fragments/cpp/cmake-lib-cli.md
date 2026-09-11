@@ -9,7 +9,7 @@ How it differs from those neighbours: a plain library has no compiled binary to 
 ## Repository layout additions
 
 ```
-include/<lib>/         # public headers - the API the library exposes
+include/myproj/         # public headers - the API the library exposes
 src/                   # library implementation (.cpp and private headers); no main()
   CMakeLists.txt       # add_library
 app/                   # the CLI: main() plus argument wiring only
@@ -28,59 +28,60 @@ The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `
 `src/CMakeLists.txt` defines the reusable core with `add_library`, defaulting to `STATIC` unless there is a specific reason to build shared:
 
 ```cmake
-add_library(mylib STATIC
+add_library(myproj_lib STATIC
     parser.cpp
     archive.cpp
 )
 
-target_include_directories(mylib
+target_include_directories(myproj_lib
     PUBLIC  "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_link_libraries(mylib PRIVATE mylib::warnings)
+target_link_libraries(myproj_lib PRIVATE myproj::warnings)
 
-target_compile_features(mylib PUBLIC cxx_std_20)
+target_compile_features(myproj_lib PUBLIC cxx_std_20)
 
-add_library(mylib::mylib ALIAS mylib)
+add_library(myproj::myproj ALIAS myproj_lib)
 ```
 
+- The target is `myproj_lib` and the executable in `app/` is `myproj`. The binary a user runs has to carry the bare name, target names are global to the build, and the library's raw name is one nothing outside this file ever writes, since every link goes through the `myproj::myproj` alias. This is the general rule in Target names in the universal fragment: the bare name goes to what a user reaches for, and everything else carries the prefix.
 - Source files are named relative to the directory holding the `CMakeLists.txt`. This file lives in `src/`, so the entry is `parser.cpp`, never `src/parser.cpp`, which would resolve to `src/src/parser.cpp` and fail to configure.
-- `PUBLIC` on `include/` propagates that path to everything that links the library, so neither the CLI nor an outside consumer needs an include path of its own; `target_link_libraries(myapp PRIVATE mylib::mylib)` is the whole wiring.
+- `PUBLIC` on `include/` propagates that path to everything that links the library, so neither the CLI nor an outside consumer needs an include path of its own; `target_link_libraries(myproj PRIVATE myproj::myproj)` is the whole wiring.
 - `PRIVATE` on the current directory keeps implementation headers off the consumer's include path entirely. The split is the API boundary expressed in CMake: what is in `include/` is promised, what is in `src/` can change freely.
 - `PROJECT_SOURCE_DIR`, never `CMAKE_SOURCE_DIR`. A consumer pulls this library in as a submodule and calls `add_subdirectory`, at which point `CMAKE_SOURCE_DIR` is *their* root and the public include path would silently point at their `include/`.
-- The `mylib::mylib` `ALIAS` gives a consistent namespaced link name whether the library is added by this project or by a consumer's superbuild. Use the alias in every `target_link_libraries`, never the bare target name, so nothing changes if the linking mechanism does.
-- Headers live in `include/<lib>/`, not directly in `include/`, so includes read `#include <mylib/parser.h>` and cannot collide with another dependency's `parser.h`.
+- The `myproj::myproj` `ALIAS` gives a consistent namespaced link name whether the library is added by this project or by a consumer's superbuild. Use the alias in every `target_link_libraries`, never the bare target name, so nothing changes if the linking mechanism does.
+- Headers live in `include/myproj/`, not directly in `include/`, so includes read `#include <myproj/parser.h>` and cannot collide with another dependency's `parser.h`.
 
 ## Generated version header
 
-The version comes from `project(MyLib VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree, so the library, the CLI, and an outside consumer all read the same compile-time constant through the same include:
+The version comes from `project(myproj VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree, so the library, the CLI, and an outside consumer all read the same compile-time constant through the same include:
 
 ```cmake
 configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/version.h.in"
-    "${PROJECT_BINARY_DIR}/include/mylib/version.h"
+    "${PROJECT_BINARY_DIR}/include/myproj/version.h"
     @ONLY
 )
 
-target_include_directories(mylib PUBLIC "${PROJECT_BINARY_DIR}/include")
+target_include_directories(myproj_lib PUBLIC "${PROJECT_BINARY_DIR}/include")
 ```
 
-`#include <mylib/version.h>` then matches every other public header. Putting `PROJECT_BINARY_DIR` itself on the public path instead would hand consumers every generated file in the build tree.
+`#include <myproj/version.h>` then matches every other public header. Putting `PROJECT_BINARY_DIR` itself on the public path instead would hand consumers every generated file in the build tree.
 
 ## CLI target
 
 `app/CMakeLists.txt` defines the executable. It links the library through its alias and pulls any CLI-only dependency (for example CLI11) from `extern/` as a SYSTEM include:
 
 ```cmake
-add_executable(myapp
+add_executable(myproj
     main.cpp
     options.cpp
 )
 
-target_link_libraries(myapp PRIVATE mylib::mylib mylib::warnings)
+target_link_libraries(myproj PRIVATE myproj::myproj myproj::warnings)
 
-target_include_directories(myapp SYSTEM PRIVATE
+target_include_directories(myproj SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/CLI11/include"
 )
 ```
@@ -91,48 +92,48 @@ The executable stays thin: it parses arguments, calls library functions, and tur
 
 A lib-cli is the one tier that can have all four layers. Unit, integration and fuzz link the library; functional spawns the binary:
 
-- Unit tests link `mylib::mylib` and test logic, with fixtures supplying whatever input they need (see cpp/testing.md).
-- Integration tests link `mylib::mylib` and run against real data the machine must already have. Opt-in (see cpp/testing-integration.md).
-- Functional tests spawn the compiled `myapp` and verify its CLI behaviour end-to-end (see cpp/testing-functional.md). This layer applies because a lib-cli ships a binary, unlike a plain library.
-- Fuzz harnesses link `mylib::mylib` and drive its parsers with hostile input. Built on demand (see cpp/testing-fuzz.md).
+- Unit tests link `myproj::myproj` and test logic, with fixtures supplying whatever input they need (see cpp/testing.md).
+- Integration tests link `myproj::myproj` and run against real data the machine must already have. Opt-in (see cpp/testing-integration.md).
+- Functional tests spawn the compiled `myproj` and verify its CLI behaviour end-to-end (see cpp/testing-functional.md). This layer applies because a lib-cli ships a binary, unlike a plain library.
+- Fuzz harnesses link `myproj::myproj` and drive its parsers with hostile input. Built on demand (see cpp/testing-fuzz.md).
 
 ```cmake
 # test/CMakeLists.txt
 
-add_executable(mylib_unit_tests
+add_executable(myproj_unit_tests
     unit/test_parser.cpp
     unit/test_archive.cpp
 )
-target_include_directories(mylib_unit_tests PRIVATE
+target_include_directories(myproj_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
-target_link_libraries(mylib_unit_tests PRIVATE
-    mylib::mylib
-    mylib::warnings
+target_link_libraries(myproj_unit_tests PRIVATE
+    myproj::myproj
+    myproj::warnings
     Catch2::Catch2WithMain
 )
 
-add_executable(myapp_functional_tests
+add_executable(myproj_functional_tests
     subprocess_helper.cpp
     functional/test_create.cpp
 )
 # Project-owned test headers use PRIVATE without SYSTEM.
-target_include_directories(myapp_functional_tests PRIVATE
+target_include_directories(myproj_functional_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 # extern/subprocess.h is the submodule directory; mark it SYSTEM and keep it in its
 # own call - never combine SYSTEM and non-SYSTEM paths.
-target_include_directories(myapp_functional_tests SYSTEM PRIVATE
+target_include_directories(myproj_functional_tests SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/subprocess.h"
 )
-target_link_libraries(myapp_functional_tests PRIVATE
-    mylib::warnings
+target_link_libraries(myproj_functional_tests PRIVATE
+    myproj::warnings
     Catch2::Catch2WithMain
 )
 
-catch_discover_tests(mylib_unit_tests
+catch_discover_tests(myproj_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)
-catch_discover_tests(myapp_functional_tests
+catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
@@ -144,32 +145,32 @@ The split between those two is the tier's main testing question, and it has a de
 
 ## Baking paths into test binaries
 
-Functional tests need the path to the compiled `myapp`, and both non-unit layers need the path to their own source directory for checked-in data. Bake both in at configure time rather than discovering them at runtime:
+Functional tests need the path to the compiled `myproj`, and both non-unit layers need the path to their own source directory for checked-in data. Bake both in at configure time rather than discovering them at runtime:
 
 ```cmake
 # In test/CMakeLists.txt
 
 if(WIN32)
-    set(MYAPP_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myapp.exe")
+    set(MYPROJ_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myproj.exe")
 else()
-    set(MYAPP_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myapp")
+    set(MYPROJ_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myproj")
 endif()
 
-# MYAPP_BINARY_PATH_OVERRIDE points the functional tests at a binary other than
+# MYPROJ_BINARY_PATH_OVERRIDE points the functional tests at a binary other than
 # the one just built: a downloaded release asset, or an installed copy, to check
 # a published artifact behaves. Unset, which is the normal case including in CI,
 # the build-tree path above is used.
-if(MYAPP_BINARY_PATH_OVERRIDE)
-    set(MYAPP_BINARY_PATH "${MYAPP_BINARY_PATH_OVERRIDE}")
+if(MYPROJ_BINARY_PATH_OVERRIDE)
+    set(MYPROJ_BINARY_PATH "${MYPROJ_BINARY_PATH_OVERRIDE}")
 endif()
 
-target_compile_definitions(myapp_functional_tests PRIVATE
-    MYAPP_BINARY_PATH="${MYAPP_BINARY_PATH}"
-    MYAPP_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+target_compile_definitions(myproj_functional_tests PRIVATE
+    MYPROJ_BINARY_PATH="${MYPROJ_BINARY_PATH}"
+    MYPROJ_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_compile_definitions(mylib_unit_tests PRIVATE
-    MYLIB_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+target_compile_definitions(myproj_unit_tests PRIVATE
+    MYPROJ_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 ```
 

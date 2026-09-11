@@ -17,8 +17,8 @@ Never use this layer as a dumping ground for tests that are awkward to write. If
 The root `CMakeLists.txt` declares a project-scoped option to build the layer, plus a cache variable naming the data it needs:
 
 ```cmake
-option(MYLIB_INTEGRATION "Build integration tests (requires the real inputs)" OFF)
-set(MYLIB_INTEGRATION_DATA "" CACHE PATH "Path to the real inputs (file or directory) for integration tests")
+option(MYPROJ_INTEGRATION "Build integration tests (requires the real inputs)" OFF)
+set(MYPROJ_INTEGRATION_DATA "" CACHE PATH "Path to the real inputs (file or directory) for integration tests")
 ```
 
 Default `OFF`: the integration binary is not built at all in a normal configure, so a developer without the data never sees it and never has to skip it. Project-scoped names, as always, so a consumer's own `INTEGRATION` flag cannot reach in here.
@@ -28,27 +28,27 @@ Default `OFF`: the integration binary is not built at all in a normal configure,
 Guard the whole target on the option. It links the library through its alias, the same as the unit binary:
 
 ```cmake
-if(MYLIB_INTEGRATION)
-    add_executable(mylib_integration_tests
+if(MYPROJ_INTEGRATION)
+    add_executable(myproj_integration_tests
         integration/test_archive_reader.cpp
         integration/test_record_reader.cpp
     )
 
-    target_include_directories(mylib_integration_tests PRIVATE
+    target_include_directories(myproj_integration_tests PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     )
 
-    target_link_libraries(mylib_integration_tests PRIVATE mylib::mylib Catch2::Catch2WithMain)
+    target_link_libraries(myproj_integration_tests PRIVATE myproj::myproj Catch2::Catch2WithMain)
 
     # Bake the data path in at configure time when given. If absent, the tests
     # fall back to an environment variable at runtime and skip cleanly if
     # neither is set.
-    if(MYLIB_INTEGRATION_DATA)
-        target_compile_definitions(mylib_integration_tests PRIVATE
-            MYLIB_INTEGRATION_DATA="${MYLIB_INTEGRATION_DATA}")
+    if(MYPROJ_INTEGRATION_DATA)
+        target_compile_definitions(myproj_integration_tests PRIVATE
+            MYPROJ_INTEGRATION_DATA="${MYPROJ_INTEGRATION_DATA}")
     endif()
 
-    catch_discover_tests(mylib_integration_tests
+    catch_discover_tests(myproj_integration_tests
         PROPERTIES LABELS "integration" SKIP_RETURN_CODE 4)
 endif()
 ```
@@ -68,26 +68,26 @@ Resolve the environment in one place, in a fixture header, checking the compile-
 
 namespace fs = std::filesystem;
 
-namespace mylib::testing {
+namespace myproj::testing {
 
 /// Returns the path to the real integration dataset, or an empty optional.
 ///
 /// Checks in order:
-///   1. MYLIB_INTEGRATION_DATA compile-time define (from -DMYLIB_INTEGRATION_DATA=...)
-///   2. MYLIB_INTEGRATION_DATA environment variable at runtime
+///   1. MYPROJ_INTEGRATION_DATA compile-time define (from -DMYPROJ_INTEGRATION_DATA=...)
+///   2. MYPROJ_INTEGRATION_DATA environment variable at runtime
 ///
 /// The path may be a single file or a directory; each test decides how to use it.
 /// @return The dataset path, or nullopt if neither source points at something that exists.
 inline std::optional<fs::path> IntegrationDataPath() {
-#ifdef MYLIB_INTEGRATION_DATA
+#ifdef MYPROJ_INTEGRATION_DATA
     {
-        fs::path p{MYLIB_INTEGRATION_DATA};
+        fs::path p{MYPROJ_INTEGRATION_DATA};
         if (fs::exists(p)) {
             return p;
         }
     }
 #endif
-    if (const char *env = std::getenv("MYLIB_INTEGRATION_DATA")) {
+    if (const char *env = std::getenv("MYPROJ_INTEGRATION_DATA")) {
         fs::path p{env};
         if (fs::exists(p)) {
             return p;
@@ -96,14 +96,14 @@ inline std::optional<fs::path> IntegrationDataPath() {
     return std::nullopt;
 }
 
-} // namespace mylib::testing
+} // namespace myproj::testing
 ```
 
 Two sources rather than one because they serve different people: the CMake define suits a developer who configures once and forgets, the environment variable suits a machine where the path is already exported.
 
 Whether that variable has a default, and what it is, is the project's decision. The test that matters is whether the default means the same thing on every machine. A path inside the repository does: a conventional directory the project sets aside for inputs it cannot commit is the same path for everyone who clones it, so defaulting to it makes the layer work with no configuration once the files are in place. A path outside the repository does not: an install location varies by machine, by operating system and by how the thing was installed, so a default pointing there is a guess that is wrong more often than right. Guess at neither, and never hardcode a path in a test.
 
-`fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable: an `MYLIB_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
+`fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable: an `MYPROJ_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
 
 ## Skipping
 
@@ -115,12 +115,12 @@ Every integration test opens by resolving the environment and skipping if it is 
 #include "integration_data.h"
 
 TEST_CASE("reads entries from a real dataset archive", "[archive]") {
-    auto data = mylib::testing::IntegrationDataPath();
+    auto data = myproj::testing::IntegrationDataPath();
     if (!data) {
-        SKIP("No integration data found - set MYLIB_INTEGRATION_DATA");
+        SKIP("No integration data found - set MYPROJ_INTEGRATION_DATA");
     }
 
-    auto index = mylib::BuildIndex(*data);
+    auto index = myproj::BuildIndex(*data);
     REQUIRE(index.Contains("records/main.dat"));
 }
 ```

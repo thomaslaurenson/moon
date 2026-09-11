@@ -29,15 +29,15 @@ One file per subcommand, named for the subcommand. The logic each one calls live
 ```cpp
 // app/main.cpp
 #include <CLI/CLI.hpp>
-#include <mylib/errors.h>
-#include <mylib/version.h>
+#include <myproj/errors.h>
+#include <myproj/version.h>
 
 #include "commands.h"
 
 int main(int argc, char **argv) {
     CLI::App app{"Reads and writes archives"};
     app.require_subcommand(1);
-    app.set_version_flag("--version", MYLIB_VERSION);
+    app.set_version_flag("--version", MYPROJ_VERSION);
 
     RegisterAdd(app);
     RegisterExtract(app);
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
         app.parse(argc, argv);
     } catch (const CLI::ParseError &e) {
         return app.exit(e);
-    } catch (const mylib::Error &e) {
+    } catch (const myproj::Error &e) {
         std::cerr << "[!] " << e.what() << "\n";
         return 1;
     } catch (const std::exception &e) {
@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
 - `require_subcommand(1)` is what makes a bare invocation fail rather than succeeding silently. Without it CLI11 parses nothing, throws nothing, and `main` returns 0, which tells a script the command worked.
 - `set_version_flag` reads the constant from the generated version header, which comes from `project(... VERSION ...)`; see the style and tier fragments. Never a literal here.
 - The subcommand callbacks run inside `app.parse`, which is why the library's own exceptions are caught around it rather than after. The exit codes are covered in the error handling fragment.
+- The `<myproj/...>` includes are the lib-cli form. An application has no `include/`: its own headers sit in `src/` and `app/` includes them by name, `#include "errors.h"`, through the core's public include directory, while `<myproj/version.h>` is generated into an include tree in both tiers; see cmake-app.md.
 
 ## One registration function per subcommand
 
@@ -74,7 +75,7 @@ Each subcommand is a `Register<Name>(CLI::App &app)` function declared in `comma
 #include <memory>
 #include <string>
 
-#include <mylib/archive.h>
+#include <myproj/archive.h>
 
 void RegisterList(CLI::App &app) {
     struct Options {
@@ -89,7 +90,7 @@ void RegisterList(CLI::App &app) {
     sub->add_flag("-d,--detailed", opts->detailed, "Show size and timestamp for each entry");
 
     sub->callback([opts]() {
-        mylib::ListEntries(opts->target, opts->detailed, std::cout);
+        myproj::ListEntries(opts->target, opts->detailed, std::cout);
     });
 }
 ```
@@ -129,7 +130,7 @@ sub->add_option("--locale", opts->locale, "Locale for the added files")->check(l
 
 A validator failure is a parse error, so it is reported by CLI11 with the usage text and never reaches the library.
 
-Where a value can come from more than one place, the order is flag, then environment, then the built-in default. Resolve it in `app/` and pass the settled value down, so nothing in `src/` can tell which layer an argument came from. CLI11 reads the environment for you with `->envname("MYAPP_TARGET")`.
+Where a value can come from more than one place, the order is flag, then environment, then the built-in default. Resolve it in `app/` and pass the settled value down, so nothing in `src/` can tell which layer an argument came from. CLI11 reads the environment for you with `->envname("MYPROJ_TARGET")`.
 
 ## Windows option syntax
 
@@ -147,10 +148,10 @@ A `completion` subcommand prints the script for a named shell to stdout, and the
 
 ```
 completion/
-  myapp.bash
-  myapp.zsh
-  myapp.fish
-  myapp.ps1
+  myproj.bash
+  myproj.zsh
+  myproj.fish
+  myproj.ps1
 ```
 
 The generated header goes to the build tree, never into `src/` or `completion/`; see the tier fragment for the `configure_file` wiring. Declare the scripts with `CMAKE_CONFIGURE_DEPENDS` so editing one regenerates the header.

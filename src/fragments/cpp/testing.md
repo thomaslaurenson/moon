@@ -77,10 +77,10 @@ The CMake wiring (the project-scoped testing option, `enable_testing()`, and `in
 Every `catch_discover_tests` call sets two properties, and both are load-bearing:
 
 ```cmake
-catch_discover_tests(mylib_unit_tests
+catch_discover_tests(myproj_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)
 
-catch_discover_tests(mylib_integration_tests
+catch_discover_tests(myproj_integration_tests
     PROPERTIES LABELS "integration" SKIP_RETURN_CODE 4)
 ```
 
@@ -132,8 +132,8 @@ TEST_CASE("ParseConfig", "[config]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/mytarget_unit_tests [helpers]
-./build/dev/bin/mytarget_unit_tests [config]
+./build/dev/bin/myproj_unit_tests [helpers]
+./build/dev/bin/myproj_unit_tests [config]
 ```
 
 ### What to unit test
@@ -165,7 +165,7 @@ struct SyntheticArchive {
 Add the fixtures directory to each test target's include path so tests include them by name:
 
 ```cmake
-target_include_directories(mylib_unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_include_directories(myproj_unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ```
 
 A fixture that owns a temporary directory must remove it in its destructor and must swallow the cleanup error: a failure there must not throw out of a destructor and mask the assertion that actually failed.
@@ -176,7 +176,7 @@ Where code under test throws, assert on the concrete type from the library's hie
 
 ```cpp
 // Good
-REQUIRE_THROWS_AS(ParseVersion("not-a-version"), mylib::ParseError);
+REQUIRE_THROWS_AS(ParseVersion("not-a-version"), myproj::ParseError);
 
 // Bad - a typo that throws std::bad_alloc would satisfy this
 REQUIRE_THROWS(ParseVersion("not-a-version"));

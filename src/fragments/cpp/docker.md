@@ -26,10 +26,10 @@ COPY . .
 # libstdc++ with it and needs no loader at runtime.
 RUN cmake -B build/release \
         -DCMAKE_BUILD_TYPE=Release \
-        -DMYAPP_BUILD_TESTING=OFF \
+        -DMYPROJ_BUILD_TESTING=OFF \
         -DCMAKE_EXE_LINKER_FLAGS="-static" \
     && cmake --build build/release --parallel $(nproc) \
-    && strip build/release/bin/myapp
+    && strip build/release/bin/myproj
 
 # Stage 2: Runtime
 FROM scratch
@@ -38,13 +38,13 @@ LABEL org.opencontainers.image.source="https://github.com/<owner>/<repo>"
 LABEL org.opencontainers.image.description="One sentence, the same as the repository description"
 LABEL org.opencontainers.image.licenses="MIT"
 
-COPY --from=build /src/build/release/bin/myapp /myapp
-ENTRYPOINT ["/myapp"]
+COPY --from=build /src/build/release/bin/myproj /myproj
+ENTRYPOINT ["/myproj"]
 ```
 
 - `alpine` is the builder because its libc is musl, and `-static` against musl is what produces a binary with no loader and no libc version floor; see One Linux binary, not two in cpp/workflows-app.md for why that is the Linux artifact. The Docker fragment prefers Alpine anyway, so nothing is overridden. Do not copy the tag from this document as the version to match: Dependabot keeps it current (see the Dependabot fragment).
 - `-DCMAKE_EXE_LINKER_FLAGS="-static"` is not optional, and leaving it out fails in a way that is easy to miss: the image builds fine, and the container then exits immediately with `no such file or directory` on a binary that plainly exists. What is missing is `/lib/ld-musl-x86_64.so.1`, the dynamic loader, which `scratch` does not have. The smoke run in `build.yml` is what catches it in CI (see cpp/workflows-app.md); locally, `docker run --rm <image> --version`, or `file` on the extracted binary, which should say `statically linked`.
-- `MYAPP_BUILD_TESTING=OFF` keeps Catch2 out of an image that never runs tests, and `strip` cuts the binary substantially.
+- `MYPROJ_BUILD_TESTING=OFF` keeps Catch2 out of an image that never runs tests, and `strip` cuts the binary substantially.
 - The build goes into `build/release`, the directory cpp/cmake.md reserves for the shipped artifact: optimised, testing off, nothing runs `ctest` against it.
 - `build-base` rather than the individual packages, because it is Alpine's own name for the C and C++ toolchain and pulls in `musl-dev`, which the static link needs and which is easy to leave out of a hand-written list.
 - The whole checkout is the build context, submodules included: the image builds from the same `extern/` the tests do, so `docker build` follows `git submodule update --init` locally and a checkout with `submodules: true` in CI.

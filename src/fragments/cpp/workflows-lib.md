@@ -79,7 +79,7 @@ A library that ships examples turns them on here, and nowhere else:
 ```yaml
       - run: |
           make configure CMAKE_ARGS="-DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
-            -D<PROJECT>_WERROR=ON -D<PROJECT>_BUILD_EXAMPLES=ON"
+            -DMYPROJ_WERROR=ON -DMYPROJ_BUILD_EXAMPLES=ON"
 ```
 
 `make build` then compiles them along with everything else, and nothing runs them. That is the whole of what cmake-lib.md asks for when it says to keep examples compiling: an example is the code a consumer copies, so one that no longer builds is worse than none, and the only way to notice is to build it. The option gates whether the targets exist rather than how they are built, so they belong in the same `build/dev` as everything else; see the build directory rules in cpp/cmake.md.

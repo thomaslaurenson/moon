@@ -6,7 +6,7 @@ Applies to any tier that ships a distributable binary: an application, or a libr
 
 ## Paths filter addition
 
-Add `Dockerfile*` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see cpp/release-app.md).
+Add `Dockerfile` and `.dockerignore` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml` where the release uses gpipe (see cpp/release-app.md).
 
 ## Depth is a function of the trigger
 
@@ -20,7 +20,7 @@ So the caller decides the depth, and `build.yml` takes an input:
 | `main.yml` | the above plus the full artifact set and `prerelease` | The rolling channel has to contain everything a release would |
 | `tag.yml` | everything, plus `release` | This is the run whose output people install |
 
-Concretely, `inputs.artifacts` gates `build_windows` and `build_docker`; `build_linux` runs on every trigger. That split is the whole cost control, and it is worth stating why it falls where it does rather than the other way round. `build_linux` builds through `Dockerfile.musl`, so running it is the only thing that proves the release container recipe still works, and it runs on the cheapest runner there is. The other three are either a second compile of a platform `test.yml` already covers, or an image tar nothing consumes until a release. On a private repository the gated jobs are also the more expensive ones: a Windows runner bills at twice a Linux one, so leaving it ungated means a pull request pays for the platform it least needs.
+Concretely, `inputs.artifacts` gates `build_windows` and `build_docker`; `build_linux` runs on every trigger. That split is the whole cost control, and it is worth stating why it falls where it does rather than the other way round. `build_linux` builds through the Dockerfile, so running it is the only thing that proves the release container recipe still works, and it runs on the cheapest runner there is. The other three are either a second compile of a platform `test.yml` already covers, or an image tar nothing consumes until a release. On a private repository the gated jobs are also the more expensive ones: a Windows runner bills at twice a Linux one, so leaving it ungated means a pull request pays for the platform it least needs.
 
 "An artifact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
 
@@ -137,8 +137,7 @@ jobs:
       - name: Build Docker image (${{ matrix.arch }})
         run: |
           docker build --platform linux/${{ matrix.arch }} \
-            -t myapp-${{ matrix.arch }} \
-            -f Dockerfile.musl .
+            -t myapp-${{ matrix.arch }} .
 
       - name: Extract binary from Docker image
         run: |
@@ -197,7 +196,7 @@ jobs:
           submodules: true
 
       - name: Build image
-        run: docker build --platform linux/amd64 -t myapp -f Dockerfile.musl .
+        run: docker build --platform linux/amd64 -t myapp .
 
       - name: Save image as a tar
         run: docker save myapp -o myapp-docker.tar

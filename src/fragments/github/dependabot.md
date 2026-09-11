@@ -27,6 +27,17 @@ updates:
 - For C++ the ecosystem is `gitsubmodule`, because every dependency is a pinned git submodule under `extern/` and there is no package manager to ask; see cpp/cmake.md. Dependabot then proposes a bump to the commit each submodule points at.
 - For Python the ecosystem is always `uv`, never `pip`. uv is the default for every Python project in these specs, and the `uv` ecosystem reads both `pyproject.toml` and `uv.lock`, so bumps regenerate the lockfile and CI stays green. The `pip` ecosystem updates `pyproject.toml` but leaves `uv.lock` stale, so reserve it for a genuinely legacy, non-uv Python project only.
 
+A project that ships a Dockerfile adds a third entry for the `docker` ecosystem. The Docker fragment pins the base image to a minor tag, and nothing else moves that pin; Dependabot then proposes the newer tag the same way it bumps an action:
+
+```yaml
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    assignees:
+      - "<username>"
+```
+
 ## Security-only alternative
 
 When the project wants security updates but no routine version-bump PRs, set `open-pull-requests-limit: 0` on that ecosystem's entry:

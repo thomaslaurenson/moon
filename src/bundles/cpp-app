@@ -18,6 +18,7 @@ cpp/make.md
 github/actions.md
 cpp/workflows.md
 tools/docker.md
+cpp/docker.md
 tools/gpipe.md
 cpp/workflows-app.md
 cpp/release-app.md

@@ -11,7 +11,7 @@ Conventions for CMake-based C++ projects. Universal to every tier; the target de
 
 ## Repository layout
 
-Every C++ project contains at least these at the root; a project-tier fragment (cmake-lib, cmake-app, or cmake-lib-cli) adds `include/`, `app/`, and the release Dockerfiles as its tier requires:
+Every C++ project contains at least these at the root; a project-tier fragment (cmake-lib, cmake-app, or cmake-lib-cli) adds `include/`, `app/`, and the release Dockerfile as its tier requires:
 
 ```
 .clang-format

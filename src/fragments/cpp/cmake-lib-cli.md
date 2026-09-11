@@ -14,11 +14,12 @@ src/                   # library implementation (.cpp and private headers); no m
   CMakeLists.txt       # add_library
 app/                   # the CLI: main() plus argument wiring only
   CMakeLists.txt       # add_executable, links the library
-Dockerfile.musl
+Dockerfile             # static musl build into scratch; see the C++ Docker fragment
+.dockerignore
 .gpipe.yml             # installer/checksum config; see workflows-app.md
 ```
 
-`src/` never contains a `main()`; keeping the entry point in `app/` stops it being compiled into the library and keeps the library free of CLI concerns. The release Dockerfile ships the `app/` binary exactly as for an application; see the Docker fragment.
+`src/` never contains a `main()`; keeping the entry point in `app/` stops it being compiled into the library and keeps the library free of CLI concerns. The release Dockerfile ships the `app/` binary exactly as for an application; see the C++ Docker fragment.
 
 The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `add_subdirectory(app)`, then `add_subdirectory(test)` when testing is on.
 
@@ -176,4 +177,4 @@ This eliminates a whole class of path-resolution bugs and makes each test binary
 
 ## Release
 
-A lib-cli ships its CLI binary, so it uses the application release path in full: a static musl Dockerfile, native macOS and Windows build jobs, the build/test/release workflow set, and the released-binary badges. See the Docker fragment and workflows-app. The library half is not separately packaged for `find_package`; a consumer who wants the core links it via git submodule and `add_subdirectory`, the same as for a plain library.
+A lib-cli ships its CLI binary, so it uses the application release path in full: a static musl Dockerfile, native macOS and Windows build jobs, the build/test/release workflow set, and the released-binary badges. See the C++ Docker fragment and workflows-app. The library half is not separately packaged for `find_package`; a consumer who wants the core links it via git submodule and `add_subdirectory`, the same as for a plain library.

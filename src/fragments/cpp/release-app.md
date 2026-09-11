@@ -90,6 +90,8 @@ jobs:
 
 A project publishing an image adds `packages: write` to this workflow's `permissions` and to the caller job in `tag.yml`.
 
+The `release_docker` job is the Docker fragment's publishing pattern, repeated here rather than referenced so that `release.yml` is complete: the bytes pushed are the ones `build.yml` saved, the tags are the ones its table gives, and the job is separate and gated so a registry outage cannot leave a release half published.
+
 
 ### `.gpipe.yml`
 

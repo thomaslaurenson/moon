@@ -4,3 +4,6 @@
 _core.md
 cpp/style.md
 cpp/errors.md
+cpp/logging.md
+cpp/scaffolding-cli.md
+cpp/signals.md

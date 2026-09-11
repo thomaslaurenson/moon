@@ -11,7 +11,7 @@ Configuration and usage conventions for clang-format across all C++ projects.
 
 ## Prerequisites
 
-clang-format major version 18 must be installed; how depends on the platform (apt.llvm.org ships `clang-format-18`, Homebrew and the LLVM Windows installer ship a plain `clang-format`). The Makefile resolves whichever is present into `$(CLANG_FORMAT)`; see the clang tooling section of cpp/cmake.md. Keep to the pinned major version, because different majors produce different formatting output and a mismatch fails `check_format` on lines nobody edited.
+clang-format at the major version the CMake fragment pins under Clang tooling, which is also where the reasons for pinning and the per-platform install differences live. The Makefile targets fragment resolves whichever binary is present into `$(CLANG_FORMAT)`. A different major produces different output and fails `check_format` on lines nobody edited.
 
 ## Running clang-format
 
@@ -64,6 +64,8 @@ These are already the LLVM defaults and must not be added as overrides:
 | `IndentCaseLabels` | `false`: `case:` labels at switch level, not indented |
 | `Cpp11BracedListStyle` | `true`: no spaces inside `{}` initialisers |
 | `DerivePointerAlignment` | `false`: never auto-detect from existing code |
+
+`IncludeIsMainRegex` is also left at its default. The `([-_]test)?$` variant found in older projects matches a `foo_test.cpp` suffix, and tests here are named `test_foo.cpp`, so it never fires; a setting that does nothing is one a reader still has to understand.
 
 ## Include ordering
 

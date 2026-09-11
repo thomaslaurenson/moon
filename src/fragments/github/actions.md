@@ -13,6 +13,23 @@ Pin runners; never use `-latest`, and never a Preview image. Generally available
 
 Architecture is part of the label, not a flag: on macOS the bare label (`macos-26`) is Apple Silicon and the `-intel` suffix is x64, so both architectures build natively and neither needs cross-compiling. Check the current runner list before relying on this one. Images are added and retired on GitHub's schedule, and a spec that freezes the roster goes stale the same way a frozen action version does.
 
+## What a job costs
+
+A private repository is billed per runner-minute, and not every minute costs the same. GitHub applies a multiplier by platform:
+
+| Platform | Multiplier |
+|---|---|
+| Linux | 1x |
+| Windows | 2x |
+| macOS | 10x |
+
+A public repository is not billed at all today. Design as though it might be: the allowance is GitHub's to change, and a project that goes private later should not need its CI rethought to become affordable.
+
+Two rules follow, and they apply to every workflow set here:
+
+- **Do the work on Linux unless the platform is the point.** Two compilers on one Linux runner cost a fifth of one macOS job and find more. Reach for another platform when it is a deployment target, not for extra confidence in the same code.
+- **Cheap by default, expensive by choice.** A new project starts with the smallest set that catches real breaks, and adds platforms and jobs deliberately. Anything that only a release needs is gated behind the trigger that releases, never run on every pull request. A default that costs nothing is one a project can afford to leave alone; a default that bills at 10x is one somebody has to notice.
+
 Canonical action per purpose:
 
 | Purpose | Action |
@@ -67,6 +84,8 @@ Both are decided by what the project ships, not by the language it is written in
 - `main.yml`: concurrency group `main-${{ github.ref }}`, **`cancel-in-progress: false`**; `paths:` must match `pr.yml` exactly. Never cancel on main. A cancelled pull request run costs nothing but minutes, whereas a cancelled main run can stop midway through publishing, leaving a rolling release whose assets, tag and registry image disagree with each other. The two filters must match because a path that gates a pull request but not the merge lets main go red for a change no pull request ever ran on.
 - `tag.yml`: no concurrency group and no `paths:` filter; every tag runs all jobs unconditionally. A release that skipped its tests because the tag happened to touch no matching path is worse than a slow one.
 - No `push.yml`.
+
+A workflow outside this set is allowed when it responds to something other than a change to the code: a scheduled scan, or a documentation site published from `docs/` on its own trigger. It follows every rule here, pinned runners and actions and least permissions, and it never wires into the three callers or gates a release. Where it has exactly one caller, body and caller share a file, since separating them would add a file and no reuse; the Go vulnerability workflow is the shape.
 
 The callers are the same shape in every language. Only the paths filter and the job list change, and the language workflow fragment supplies both.
 

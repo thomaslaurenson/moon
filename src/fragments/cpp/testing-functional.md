@@ -22,7 +22,7 @@ extern/
 Register the target with a `functional` label, and with `SKIP_RETURN_CODE` so an optional-data skip is not reported as a failure:
 
 ```cmake
-catch_discover_tests(myapp_functional_tests
+catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
@@ -30,18 +30,18 @@ See cpp/testing.md for why the label rather than `-R`, and why the skip code mat
 
 ## Subprocess helper
 
-Every project that has functional tests includes a cross-platform subprocess helper: `test/subprocess_helper.h` and `test/subprocess_helper.cpp`. This helper is not written from scratch each time; copy it from an existing project that already uses this pattern.
+Functional tests have to start a process and capture what it did, and the standard library gives you no way to do that. The layer therefore rests on a small helper, `test/subprocess_helper.h` and `test/subprocess_helper.cpp`.
 
-The helper exposes a `run()` function that returns a `RunResult` containing `stdout_output_`, `stderr_output_`, `returncode_`, and `timed_out_`. A `RunOptions` struct controls optional stdin input and working directory.
+**The interface is fixed; the implementation is not.** Every test in the layer is written against `Run()`, so that shape is the rule: it takes a binary path and an argument list, and returns a `RunResult` carrying `stdout_output`, `stderr_output`, `returncode` and `timed_out`, with a `RunOptions` for optional stdin input and a working directory. How those are obtained is a project's own business. These projects build the helper on `subprocess.h` (below), which is the part that handles the platform differences; anything presenting the same interface serves equally well.
 
 Usage in a functional test:
 
 ```cpp
-#include "../subprocess_helper.h"
+#include "subprocess_helper.h"
 
 TEST_CASE("create: target does not exist", "[create]") {
-    auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
-    REQUIRE(result.returncode_ == 1);
+    auto result = Run(MYPROJ_BINARY_PATH, {"create", "no-such-file"});
+    REQUIRE(result.returncode == 1);
 }
 ```
 
@@ -62,7 +62,7 @@ Always pin to an immutable reference: a release tag or a commit hash, never a mo
 
 The general fixture conventions live in cpp/testing.md and apply here unchanged; `test/fixtures/` is shared by every layer.
 
-`test_environment.h` is the one fixture that is not function-scoped: it is a singleton holding the CMake-baked paths (`MYAPP_BINARY_PATH`, `MYAPP_TEST_DIR`). A singleton is right here and nowhere else, because these values are constant for the whole run and cannot vary per test:
+`test_environment.h` is the one fixture that is not function-scoped: it is a singleton holding the CMake-baked paths (`MYPROJ_BINARY_PATH`, `MYPROJ_TEST_DIR`). A singleton is right here and nowhere else, because these values are constant for the whole run and cannot vary per test:
 
 ```cpp
 // test/fixtures/test_environment.h
@@ -74,13 +74,13 @@ namespace fs = std::filesystem;
 
 /// Singleton that exposes CMake-baked build and source paths to functional tests.
 struct TestEnvironment {
-    static const TestEnvironment &instance() {
+    static const TestEnvironment &Instance() {
         static TestEnvironment env;
         return env;
     }
 
-    const fs::path binary_path { MYAPP_BINARY_PATH };
-    const fs::path test_dir    { MYAPP_TEST_DIR };
+    const fs::path binary_path{MYPROJ_BINARY_PATH};
+    const fs::path test_dir{MYPROJ_TEST_DIR};
 
 private:
     TestEnvironment() = default;
@@ -93,13 +93,14 @@ All other fixtures (for example `TestFiles`) are ordinary function-scoped struct
 // test/fixtures/test_files.h
 #pragma once
 #include <filesystem>
+
 #include "test_environment.h"
 
 namespace fs = std::filesystem;
 
 /// Creates the static input files used across functional tests.
 struct TestFiles {
-    fs::path files_dir_;
+    fs::path files_dir;
 
     TestFiles() {
         // create files, set timestamps etc.
@@ -114,35 +115,40 @@ Instantiate in a test:
 ```cpp
 TEST_CASE("add file to archive", "[add]") {
     TestFiles files;
-    auto result = run(MYAPP_BINARY_PATH,
-                      {"add", (files.files_dir_ / "sample.txt").string(), "out.dat"});
-    REQUIRE(result.returncode_ == 0);
+    auto result =
+        Run(MYPROJ_BINARY_PATH, {"add", (files.files_dir / "sample.txt").string(), "out.dat"});
+    REQUIRE(result.returncode == 0);
 }
 ```
 
 ## Asserting on CLI output
 
-Use a `lines_to_set` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it as a static function at the top of each functional test file:
+Use a `LinesToSet` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it in an anonymous namespace at the top of each functional test file:
 
 ```cpp
-static std::set<std::string> lines_to_set(const std::string &output,
-                                           bool skip_empty = false) {
+namespace {
+
+std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = false) {
     std::set<std::string> result;
     std::istringstream stream(output);
     std::string line;
     while (std::getline(stream, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (skip_empty && line.empty()) continue;
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        if (skip_empty && line.empty())
+            continue;
         result.insert(line);
     }
     return result;
 }
+
+} // namespace
 ```
 
 Usage:
 
 ```cpp
-auto output = lines_to_set(result.stdout_output_);
+auto output = LinesToSet(result.stdout_output);
 std::set<std::string> expected = {"cats.txt", "dogs.txt"};
 REQUIRE(output == expected);
 ```
@@ -157,10 +163,10 @@ Inputs and expected values are handled differently. Prefer a portable input; con
 
 ```cpp
 // Wrong - parsed as an option on Windows, exits 106 (CLI11 RequiredError)
-run(binary, {"info", "/does/not/exist.bin"});
+Run(binary, {"info", "/does/not/exist.bin"});
 
 // Right - means the same thing on every platform
-run(binary, {"info", "no-such-file.bin"});
+Run(binary, {"info", "no-such-file.bin"});
 ```
 
 A relative path needs no `#ifdef`, which is the point: a conditional here would compile two tests that assert different things, when one value works for both. Reach for a portable input first and a branch only when there is not one.
@@ -177,22 +183,25 @@ Use `#ifdef _WIN32` for expected values that differ between Windows and POSIX; f
 #else
     std::string expected_size = "1381";
 #endif
-REQUIRE(result.stdout_output_.find(expected_size) != std::string::npos);
+REQUIRE(result.stdout_output.find(expected_size) != std::string::npos);
 ```
 
 ## Skipping tests with optional dependencies
 
-Use Catch2's `SKIP()` macro when a test depends on a file or resource that may not be present in all environments:
+A functional test that needs a real input the repository does not hold resolves it the way the integration layer does: through `IntegrationDataPath()` from `test/fixtures/integration_data.h`, skipping with `SKIP()` when it is absent, and the functional target gets the same guarded `target_compile_definitions` for `MYPROJ_INTEGRATION_DATA` that cpp/testing-integration.md gives the integration target. One resolver, so the same environment variable and the same configure flag serve both layers, and the README's one answer for obtaining the inputs covers both:
 
 ```cpp
-TEST_CASE("verify signature", "[verify]") {
-    fs::path data = env.test_dir_ / "data" / "sample.dat";
-    if (!fs::exists(data)) {
-        SKIP("Test data not found - run scripts/download_test_data.sh");
+TEST_CASE("info: reads a real patch", "[info]") {
+    auto data = myproj::testing::IntegrationDataPath();
+    if (!data) {
+        SKIP("No integration data found - set MYPROJ_INTEGRATION_DATA");
     }
-    // test body
+    auto result = Run(MYPROJ_BINARY_PATH, {"info", (*data / "sample.dat").string()});
+    REQUIRE(result.returncode == 0);
 }
 ```
+
+Committed inputs under `test/data/` need no skip: they are always there, and a test reaches them through `TestEnvironment::Instance().test_dir`.
 
 This is why the target sets `SKIP_RETURN_CODE 4`: `SKIP()` exits the binary with code 4, and without that property CTest reports the skip as a failure.
 
@@ -208,7 +217,7 @@ TEST_CASE("list with filter", "[list]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/myapp_functional_tests [create]
+./build/dev/bin/myproj_functional_tests [create]
 ```
 
 ## Asserting on the CLI contract
@@ -217,28 +226,16 @@ The functional layer owns the exit-code contract, because it is the only layer t
 
 ```cpp
 TEST_CASE("create: target does not exist", "[create]") {
-    auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
-    REQUIRE(result.returncode_ == 1);
-    REQUIRE_THAT(result.stderr_output_, Catch::Matchers::ContainsSubstring("does not exist"));
+    auto result = Run(MYPROJ_BINARY_PATH, {"create", "no-such-file"});
+    REQUIRE(result.returncode == 1);
+    REQUIRE_THAT(result.stderr_output, Catch::Matchers::ContainsSubstring("does not exist"));
 }
 ```
 
 An expected failure the user can act on exits 1 and explains itself on stderr; an unexpected one exits 2. See the error handling fragment for where those codes come from. A test asserting only that the command failed would pass if the binary crashed instead.
 
-## Makefile targets
+## Running it
 
-```makefile
-.PHONY: test_functional
-test_functional: build ## Run Catch2 functional tests against the built binary
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L functional
-```
+`test_functional` in the Makefile targets fragment runs the layer, and depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result. A tier that ships a binary also adds it to `ci`.
 
-`test_functional` depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result.
-
-This layer does not change cpp/testing.md's `test` target, which stays the unit layer alone and remains the everyday command. A project that wants both in one go adds:
-
-```makefile
-.PHONY: test_all
-test_all: ## Run every test layer built into the current configure
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
-```
+This layer does not change the `test` target, which stays the unit layer alone and remains the everyday command. `test_all` is what runs both in one go, and it is defined once rather than per layer, so a tier with a functional layer and a tier without see the same target.

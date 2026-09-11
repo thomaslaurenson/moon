@@ -2,6 +2,8 @@
 
 How a failure travels from library code to a user. Assumes the C++ style fragment.
 
+Applies to every tier. The boundary and the hierarchy are library rules; "Catching in the app" and "Exit codes" apply only in a tier with an `app/` binary. A plain library stops at the hierarchy and leaves the rest to whoever links it.
+
 These rules are the concrete form of the `src/`-versus-`app/` split: they are what makes a CLI wrapper thin, rather than merely short.
 
 ## The boundary
@@ -21,14 +23,15 @@ Exceptions are the mechanism. `std::expected` is C++23 and the target standard h
 Define a single root exception so a consumer can catch everything the library throws with one handler, and derive specific types so they can catch narrowly when they care. Root the hierarchy at `std::runtime_error`, which gives `what()` for free:
 
 ```cpp
-// include/mylib/errors.h
+// include/myproj/errors.h
 #pragma once
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 
-namespace mylib {
+namespace myproj {
 
-/// Base for every exception thrown by mylib
+/// Base for every exception thrown by myproj
 class Error : public std::runtime_error {
 public:
     explicit Error(const std::string &message) : std::runtime_error(message) {}
@@ -43,25 +46,27 @@ public:
 /// Thrown when an archive cannot be opened
 class ArchiveOpenError : public ArchiveError {
 public:
-    ArchiveOpenError(std::string path, int error_code)
-        : ArchiveError("could not open archive: " + path),
-          path_(std::move(path)), error_code_(error_code) {}
+    ArchiveOpenError(std::filesystem::path path, int error_code)
+        : ArchiveError("could not open archive: " + path.string()), path_(std::move(path)),
+          error_code_(error_code) {}
 
-    const std::string &path() const { return path_; }
+    const std::filesystem::path &path() const { return path_; }
     int error_code() const { return error_code_; }
 
 private:
-    std::string path_;
+    std::filesystem::path path_;
     int error_code_;
 };
 
-}  // namespace mylib
+} // namespace myproj
 ```
 
 - Every exception class gets a Doxygen comment saying when it is thrown; see the Doxygen fragment.
 - Public API functions throw the library's own types, never a bare `std::runtime_error`, `std::invalid_argument`, or a third-party library's exception. Catch a dependency's exception at the boundary and rethrow as your own with `std::throw_with_nested` where the original matters.
 - Carry structured data as members (`path()`, `error_code()`), not just a formatted string. A caller that wants to retry needs the path, not prose.
-- Exception types live in `include/<lib>/errors.h` so a consumer imports them from one place.
+- A path member is a `std::filesystem::path`, for the same reason a path parameter is; see the C++ style fragment. Building the message then needs an explicit `path.string()`, because there is no `operator+` between a string literal and a path. That conversion is the one place the narrow form is correct: the message is prose for a human, not something anyone reopens the file with.
+- Exception types live in `include/myproj/errors.h` in a tier with a public API, so a consumer imports them from one place. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app.md).
+- `Interrupted`, thrown by library code when the cancellation flag it was handed is set, derives from `Error` like every other type and is declared in the same header; see the interrupts fragment.
 
 ## What is not an exception
 
@@ -72,7 +77,7 @@ An exception is for a failure the caller did not expect. A result the caller ask
 std::optional<Entry> FindEntry(const std::string &name) const;
 
 // Bad - throwing for a routine miss forces try/catch into normal control flow
-Entry FindEntry(const std::string &name) const;  // throws EntryNotFoundError
+Entry FindEntry(const std::string &name) const; // throws EntryNotFoundError
 ```
 
 Use `std::optional` for "may legitimately be absent", a `bool` return for "worked or did not, and the reason is obvious", and an exception when the reason matters and the caller cannot reasonably continue.
@@ -86,20 +91,47 @@ Never use exceptions for control flow across a loop body; the cost is real and t
 ```cpp
 // app/main.cpp
 #include <iostream>
-#include <mylib/errors.h>
+#include <myproj/errors.h>
 
 int main(int argc, char **argv) {
     try {
-        // parse arguments, call into mylib
+        // parse arguments, call into myproj
         return 0;
-    } catch (const mylib::Error &e) {
-        std::cerr << "error: " << e.what() << "\n";
+    } catch (const myproj::Error &e) {
+        std::cerr << "[!] " << e.what() << "\n";
         return 1;
     } catch (const std::exception &e) {
-        std::cerr << "unexpected error: " << e.what() << "\n";
+        std::cerr << "[!] unexpected: " << e.what() << "\n";
         return 2;
     }
 }
 ```
 
-Exit codes are part of the CLI contract and are asserted by functional tests (see the functional testing fragment). Use `0` for success, `1` for an expected failure the user can act on, and `2` for a bug or an unhandled condition. A project needing finer-grained codes documents them in the README and keeps them stable across releases.
+The line is marked `[!]`, like every other warning or error the program prints (see the core conventions). Never an `error:` prefix, which carries nothing the marker does not.
+
+## Exit codes
+
+Exit codes are part of the CLI contract and are asserted by functional tests (see the functional testing fragment).
+
+| Code | Meaning |
+|---|---|
+| 0 | success, including `--help` and `--version` |
+| 1 | an expected failure the user can act on, with a message on stderr |
+| 2 | a bug or an unhandled condition |
+| 100-114, 127 | a CLI11 parse error, returned by `app.exit()` |
+
+The last row is not a choice the project makes. `CLI::ExitCodes` numbers every parse failure from 100 upwards, `app.exit(e)` returns that number, and a `main` that forwards it propagates the whole range:
+
+```cpp
+try {
+    app.parse(argc, argv);
+} catch (const CLI::ParseError &e) {
+    return app.exit(e);
+}
+```
+
+Forward them rather than collapsing them to 1. The code says which parse failure occurred, a functional test can assert on it, and `--help` already comes back as 0 through the same path, so collapsing would have to special-case success as well.
+
+Knowing the range matters when writing a functional test. A test expecting a file error and getting 106 has hit `RequiredError`, which means the argument never reached the code under test; see the portable-input rule in the functional testing fragment.
+
+Leave 3 to 99 unused. A project needing a code of its own takes one from there, documents it in the README, and keeps it stable across releases, which keeps it clear of both the codes above and the shell's own 126 and upwards.

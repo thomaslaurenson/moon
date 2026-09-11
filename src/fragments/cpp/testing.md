@@ -20,7 +20,13 @@ Deciding where a test goes:
 - Needs argv, an exit code, or something on stdout: **functional**.
 - Feeds arbitrary bytes to a parser looking for a crash: **fuzz**.
 
-Which layers a project has follows from its tier. A library has unit, integration and fuzz, and cannot have functional, having no binary to spawn. An application and a lib-cli have unit and functional, and add integration and fuzz where they apply. See the tier fragment.
+Which layers a project has follows partly from its tier and partly from what it does, and only one of the four is universal.
+
+- **unit** is always present, in every tier.
+- **functional** needs a binary to spawn, so the tiers that ship one always have it and a library cannot.
+- **integration** and **fuzz** are earned, not assigned. Integration where the project has real inputs it cannot construct; fuzz where it parses input it did not create.
+
+A library that computes rather than parses, and needs no input it cannot build itself, has a unit layer and nothing else. That is a complete test suite for it, not a gap: a fuzz harness over code that never sees untrusted bytes has nothing to find, and an integration layer with no real data to point at is a directory of skips. See the tier fragment.
 
 ## Structure
 
@@ -29,7 +35,7 @@ Every layer lives under `test/`, including fuzz harnesses. A project with module
 ```
 test/
   CMakeLists.txt
-  data/                   # checked-in static inputs; tests read, never write
+  data/                   # static inputs; tests read, never write
   fixtures/               # shared fixture headers, one per fixture, used by every layer
     synthetic_archive.h
     temp_dir.h
@@ -51,6 +57,7 @@ extern/
 
 - One unit test file per source file, named `test_<source>.cpp`, in a directory mirroring the module. The other layers mirror behaviour rather than source files and do not follow this rule.
 - Fixtures live in `test/fixtures/`, one header per fixture, and are shared by every layer.
+- `test/data/` holds inputs a test reads and never writes. Most are small enough to commit, and a fuzz crash reproducer always is. Inputs an integration layer needs may be too large, too proprietary or too numerous to commit, in which case they are gitignored and the project says how to obtain them; see testing-integration.md. Which of the two a given file is does not change where it lives.
 
 ## Catch2 setup
 
@@ -70,10 +77,10 @@ The CMake wiring (the project-scoped testing option, `enable_testing()`, and `in
 Every `catch_discover_tests` call sets two properties, and both are load-bearing:
 
 ```cmake
-catch_discover_tests(mylib_unit_tests
+catch_discover_tests(myproj_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)
 
-catch_discover_tests(mylib_integration_tests
+catch_discover_tests(myproj_integration_tests
     PROPERTIES LABELS "integration" SKIP_RETURN_CODE 4)
 ```
 
@@ -97,17 +104,18 @@ Use one `TEST_CASE` per function under test, with `SECTION` blocks for individua
 
 ```cpp
 #include <catch2/catch_test_macros.hpp>
+
 #include "helpers.h"
 
-TEST_CASE("next_power_of_two", "[helpers]") {
+TEST_CASE("NextPowerOfTwo", "[helpers]") {
     SECTION("returns the same value for exact powers of two") {
-        REQUIRE(next_power_of_two(1) == 1);
-        REQUIRE(next_power_of_two(32) == 32);
+        REQUIRE(NextPowerOfTwo(1) == 1);
+        REQUIRE(NextPowerOfTwo(32) == 32);
     }
 
     SECTION("rounds up to the next power for non-powers") {
-        REQUIRE(next_power_of_two(5) == 8);
-        REQUIRE(next_power_of_two(33) == 64);
+        REQUIRE(NextPowerOfTwo(5) == 8);
+        REQUIRE(NextPowerOfTwo(33) == 64);
     }
 }
 ```
@@ -117,20 +125,22 @@ TEST_CASE("next_power_of_two", "[helpers]") {
 Tag each `TEST_CASE` with the name of the source file under test:
 
 ```cpp
-TEST_CASE("next_power_of_two", "[helpers]") { ... }
-TEST_CASE("parse_config", "[config]") { ... }
+TEST_CASE("NextPowerOfTwo", "[helpers]") { ... }
+TEST_CASE("ParseConfig", "[config]") { ... }
 ```
 
 Run a subset during development:
 
 ```bash
-./build/dev/bin/mytarget_unit_tests [helpers]
-./build/dev/bin/mytarget_unit_tests [config]
+./build/dev/bin/myproj_unit_tests [helpers]
+./build/dev/bin/myproj_unit_tests [config]
 ```
 
 ### What to unit test
 
 A function gets a unit test if its behaviour can be provoked from data the test itself can build. That covers far more than pure logic: a parser gets a unit test driven by a synthetic file written to a temp directory, a socket layer gets one driven over loopback, an archive reader gets one against an archive the fixture assembled in memory. Reach for a fixture rather than reaching for the integration layer.
+
+That includes a private helper in `src/` that no public header declares. It is tested like anything else, and the unit binary has `src/` on its include path so the test reaches the header by the same path the implementation does; see the tier fragment. It is the only test binary that does.
 
 A function only escapes to the integration layer when the input cannot be synthesised: when the test is meaningful precisely because the data is real (an actual production dataset, a live server's handshake).
 
@@ -148,7 +158,7 @@ A fixture that builds synthetic input is what keeps tests in the unit layer, so 
 
 /// Builds a minimal in-memory archive for tests that need a real one to read
 struct SyntheticArchive {
-    std::vector<std::byte> bytes_;
+    std::vector<std::byte> bytes;
 
     SyntheticArchive() { /* assemble header, table, entries */ }
 };
@@ -157,7 +167,7 @@ struct SyntheticArchive {
 Add the fixtures directory to each test target's include path so tests include them by name:
 
 ```cmake
-target_include_directories(mylib_unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_include_directories(myproj_unit_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 ```
 
 A fixture that owns a temporary directory must remove it in its destructor and must swallow the cleanup error: a failure there must not throw out of a destructor and mask the assertion that actually failed.
@@ -168,24 +178,20 @@ Where code under test throws, assert on the concrete type from the library's hie
 
 ```cpp
 // Good
-REQUIRE_THROWS_AS(ParseVersion("not-a-version"), mylib::ParseError);
+REQUIRE_THROWS_AS(ParseVersion("not-a-version"), myproj::ParseError);
 
 // Bad - a typo that throws std::bad_alloc would satisfy this
 REQUIRE_THROWS(ParseVersion("not-a-version"));
 ```
 
-## Makefile targets
+## Running the layers
 
-`JOBS` is declared once in the CMake fragment's `build` target and reused here.
+`test` runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and `test_all` runs whatever the current configure contains, which is the unit layer alone unless another was configured in. Every test target depends on `build`, and `build` on `configure`, so any of them works from a fresh clone; that chain is what makes `make ci` runnable on a clean checkout. The recipes are in the Makefile targets fragment.
 
-```makefile
-.PHONY: test
-test: ## Run Catch2 unit tests
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L unit
+## Coverage
 
-.PHONY: test_verbose
-test_verbose: ## Run unit tests with verbose Catch2 output
-	ctest --test-dir build/dev --verbose -L unit
-```
+Coverage is measured over the unit layer using clang's source-based instrumentation. It gets its own `build/coverage` directory: the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. The recipe is `test_coverage` in the Makefile targets fragment.
 
-`test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.
+- The unit layer alone, for the same reason `test_asan` uses it: that layer needs no external data and runs anywhere, so the number means the same thing on every machine and in every checkout. A figure that moves depending on whether the developer happens to have the integration dataset is not a figure worth publishing.
+- Vendored code and the tests themselves are kept out of the report. A project that counts its own test files reports a number that climbs as tests are added and says nothing about how well the library is covered.
+- The report goes to stdout. Nothing publishes it automatically: the percentage is copied by hand into the static coverage badge on each release, which is what cpp/badges.md asks for. That target is where the number comes from.

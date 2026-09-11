@@ -2,23 +2,13 @@
 
 CMake conventions for a project that is a reusable library first and ships a thin CLI binary on top of it. Assumes the universal CMake conventions.
 
-This tier is both of its neighbours at once: a public API behind `include/` like a library, and a shipped binary with functional tests and a release matrix like an application. It is the single tier fragment for a lib-cli project and states the combined shape in full, so nothing here defers to cmake-lib or cmake-app.
+This tier is both of its neighbours at once: a public API behind `include/` like a library, and a shipped binary with functional tests and a release matrix like an application. It is the single CMake fragment for a lib-cli project and states the combined target shape in full, so nothing here defers to cmake-lib or cmake-app for a target; the layout comes from the two scaffolding fragments, one per half.
 
 How it differs from those neighbours: a plain library has no compiled binary to ship or spawn, so it needs no `app/`, no Docker release and no functional test layer. A plain application has a binary but no reusable core behind a public API, so its `src/` builds an internal core library with no `include/` and no alias. A lib-cli has both halves. All real logic lives in the library so it stays unit-testable and reusable by other projects; the executable is a thin wrapper that parses arguments and calls into the library.
 
-## Repository layout additions
+## Layout
 
-```
-include/<lib>/         # public headers - the API the library exposes
-src/                   # library implementation (.cpp and private headers); no main()
-  CMakeLists.txt       # add_library
-app/                   # the CLI: main() plus argument wiring only
-  CMakeLists.txt       # add_executable, links the library
-Dockerfile.musl
-.gpipe.yml             # installer/checksum config; see workflows-app.md
-```
-
-`src/` never contains a `main()`; keeping the entry point in `app/` stops it being compiled into the library and keeps the library free of CLI concerns. The release Dockerfile ships the `app/` binary exactly as for an application; see the Docker fragment.
+The library half is laid out as the library scaffolding fragment says, `include/myproj/` mirrored by `src/`, and the app half as the CLI scaffolding fragment says, `app/` beside it with `completion/` and the release files. `src/` never contains a `main()`; keeping the entry point in `app/` stops it being compiled into the library and keeps the library free of CLI concerns. The release Dockerfile ships the `app/` binary exactly as for an application; see the C++ Docker fragment.
 
 The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `add_subdirectory(app)`, then `add_subdirectory(test)` when testing is on.
 
@@ -27,57 +17,62 @@ The root `CMakeLists.txt` orchestrates in order: `add_subdirectory(src)`, then `
 `src/CMakeLists.txt` defines the reusable core with `add_library`, defaulting to `STATIC` unless there is a specific reason to build shared:
 
 ```cmake
-add_library(mylib STATIC
+add_library(myproj_lib STATIC
     parser.cpp
     archive.cpp
 )
 
-target_include_directories(mylib
+target_include_directories(myproj_lib
     PUBLIC  "${PROJECT_SOURCE_DIR}/include"
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_compile_features(mylib PUBLIC cxx_std_20)
+target_link_libraries(myproj_lib PRIVATE myproj::warnings)
 
-add_library(mylib::mylib ALIAS mylib)
+target_compile_features(myproj_lib PUBLIC cxx_std_20)
+
+add_library(myproj::myproj ALIAS myproj_lib)
 ```
 
+- The target is `myproj_lib` and the executable in `app/` is `myproj`. The binary a user runs has to carry the bare name, target names are global to the build, and the library's raw name is one nothing outside this file ever writes, since every link goes through the `myproj::myproj` alias. This is the general rule in Target names in the universal fragment: the bare name goes to what a user reaches for, and everything else carries the prefix.
 - Source files are named relative to the directory holding the `CMakeLists.txt`. This file lives in `src/`, so the entry is `parser.cpp`, never `src/parser.cpp`, which would resolve to `src/src/parser.cpp` and fail to configure.
-- `PUBLIC` on `include/` propagates that path to everything that links the library, so neither the CLI nor an outside consumer needs an include path of its own; `target_link_libraries(myapp PRIVATE mylib::mylib)` is the whole wiring.
+- `PUBLIC` on `include/` propagates that path to everything that links the library, so neither the CLI nor an outside consumer needs an include path of its own; `target_link_libraries(myproj PRIVATE myproj::myproj)` is the whole wiring.
 - `PRIVATE` on the current directory keeps implementation headers off the consumer's include path entirely. The split is the API boundary expressed in CMake: what is in `include/` is promised, what is in `src/` can change freely.
 - `PROJECT_SOURCE_DIR`, never `CMAKE_SOURCE_DIR`. A consumer pulls this library in as a submodule and calls `add_subdirectory`, at which point `CMAKE_SOURCE_DIR` is *their* root and the public include path would silently point at their `include/`.
-- The `mylib::mylib` `ALIAS` gives a consistent namespaced link name whether the library is added by this project or by a consumer's superbuild. Use the alias in every `target_link_libraries`, never the bare target name, so nothing changes if the linking mechanism does.
-- Headers live in `include/<lib>/`, not directly in `include/`, so includes read `#include <mylib/parser.h>` and cannot collide with another dependency's `parser.h`.
+- The `myproj::myproj` `ALIAS` gives a consistent namespaced link name whether the library is added by this project or by a consumer's superbuild. Use the alias in every `target_link_libraries`, never the bare target name, so nothing changes if the linking mechanism does.
+- Headers live in `include/myproj/`, not directly in `include/`, so includes read `#include <myproj/parser.h>` and cannot collide with another dependency's `parser.h`.
+
+A library half that has grown modules takes the module and aggregate shape from cmake-lib.md unchanged, with one difference: the aggregate `INTERFACE` target is `myproj_lib`, not `myproj`, because the executable holds the bare name, and the alias stays `myproj::myproj` so nothing that links it changes. The examples option, the `EXCLUDE_FROM_ALL` consumption and the generated header carried by each module all apply as written there.
 
 ## Generated version header
 
-The version comes from `project(MyLib VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree, so the library, the CLI, and an outside consumer all read the same compile-time constant through the same include:
+The version comes from `project(myproj VERSION 1.2.3)` in the root (see the C++ style fragment). Generate it into the public include tree, so the library, the CLI, and an outside consumer all read the same compile-time constant through the same include:
 
 ```cmake
 configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/version.h.in"
-    "${PROJECT_BINARY_DIR}/include/mylib/version.h"
+    "${PROJECT_BINARY_DIR}/include/myproj/version.h"
     @ONLY
 )
 
-target_include_directories(mylib PUBLIC "${PROJECT_BINARY_DIR}/include")
+target_include_directories(myproj_lib PUBLIC "${PROJECT_BINARY_DIR}/include")
 ```
 
-`#include <mylib/version.h>` then matches every other public header. Putting `PROJECT_BINARY_DIR` itself on the public path instead would hand consumers every generated file in the build tree.
+`#include <myproj/version.h>` then matches every other public header. Putting `PROJECT_BINARY_DIR` itself on the public path instead would hand consumers every generated file in the build tree.
 
 ## CLI target
 
 `app/CMakeLists.txt` defines the executable. It links the library through its alias and pulls any CLI-only dependency (for example CLI11) from `extern/` as a SYSTEM include:
 
 ```cmake
-add_executable(myapp
+add_executable(myproj
     main.cpp
     options.cpp
 )
 
-target_link_libraries(myapp PRIVATE mylib::mylib)
+target_link_libraries(myproj PRIVATE myproj::myproj myproj::warnings)
 
-target_include_directories(myapp SYSTEM PRIVATE
+target_include_directories(myproj SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/CLI11/include"
 )
 ```
@@ -88,45 +83,55 @@ The executable stays thin: it parses arguments, calls library functions, and tur
 
 A lib-cli is the one tier that can have all four layers. Unit, integration and fuzz link the library; functional spawns the binary:
 
-- Unit tests link `mylib::mylib` and test logic, with fixtures supplying whatever input they need (see cpp/testing.md).
-- Integration tests link `mylib::mylib` and run against real data the machine must already have. Opt-in (see cpp/testing-integration.md).
-- Functional tests spawn the compiled `myapp` and verify its CLI behaviour end-to-end (see cpp/testing-functional.md). This layer applies because a lib-cli ships a binary, unlike a plain library.
-- Fuzz harnesses link `mylib::mylib` and drive its parsers with hostile input. Built on demand (see cpp/testing-fuzz.md).
+- Unit tests link `myproj::myproj` and test logic, with fixtures supplying whatever input they need (see cpp/testing.md).
+- Integration tests link `myproj::myproj` and run against real data the machine must already have. Opt-in (see cpp/testing-integration.md).
+- Functional tests spawn the compiled `myproj` and verify its CLI behaviour end-to-end (see cpp/testing-functional.md). This layer applies because a lib-cli ships a binary, unlike a plain library.
+- Fuzz harnesses link `myproj::myproj` and drive its parsers with hostile input. Built on demand (see cpp/testing-fuzz.md).
 
 ```cmake
 # test/CMakeLists.txt
 
-add_executable(mylib_unit_tests
+add_executable(myproj_unit_tests
     unit/test_parser.cpp
     unit/test_archive.cpp
 )
-target_include_directories(mylib_unit_tests PRIVATE
+target_include_directories(myproj_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    "${PROJECT_SOURCE_DIR}/src"
 )
-target_link_libraries(mylib_unit_tests PRIVATE mylib::mylib Catch2::Catch2WithMain)
+target_link_libraries(myproj_unit_tests PRIVATE
+    myproj::myproj
+    myproj::warnings
+    Catch2::Catch2WithMain
+)
 
-add_executable(myapp_functional_tests
+add_executable(myproj_functional_tests
     subprocess_helper.cpp
     functional/test_create.cpp
 )
-# Project-owned test headers use PRIVATE without SYSTEM.
-target_include_directories(myapp_functional_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+# Project-owned test headers use PRIVATE without SYSTEM: the helper beside this
+# file, and the fixtures every layer shares.
+target_include_directories(myproj_functional_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 # extern/subprocess.h is the submodule directory; mark it SYSTEM and keep it in its
 # own call - never combine SYSTEM and non-SYSTEM paths.
-target_include_directories(myapp_functional_tests SYSTEM PRIVATE
+target_include_directories(myproj_functional_tests SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/subprocess.h"
 )
-target_link_libraries(myapp_functional_tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(myproj_functional_tests PRIVATE
+    myproj::warnings
+    Catch2::Catch2WithMain
+)
 
-catch_discover_tests(mylib_unit_tests
+catch_discover_tests(myproj_unit_tests
     PROPERTIES LABELS "unit" SKIP_RETURN_CODE 4)
-catch_discover_tests(myapp_functional_tests
+catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
-The unit binary links the library rather than listing `src/*.cpp` again: the library already compiles that source once, and linking it keeps the two builds from drifting. The functional binary links neither the library nor the executable, because it exercises the binary through its CLI as a user would; giving it the library would let a functional test quietly call a function instead of running the command.
+The unit binary links the library rather than listing `src/*.cpp` again: the library already compiles that source once, and linking it keeps the two builds from drifting. It does get `src/` on its include path, and it is the only test binary that does: the layer tests logic, some of which is deliberately not API, and a private helper's test includes its header by the same path the implementation does. The functional binary links neither the library nor the executable, because it exercises the binary through its CLI as a user would; giving it the library would let a functional test quietly call a function instead of running the command.
 
 The split between those two is the tier's main testing question, and it has a default answer: a lib-cli puts its logic in the library, so almost everything is unit-testable without a subprocess. Test the library through the library, and keep the functional layer for what only it can see: argv parsing, exit codes, and stdout.
 
@@ -134,32 +139,32 @@ The split between those two is the tier's main testing question, and it has a de
 
 ## Baking paths into test binaries
 
-Functional tests need the path to the compiled `myapp`, and both non-unit layers need the path to their own source directory for checked-in data. Bake both in at configure time rather than discovering them at runtime:
+Functional tests need the path to the compiled `myproj`, and both non-unit layers need the path to their own source directory for checked-in data. Bake both in at configure time rather than discovering them at runtime:
 
 ```cmake
 # In test/CMakeLists.txt
 
 if(WIN32)
-    set(MYAPP_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myapp.exe")
+    set(MYPROJ_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myproj.exe")
 else()
-    set(MYAPP_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myapp")
+    set(MYPROJ_BINARY_PATH "${PROJECT_BINARY_DIR}/bin/myproj")
 endif()
 
-# CI runs functional tests against a downloaded release binary rather than the
-# one just built. MYAPP_BINARY_PATH_OVERRIDE lets the workflow point the tests at
-# that artifact at configure time; locally it is unset and the build-tree path
-# above is used.
-if(MYAPP_BINARY_PATH_OVERRIDE)
-    set(MYAPP_BINARY_PATH "${MYAPP_BINARY_PATH_OVERRIDE}")
+# MYPROJ_BINARY_PATH_OVERRIDE points the functional tests at a binary other than
+# the one just built: a downloaded release asset, or an installed copy, to check
+# a published artifact behaves. Unset, which is the normal case including in CI,
+# the build-tree path above is used.
+if(MYPROJ_BINARY_PATH_OVERRIDE)
+    set(MYPROJ_BINARY_PATH "${MYPROJ_BINARY_PATH_OVERRIDE}")
 endif()
 
-target_compile_definitions(myapp_functional_tests PRIVATE
-    MYAPP_BINARY_PATH="${MYAPP_BINARY_PATH}"
-    MYAPP_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+target_compile_definitions(myproj_functional_tests PRIVATE
+    MYPROJ_BINARY_PATH="${MYPROJ_BINARY_PATH}"
+    MYPROJ_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_compile_definitions(mylib_unit_tests PRIVATE
-    MYLIB_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+target_compile_definitions(myproj_unit_tests PRIVATE
+    MYPROJ_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 ```
 
@@ -167,4 +172,4 @@ This eliminates a whole class of path-resolution bugs and makes each test binary
 
 ## Release
 
-A lib-cli ships its CLI binary, so it uses the application release path in full: a static musl Dockerfile, native macOS and Windows build jobs, the build/test/release workflow set, and the released-binary badges. See the Docker fragment and workflows-app. The library half is not separately packaged for `find_package`; a consumer who wants the core links it via git submodule and `add_subdirectory`, the same as for a plain library.
+A lib-cli ships its CLI binary, so it uses the application release path in full: a static musl Dockerfile, native macOS and Windows build jobs, the build/test/release workflow set, and the released-binary badges. See the C++ Docker fragment and workflows-app. The library half is not separately packaged for `find_package`; a consumer who wants the core links it via git submodule and `add_subdirectory`, the same as for a plain library.

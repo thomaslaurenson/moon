@@ -6,18 +6,22 @@
 @include cpp-app-code
 cpp/cmake.md
 cpp/cmake-app.md
+cpp/tooling.md
 cpp/clang-format.md
 cpp/clang-tidy.md
 cpp/testing.md
-cpp/testing-integration.md
 cpp/testing-functional.md
+cpp/testing-integration.md
 cpp/testing-fuzz.md
 tools/makefile.md
-tools/docker.md
+cpp/make.md
 github/actions.md
 cpp/workflows.md
+tools/docker.md
+cpp/docker.md
 tools/gpipe.md
 cpp/workflows-app.md
+cpp/release-app.md
 github/badges.md
 cpp/badges.md
 github/dependabot.md

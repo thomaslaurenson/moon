@@ -35,7 +35,7 @@ clang-tidy analyses all headers included in each translation unit. Without expli
 
 The canonical fix is the `SYSTEM` keyword on `target_include_directories` in `CMakeLists.txt`. See the CMake fragment (Including extern/ headers). With `SYSTEM`, the compiler passes `-isystem` for those paths; clang-tidy treats `-isystem` paths as system headers and excludes them from all analysis by default.
 
-`--header-filter` in the Makefile target provides belt-and-suspenders coverage. It limits diagnostic output to `src/` headers even if a path was accidentally not marked `SYSTEM`.
+`--header-filter` in the Makefile target provides belt-and-suspenders coverage. It limits diagnostic output to the project's own headers under `include/`, `src/` and `app/`, even if a path was accidentally not marked `SYSTEM`.
 
 Never add check suppressions to `.clang-tidy` to silence noise from third-party headers. Fix the include declaration instead.
 
@@ -53,18 +53,20 @@ Checks: >
 WarningsAsErrors: "*"
 FormatStyle: file
 CheckOptions:
-  - { key: readability-identifier-naming.FunctionCase,        value: CamelCase  }
-  - { key: readability-identifier-naming.MethodCase,          value: CamelCase  }
-  - { key: readability-identifier-naming.ClassCase,           value: CamelCase  }
-  - { key: readability-identifier-naming.StructCase,          value: CamelCase  }
-  - { key: readability-identifier-naming.EnumCase,            value: CamelCase  }
-  - { key: readability-identifier-naming.EnumConstantCase,    value: UPPER_CASE }
-  - { key: readability-identifier-naming.VariableCase,        value: lower_case }
-  - { key: readability-identifier-naming.ParameterCase,       value: lower_case }
-  - { key: readability-identifier-naming.MemberCase,          value: lower_case }
-  - { key: readability-identifier-naming.PrivateMemberCase,   value: lower_case }
-  - { key: readability-identifier-naming.PrivateMemberSuffix, value: _          }
-  - { key: readability-identifier-naming.ConstantCase,        value: lower_case }
+  - { key: readability-identifier-naming.FunctionCase,          value: CamelCase  }
+  - { key: readability-identifier-naming.MethodCase,            value: CamelCase  }
+  - { key: readability-identifier-naming.ClassCase,             value: CamelCase  }
+  - { key: readability-identifier-naming.StructCase,            value: CamelCase  }
+  - { key: readability-identifier-naming.EnumCase,              value: CamelCase  }
+  - { key: readability-identifier-naming.EnumConstantCase,      value: UPPER_CASE }
+  - { key: readability-identifier-naming.VariableCase,          value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase,         value: lower_case }
+  - { key: readability-identifier-naming.MemberCase,            value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberCase,     value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberSuffix,   value: _          }
+  - { key: readability-identifier-naming.ProtectedMemberCase,   value: lower_case }
+  - { key: readability-identifier-naming.ProtectedMemberSuffix, value: _          }
+  - { key: readability-identifier-naming.ConstantCase,          value: lower_case }
 ```
 
 The `CheckOptions` implement the naming conventions defined in the C++ style fragment:
@@ -76,7 +78,7 @@ The `CheckOptions` implement the naming conventions defined in the C++ style fra
 | `EnumConstantCase` | `UPPER_CASE` | `SCREAMING_SNAKE` for enum values |
 | `VariableCase`, `ParameterCase` | `lower_case` | `snake_case` for variables and parameters |
 | `MemberCase` | `lower_case` | `snake_case` for struct members and public class members |
-| `PrivateMemberCase` + `PrivateMemberSuffix: _` | `lower_case` + `_` | `snake_case_` for private class members |
+| `PrivateMemberCase` / `ProtectedMemberCase`, both with suffix `_` | `lower_case` + `_` | `snake_case_` for private and protected class members |
 | `ConstantCase` | `lower_case` | `snake_case` for constants |
 
 | Check | Purpose |
@@ -91,7 +93,7 @@ The `CheckOptions` implement the naming conventions defined in the C++ style fra
 
 Additional checks are added per project. Before adding a check:
 
-1. Run it in isolation to confirm it fires on real issues in `src/`: `$(CLANG_TIDY) --checks="-*,<check>" -p build/dev src/*.cpp`
+1. Run it in isolation to confirm it fires on real issues, against the clang-configured build: `make configure_lint && $(CLANG_TIDY) --checks="-*,<check>" -p build/lint $(find src app -name "*.cpp")`
 2. Decide whether the findings should be fixed or suppressed
 3. Add the check by name, never by wildcard
 4. If suppressed, add a comment above the `Checks:` block explaining why
@@ -123,16 +125,21 @@ FormatStyle: file
 
 - Comments go above `Checks:`, not inside the multi-line scalar
 - `FormatStyle: file` tells clang-tidy to use the root `.clang-format` for any format-related checks
-- Both `.clang-tidy` and `.clang-format` live at the project root
+- Both `.clang-tidy` and `.clang-format` live at the project root. The one exception is a directory of generated files, which may carry its own `.clang-tidy` with `InheritParentConfig: true` that disables only the checks the generator cannot satisfy, with the comment naming the generator. Hand-written code never gets one; a check that is wrong for hand-written code is suppressed at the root, with the reason, where the next reader sees it
 
 ## Verifying a check before adding it
 
 ```bash
-# Run a single check against all source files
-$(CLANG_TIDY) --checks="-*,<check-name>" -p build/dev src/*.cpp 2>&1 | grep -v " warnings generated"
+# Run a single check against all source files. -p build/lint, never build/dev:
+# see Prerequisites for why a GCC-configured build makes the output fiction.
+make configure_lint
+$(CLANG_TIDY) --checks="-*,<check-name>" -p build/lint $(find src app -name "*.cpp") 2>&1 \
+  | grep -v " warnings generated"
 
 # Run the full current config to confirm a clean baseline
 make check_lint
 ```
+
+`find` rather than a `src/*.cpp` glob, for the same reason `check_lint` uses it: the glob stops at the top level and silently skips every nested directory.
 
 If a check produces no findings, it is still worth having if it covers a real risk class for the project. If it produces findings, fix them before committing the check to `.clang-tidy`.

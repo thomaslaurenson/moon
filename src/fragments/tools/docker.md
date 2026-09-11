@@ -135,30 +135,20 @@ Multi-stage builds are mandatory for all compiled languages (C++, Go). The build
 
 ```dockerfile
 # Stage 1: Build
-FROM alpine:3.20 AS builder
-RUN apk add --no-cache \
-    cmake \
-    make \
-    g++
-WORKDIR /build
-# -static is what makes the scratch stage below viable: the binary carries musl
-# and libstdc++ with it and needs no loader at runtime.
-RUN cmake -B build/release \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DMYTOOL_BUILD_TESTING=OFF \
-        -DCMAKE_EXE_LINKER_FLAGS="-static" \
-    && cmake --build build/release --parallel $(nproc) \
-    && strip build/release/bin/mytool
+FROM <toolchain image>:<minor> AS build
+WORKDIR /src
+COPY . .
+RUN <build a statically linked binary into /src/out/myapp>
 
 # Stage 2: Runtime
 FROM scratch
-COPY --from=builder /build/build/release/bin/mytool /mytool
-ENTRYPOINT ["/mytool"]
+COPY --from=build /src/out/myapp /myapp
+ENTRYPOINT ["/myapp"]
 ```
 
-`-DCMAKE_EXE_LINKER_FLAGS="-static"` is not optional here, and leaving it out fails in a way that is easy to miss: the image builds fine, and the container then exits immediately with `no such file or directory` on a binary that plainly exists. What is missing is `/lib/ld-musl-x86_64.so.1`, the dynamic loader, which `scratch` does not have. Verify with `docker run --rm <image> --version`, or on the extracted binary with `file` (expect `statically linked`) and `ldd` (expect `not a dynamic executable`) - do not assume it worked because the build passed.
+The binary that lands on `scratch` has to be statically linked, and leaving that out fails in a way that is easy to miss: the image builds fine, and the container then exits immediately with `no such file or directory` on a binary that plainly exists. What is missing is the dynamic loader, which `scratch` does not have. Verify with `docker run --rm <image> --version`, or on the extracted binary with `file` (expect `statically linked`) and `ldd` (expect `not a dynamic executable`); do not assume it worked because the build passed.
 
-`MYTOOL_BUILD_TESTING=OFF` keeps Catch2 out of a release image that never runs tests, and `strip` cuts the binary substantially. Both are worth having on any shipped image.
+Turn the language's test build off in the builder stage and strip the binary: a release image never runs tests, and both cut what ships. How, and which toolchain image to build with, are the language's business; the C++ Docker fragment carries that recipe.
 
 No multi-stage rule applies to interpreted languages; use project judgement.
 

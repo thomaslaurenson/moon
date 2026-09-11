@@ -2,7 +2,7 @@
 
 Doxygen conventions for a library's public API. Assumes the C++ style fragment.
 
-A library's headers under `include/<lib>/` are a contract with people who cannot read your implementation and will not ask you what a parameter means. Everything declared there is documented. Internal headers under `src/` are read by people who can see the code next to them, so they are documented where the code is not self-evident, not as a matter of course.
+A library's headers under `include/myproj/` are a contract with people who cannot read your implementation and will not ask you what a parameter means. Everything declared there is documented. Internal headers under `src/` are read by people who can see the code next to them, so they are documented where the code is not self-evident, not as a matter of course.
 
 ## Where the comment goes
 
@@ -20,8 +20,8 @@ Use `///` triple-slash. The first line is a single summary sentence with no full
 /// @param path Path to the archive file.
 /// @param mode Whether to open for reading or writing.
 /// @return A handle to the opened archive.
-/// @throws mylib::ArchiveOpenError If the file does not exist or cannot be read.
-Archive OpenArchive(const std::string &path, OpenMode mode);
+/// @throws myproj::ArchiveOpenError If the file does not exist or cannot be read.
+Archive OpenArchive(const std::filesystem::path &path, OpenMode mode);
 ```
 
 The `@throws` lines are part of the contract, not a nicety: an exception a consumer cannot discover from the header is an exception they will not catch. Keep them in step with the error hierarchy (see the error handling fragment).
@@ -52,9 +52,9 @@ Enum values and public data members get a one-line `///` where the name does not
 ```cpp
 /// How an archive is opened
 enum class OpenMode {
-    READ,       ///< Open an existing archive; fails if it does not exist
-    WRITE,      ///< Create a new archive, truncating any existing file
-    APPEND,     ///< Open an existing archive for adding entries
+    READ,   ///< Open an existing archive; fails if it does not exist
+    WRITE,  ///< Create a new archive, truncating any existing file
+    APPEND, ///< Open an existing archive for adding entries
 };
 ```
 

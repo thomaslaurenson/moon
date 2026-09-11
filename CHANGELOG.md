@@ -1,26 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-09-11
 
 ### Added
 
-- Add a C++ output fragment covering the stream split and passing a stream into library code
-- Document the CLI11 exit code range alongside the project's own codes
-- Add C++ coverage and sanitizer targets, and the CI jobs that run them
-- Add a get_version target, and build C++ examples in CI
+- Add C++ fragments for output, CLI scaffolding, tooling, interrupts, make, Docker and library releases
+- Add C++ coverage, sanitizer and version targets, and the CI jobs that run them
+- Add a Dependabot entry for Docker base images
 
 ### Changed
 
-- Test C++ under both build types as well as both compilers
-- Build and test each platform in one job instead of testing a downloaded artifact
-- Describe integration test data by its contract rather than one project's sourcing
+- Restructure the C++ bundles around one project placeholder, ordered so each fragment follows what it assumes
+- Move the C++ release workflows and Makefile targets into fragments of their own
+- Test C++ under both compilers and both build types, building each platform in one job
+- Require every C++ CLI to ship shell completion
 - Take file paths as std::filesystem::path throughout the C++ examples
-- Note the runner cost multipliers and make the cheap platform set the default
 
 ### Fixed
 
-- Fix the library version header, warning bar, and fuzz harness wiring
-- Fix the member naming rule to apply the trailing underscore by access
+- Resolve the contradictions across the C++ CMake, testing and workflow fragments
+- Fix the C++ library version header, warning bar, fuzz harness wiring and member naming rule
 - Make every C++ make target runnable from a clean checkout
 
 ### Removed
@@ -132,9 +131,6 @@
 
 - Rename the python-app bundle to python-tools and restructure it around domain-named script directories
 - Use standard-library logging across all Python tiers
-- Make PyPI publishing optional over a GitHub-release baseline for Python libraries
-- Default the Python version badge to a static requires-python badge
-- Clarify dependency groups versus extras across the Python fragments
 - Print the full coverage table in test_coverage and document the total line as the badge source
 
 ### Removed

@@ -231,14 +231,8 @@ TEST_CASE("create: target does not exist", "[create]") {
 
 An expected failure the user can act on exits 1 and explains itself on stderr; an unexpected one exits 2. See the error handling fragment for where those codes come from. A test asserting only that the command failed would pass if the binary crashed instead.
 
-## Makefile targets
+## Running it
 
-```makefile
-.PHONY: test_functional
-test_functional: build ## Run Catch2 functional tests against the built binary
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L functional
-```
+`test_functional` in the Makefile targets fragment runs the layer, and depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result. A tier that ships a binary also adds it to `ci`.
 
-`test_functional` depends on `build`: the layer spawns the compiled binary, so a stale or absent one is a failure with a confusing message rather than a test result.
-
-This layer does not change cpp/testing.md's `test` target, which stays the unit layer alone and remains the everyday command. `test_all` is what runs both in one go, and it is defined once in cpp/testing.md rather than here, so a tier with a functional layer and a tier without see the same target.
+This layer does not change the `test` target, which stays the unit layer alone and remains the everyday command. `test_all` is what runs both in one go, and it is defined once rather than per layer, so a tier with a functional layer and a tier without see the same target.

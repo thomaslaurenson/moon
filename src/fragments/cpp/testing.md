@@ -182,55 +182,14 @@ REQUIRE_THROWS_AS(ParseVersion("not-a-version"), mylib::ParseError);
 REQUIRE_THROWS(ParseVersion("not-a-version"));
 ```
 
-## Makefile targets
+## Running the layers
 
-`JOBS` is declared once in the CMake fragment's `build` target and reused here.
-
-```makefile
-.PHONY: test
-test: build ## Run Catch2 unit tests
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS) -L unit
-
-.PHONY: test_verbose
-test_verbose: build ## Run unit tests with verbose Catch2 output
-	ctest --test-dir build/dev --verbose -L unit
-
-.PHONY: test_all
-test_all: build ## Run every test layer built into the current configure
-	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
-```
-
-Every test target depends on `build`, and `build` depends on `configure`, so any of them works from a fresh clone with no prior step. That chain is what makes `make ci` runnable on a clean checkout; without it `ctest` fails on a missing `build/dev` with a message about the directory rather than about the missing build. Reconfiguring an existing tree is a no-op that costs under a second, and CMake keeps every cached `-D` from the original `make configure CMAKE_ARGS=...`, so the repeat does not discard a CI job's compiler or `-Werror` setting.
-
-`test_all` is defined here, in the fragment every tier includes, rather than in the layer fragments. It runs whatever the current configure contains, which is the unit layer alone unless another was configured in, so it belongs with the universal targets and not with any one layer.
-
-`test` is the everyday target and runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and a `test_all` where a project wants everything at once. See testing-integration.md and testing-functional.md.
+`test` runs the unit layer alone, because that is the layer that always works: it needs no external data, no server, and no shipped binary. The other layers get their own targets, each named for what it needs, and `test_all` runs whatever the current configure contains, which is the unit layer alone unless another was configured in. Every test target depends on `build`, and `build` on `configure`, so any of them works from a fresh clone; that chain is what makes `make ci` runnable on a clean checkout. The recipes are in the Makefile targets fragment.
 
 ## Coverage
 
-Coverage is measured over the unit layer using clang's source-based instrumentation. It gets its own `build/coverage` directory: the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. `CLANG_CXX`, `JOBS`, `LLVM_PROFDATA` and `LLVM_COV` are declared once in the CMake fragment and reused here.
-
-```makefile
-.PHONY: configure_coverage
-configure_coverage: ## Configure build/coverage with clang source-based coverage
-	cmake -B build/coverage \
-	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DMYLIB_BUILD_TESTING=ON \
-	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
-	  -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping" \
-	  -DCMAKE_EXE_LINKER_FLAGS="-fprofile-instr-generate" \
-	  $(CMAKE_ARGS)
-
-.PHONY: test_coverage
-test_coverage: configure_coverage ## Report unit-test coverage
-	cmake --build build/coverage --parallel $(JOBS) --target mylib_unit_tests
-	LLVM_PROFILE_FILE=build/coverage/unit.profraw ./build/coverage/bin/mylib_unit_tests
-	$(LLVM_PROFDATA) merge -o build/coverage/unit.profdata build/coverage/unit.profraw
-	$(LLVM_COV) report ./build/coverage/bin/mylib_unit_tests \
-	  -instr-profile=build/coverage/unit.profdata \
-	  --ignore-filename-regex="extern/|test/"
-```
+Coverage is measured over the unit layer using clang's source-based instrumentation. It gets its own `build/coverage` directory: the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. The recipe is `test_coverage` in the Makefile targets fragment.
 
 - The unit layer alone, for the same reason `test_asan` uses it: that layer needs no external data and runs anywhere, so the number means the same thing on every machine and in every checkout. A figure that moves depending on whether the developer happens to have the integration dataset is not a figure worth publishing.
-- `--ignore-filename-regex` keeps vendored code and the tests themselves out of the report. A project that counts its own test files reports a number that climbs as tests are added and says nothing about how well the library is covered.
-- The report goes to stdout. Nothing publishes it automatically: the percentage is copied by hand into the static coverage badge on each release, which is what cpp/badges.md asks for. This target is where that number comes from.
+- Vendored code and the tests themselves are kept out of the report. A project that counts its own test files reports a number that climbs as tests are added and says nothing about how well the library is covered.
+- The report goes to stdout. Nothing publishes it automatically: the percentage is copied by hand into the static coverage badge on each release, which is what cpp/badges.md asks for. That target is where the number comes from.

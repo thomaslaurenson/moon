@@ -114,35 +114,8 @@ Seed a harness with real inputs where you have them: a corpus of valid files mak
 
 When a harness finds something, it writes the offending input to a `crash-<hash>` file. Commit that file to `test/data/` and write a unit test that reads it, before fixing the bug. The fuzzer found it once; the unit test is what stops it coming back.
 
-## Makefile targets
+## Running it
 
-`FUZZ_TIME` is declared here; `CLANG_CXX` and `JOBS` come from the CMake fragment.
-
-```makefile
-FUZZ_TIME ?= 60
-
-.PHONY: configure_fuzz
-configure_fuzz: ## Configure build/fuzz with libFuzzer harnesses (requires Clang)
-	cmake -B build/fuzz \
-	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DMYLIB_BUILD_FUZZERS=ON \
-	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
-	  $(CMAKE_ARGS)
-
-.PHONY: build_fuzz
-build_fuzz: configure_fuzz ## Configure and build the fuzz harnesses
-	cmake --build build/fuzz --parallel $(JOBS)
-
-.PHONY: fuzz
-fuzz: build_fuzz ## Run one harness for FUZZ_TIME seconds (requires: NAME=archive)
-	@if [ -z "$(NAME)" ]; then echo "Error: set NAME=archive" >&2; exit 1; fi
-	@corpus=test/fuzz/corpus/$(NAME); \
-	  [ -d "$$corpus" ] || corpus=; \
-	  ./build/fuzz/bin/mylib_fuzz_$(NAME) -max_total_time=$(FUZZ_TIME) $$corpus
-```
-
-`NAME` is the bare harness name, the same string `add_fuzzer` takes, so `make fuzz NAME=archive` runs `mylib_fuzz_archive` against `test/fuzz/corpus/archive`.
-
-The corpus directory is passed only when it exists. libFuzzer treats a corpus path it was given as mandatory and exits 1 with `ERROR: The required directory ... does not exist`, so hardcoding the path makes a harness unrunnable in a project that has not seeded one, which the corpus section above says is allowed. Passing nothing is the supported way to run without a corpus, and libFuzzer then generates from scratch.
+`configure_fuzz`, `build_fuzz` and `fuzz` in the Makefile targets fragment configure `build/fuzz` with clang, build the harnesses, and run one of them for `FUZZ_TIME` seconds. `make fuzz NAME=archive` runs `mylib_fuzz_archive` against `test/fuzz/corpus/archive`, with `NAME` the same bare name `add_fuzzer` takes, and the corpus passed only when the directory exists.
 
 Fuzzing gets its own `build/fuzz` directory, and this is the clearest case for the rule in cpp/cmake.md. `-fsanitize=fuzzer` is Clang-only (see Option above), and CMake cannot change a build tree's compiler after the first configure without discarding the cache. Pointing `configure_fuzz` at `build/dev` would therefore reconfigure and rebuild everything, not just the harnesses, destroy whatever `build/dev` previously held, and charge the same cost again on the next ordinary configure. Two directories cost one `.gitignore` entry that already exists, and `rm -rf build` still cleans both.

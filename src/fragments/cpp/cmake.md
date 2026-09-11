@@ -5,7 +5,7 @@ Conventions for CMake-based C++ projects. Universal to every tier; the target de
 ## Design principles
 
 - CMake is the build system for all C++ projects; never use raw compiler invocations
-- The Makefile is a task runner that wraps CMake; CI calls `make <target>`, never raw `cmake` commands
+- The Makefile wraps CMake and CI calls `make <target>` rather than `cmake`, as the Makefile conventions fragment requires; the targets themselves are defined in the C++ Makefile targets fragment
 - All build output lives under `build/`, one subdirectory per configuration; see Build directory
 - Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
 
@@ -345,26 +345,7 @@ This is the one legitimate use of the directory-scoped `add_compile_options` rat
 
 Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job: that job is `test_asan` in cpp/workflows.md, and the reason it is separate is the same 2x.
 
-### Makefile targets
-
-A sanitized build changes code generation, so it gets its own directory and cannot share `build/dev`:
-
-```makefile
-.PHONY: configure_asan
-configure_asan: ## Configure build/asan with Address + UB sanitizers
-	cmake -B build/asan \
-	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DMYLIB_ASAN=ON \
-	  -DMYLIB_BUILD_TESTING=ON \
-	  $(CMAKE_ARGS)
-
-.PHONY: test_asan
-test_asan: configure_asan ## Build and run the unit tests under sanitizers
-	cmake --build build/asan --parallel $(JOBS)
-	ctest --test-dir build/asan --output-on-failure --parallel $(JOBS) -L unit
-```
-
-`test_asan` runs the unit layer only. That layer needs no external data or server, so it is the one that can run anywhere, and sanitizer findings in it point at the project's own code rather than at a fixture. Without these targets the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent.
+A sanitized build changes code generation, so it gets its own `build/asan` directory rather than sharing `build/dev`. `configure_asan` and `test_asan` in the Makefile targets fragment configure it and run the unit layer there, which is the layer that needs no external data and whose findings point at the project's own code. Without them the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent.
 
 ## Dependencies
 
@@ -488,135 +469,17 @@ There is no `install_clang_tools` target. Installing a system toolchain is the e
 
 ### Resolving the binaries
 
-```makefile
-CLANG_VERSION ?= 18
-CLANG_FORMAT  ?= $(shell command -v clang-format-$(CLANG_VERSION) 2>/dev/null || echo clang-format)
-CLANG_CXX     ?= $(shell command -v clang++-$(CLANG_VERSION) 2>/dev/null || echo clang++)
-CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) 2>/dev/null || echo clang-tidy)
-LLVM_PROFDATA ?= $(shell command -v llvm-profdata-$(CLANG_VERSION) 2>/dev/null || echo llvm-profdata)
-LLVM_COV      ?= $(shell command -v llvm-cov-$(CLANG_VERSION) 2>/dev/null || echo llvm-cov)
-```
-
-`llvm-profdata` and `llvm-cov` are resolved here with the rest, rather than beside the coverage target that uses them, so every clang tool the project shells out to is named in one block. They are packaged and versioned exactly like `clang-format`, so they need the same fallback; see the coverage section of cpp/testing.md.
-
-Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make format CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
-
-CI pins the version explicitly, so drift between a contributor's local major version and the enforced one surfaces there rather than in review.
+The Makefile resolves each tool into a variable rather than naming a binary: `CLANG_FORMAT`, `CLANG_TIDY`, `CLANG_CXX`, `LLVM_PROFDATA` and `LLVM_COV`, each preferring the versioned name and falling back to the plain one, and each overridable from the command line. The block, and the reasoning for the fallback, are in the Makefile targets fragment. CI pins the version explicitly, so drift between a contributor's local major version and the enforced one surfaces there rather than in review.
 
 ### Configuring for clang-tidy
 
 clang-tidy resolves headers through the compiler that produced `compile_commands.json`. Point it at a GCC-configured build and it cannot find libstdc++ at all: it reports `'algorithm' file not found`, then keeps going and emits diagnostics from a broken AST. The output looks like real findings and is not: a free function gets reported as a *variable* with the wrong case style, because without the standard headers clang-tidy cannot tell what it is looking at. A lint job in that state passes or fails for reasons unrelated to the code.
 
-So clang-tidy gets its own configure, pinned to clang:
-
-```makefile
-LINT_DIR        ?= build/lint
-GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev/null)
-```
-
-```makefile
-.PHONY: configure_lint
-configure_lint: ## Configure $(LINT_DIR) with clang++, so clang-tidy can parse the sources
-	cmake -B $(LINT_DIR) \
-	  -DCMAKE_BUILD_TYPE=Debug \
-	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-	  -DCMAKE_CXX_COMPILER=$(CLANG_CXX) \
-	  $(if $(GCC_INSTALL_DIR),-DCMAKE_CXX_FLAGS="--gcc-install-dir=$(GCC_INSTALL_DIR)") \
-	  $(CMAKE_ARGS)
-```
-
-`--gcc-install-dir` tells clang which libstdc++ to use when the two toolchains are installed side by side, which is the normal state on a Linux runner and on most developer machines. It is passed only when `gcc` is present to ask: on a machine with no GCC the shell call yields an empty string, and `--gcc-install-dir=` with nothing after it is rejected by clang, so an unconditional flag would break `make check_lint` everywhere GCC is not installed.
+So clang-tidy gets its own configure, pinned to clang. `configure_lint` in the Makefile targets fragment writes `build/lint` with `CMAKE_CXX_COMPILER` set to the resolved clang, and `check_lint` reads its `compile_commands.json` from there rather than from the everyday build.
 
 A second directory rather than pinning clang in `configure` itself, because `configure` has to stay compiler-neutral: CI builds under both GCC and clang (see cpp/workflows.md), and `--gcc-install-dir` is a clang flag that `g++` rejects outright. The cost is close to nothing: `configure_lint` only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
 
-### Makefile targets
-
-Use the resolved variables in all targets, never a literal binary name. Both targets below take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `JOBS` is declared here, once, because `build` is the first target that needs it; every later fragment's `cmake --build` and `ctest` targets reuse the same variable rather than redeclaring it.
-
-```makefile
-# Project-owned C++ directories, in whichever of them this tier actually has
-CPP_DIRS      := $(wildcard include src app test)
-CPP_LINT_DIRS := $(wildcard src app)
-JOBS          ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-BUILD_TYPE    ?= Debug
-
-.PHONY: configure
-configure: ## Configure the cmake build
-	cmake -B build/dev \
-	  -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
-	  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-	  $(CMAKE_ARGS)
-
-.PHONY: build
-build: configure ## Build the project
-	cmake --build build/dev --parallel $(JOBS)
-
-.PHONY: format
-format: ## Format all source files with clang-format
-	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) -i
-
-.PHONY: check_format
-check_format: ## Check formatting without modifying files
-	find $(CPP_DIRS) \( -name "*.cpp" -o -name "*.h" \) | xargs $(CLANG_FORMAT) --dry-run --Werror
-
-.PHONY: check_lint
-check_lint: configure_lint ## Run clang-tidy static analysis
-	$(CLANG_TIDY) --quiet -p $(LINT_DIR) \
-	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
-	| grep -v " warnings generated"; \
-	exit $${PIPESTATUS[0]}
-
-##@ GET
-
-.PHONY: get_version
-get_version: ## Print the project version from CMakeLists.txt (fails if absent)
-	@awk '\
-	  /cmake_minimum_required/ { next } \
-	  match($$0, /VERSION[ \t]+[0-9]+\.[0-9]+\.[0-9]+/) { \
-	    v = substr($$0, RSTART, RLENGTH); sub(/VERSION[ \t]+/, "", v); \
-	    print v; found = 1; exit } \
-	  END { if (!found) exit 1 }' CMakeLists.txt
-
-.PHONY: get_changelog
-get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
-	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
-	@awk -v raw="$(TAG)" '\
-	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
-	  found { print } \
-	  END { if (!found) exit 1 }' CHANGELOG.md
-
-##@ CI
-
-.PHONY: check_all
-check_all: check_format check_lint ## Run every static check
-
-.PHONY: ci
-ci: check_all test ## Run the checks CI runs
-
-.PHONY: clean
-clean: ## Remove all build directories
-	rm -rf build
-```
-
-- `--quiet` suppresses the "Suppressed N warnings" summary and hint lines
-- `find` covers every implementation file in those directories, including nested subdirectories; a bare `src/*.cpp` glob would miss anything below the top level
-- `include/` is formatted but not tidied directly: its headers carry no `.cpp` of their own, and clang-tidy reaches them through the `--header-filter` when it analyses the `src/` files that include them
-- `--header-filter="$(CURDIR)/(include|src|app)/.*"` limits diagnostic output to project headers; extern/ headers are already excluded as system headers (see Including extern/ headers in this file) but this provides belt-and-suspenders coverage
-- `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe
-- `check_lint` depends on `configure_lint`, so it needs no separate `make configure` first and reads `$(LINT_DIR)/compile_commands.json` rather than the everyday build's
-- `configure` is `.PHONY` and always runs, rather than being a rule on `build/dev/CMakeCache.txt`. Keying it to the cache file looks like a saving and is a trap: `make configure CMAKE_ARGS=-DFOO=ON` then does nothing at all on a tree that already configured, silently ignoring the flags, and the reconfigure it avoids takes under a second
-- `build` depends on `configure`, and every test target depends on `build`, so any entry point works from a fresh clone. CMake keeps cached `-D` values across a reconfigure, so the repeat does not discard the compiler or `-Werror` a CI job set with `make configure CMAKE_ARGS=...`
-- `ci` is prerequisites only, with no recipe: it names the checks CI runs so a developer can run them in one command before pushing. Through `test` it pulls in `build` and `configure`, so it runs on a clean checkout. A tier with a functional layer adds `test_functional`. It cannot mirror CI exactly, and should not try: CI builds under two compilers and a developer has one, so `ci` reproduces the checks rather than the matrix
-- `clean` removes `build` entirely, not `$(BUILD_DIR)`. There are several build directories (`dev`, `lint`, `asan`, `fuzz`) and a clean that leaves the others behind is the one that gets debugged at the wrong moment
-- `BUILD_TYPE` defaults to `Debug`, the everyday configuration, and is overridable so a CI job can test the shipped one with `make configure BUILD_TYPE=Release`. It is a variable rather than a `CMAKE_ARGS` flag because it is the one setting a developer changes often enough to deserve a name
-- `CMAKE_ARGS` passes extra `-D` flags through to `cmake` (for example CI's `-DMYAPP_BINARY_PATH_OVERRIDE=...`); it is empty for a normal local configure
-- `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style.md makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox
-- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes
-
-Every target a workflow invokes must be defined by one of these fragments. A workflow calling `make <something>` that no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
-
-Note: `format` and `check_format` include the `test/` directory; test code is held to the same formatting standard as production code. `check_lint` deliberately does not run clang-tidy over `test/`: test files use Catch2 macros and fixture patterns that trip naming and readability checks written for production code. Format tests, but do not tidy them.
+Every target the Makefile defines, from `configure` and `build` through `format`, `check_format` and `check_lint` to the `get_*` targets and the CI aggregates, is in the Makefile targets fragment, which is the only place a target is written down. One rule of theirs follows from this section: `format` and `check_format` include `test/`, since test code is held to the same formatting standard as production code, and `check_lint` deliberately does not run clang-tidy over `test/`, because test files use Catch2 macros and fixture patterns that trip naming and readability checks written for production code. Format tests, but do not tidy them.
 
 ### Configuration files
 

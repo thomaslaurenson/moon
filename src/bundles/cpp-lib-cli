@@ -5,19 +5,19 @@
 # which cpp-lib does not have. All four test layers can apply. Use cpp-lib when there is no
 # binary to ship, cpp-app when there is no reusable library behind a public API.
 @include cpp-lib-cli-code
-cpp/tooling.md
+tools/makefile.md
 cpp/cmake.md
 cpp/cmake-lib-cli.md
+cpp/tooling.md
 cpp/clang-format.md
 cpp/clang-tidy.md
 cpp/testing.md
-cpp/testing-integration.md
 cpp/testing-functional.md
+cpp/testing-integration.md
 cpp/testing-fuzz.md
-tools/makefile.md
-tools/docker.md
 github/actions.md
 cpp/workflows.md
+tools/docker.md
 tools/gpipe.md
 cpp/workflows-app.md
 cpp/release-app.md

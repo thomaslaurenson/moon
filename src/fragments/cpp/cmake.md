@@ -91,7 +91,7 @@ foreach(cfg IN ITEMS DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
 endforeach()
 ```
 
-- `CMAKE_BUILD_TYPE` defaults to `Debug`: this ensures `compile_commands.json` is always generated with full debug information for clang-tidy
+- `CMAKE_BUILD_TYPE` defaults to `Debug`: a bare `cmake -B build/dev` then produces the same everyday configuration `make configure` does, rather than CMake's own default of no build type at all, which is neither optimised nor carrying debug information
 - `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
 - `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
@@ -126,7 +126,7 @@ cmake --build build/dev
 
 | Directory | Why it is separate |
 |---|---|
-| `build/dev` | The default: everything testable, `compile_commands.json`, the daily build |
+| `build/dev` | The default: everything testable, the daily build |
 | `build/release` | The shipped artifact: optimised, testing off, produced by the Dockerfile or a release job |
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
@@ -144,7 +144,7 @@ The default directory is `dev`, not `debug`, because it is named for what it is 
 
 That is why `build/release` is described above by what it produces rather than by its build type. Testing the release configuration and shipping it are different jobs: the first is `make configure BUILD_TYPE=Release` in `build/dev`, still with tests on, and the second is an optimised tree with testing off that nothing runs `ctest` against. A developer alternating build types locally does pay a reconfigure and a rebuild, which is the honest cost of one directory rather than two; a CI runner starts empty and pays nothing.
 
-Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myapp` becomes `build/dev/bin/myapp`. `compile_commands.json` for clang tooling comes from `build/dev`, which is why that configuration always has testing on.
+Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin/myapp` becomes `build/dev/bin/myapp`. clang-tidy does not read this directory: its `compile_commands.json` comes from `build/lint`; see Configuring for clang-tidy below.
 
 ## CMakeLists.txt structure
 

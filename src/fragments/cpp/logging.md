@@ -2,6 +2,8 @@
 
 A CLI writes to two streams and they carry different things. Getting the split wrong is what makes a tool awkward to use in a pipeline, and it is the most common output mistake there is.
 
+Applies to every tier. A library follows "Library code takes a stream" and nothing else here: it names no stream and prints nothing of its own. The rest describes the `app/` binary that hands the streams in.
+
 ## The two streams
 
 - **stdout** carries exactly what the user asked for, and nothing else. It is the tool's return value: it will be piped, redirected to a file, and parsed by something that was not written yet.

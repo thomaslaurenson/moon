@@ -127,7 +127,7 @@ target_compile_definitions(myapp_functional_tests PRIVATE
 In test code:
 
 ```cpp
-auto result = run(MYAPP_BINARY_PATH, {"create", "--version", "1", input_dir});
+auto result = Run(MYAPP_BINARY_PATH, {"create", "--version", "1", input_dir});
 REQUIRE(result.returncode == 0);
 ```
 

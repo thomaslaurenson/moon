@@ -32,15 +32,15 @@ See cpp/testing.md for why the label rather than `-R`, and why the skip code mat
 
 Functional tests have to start a process and capture what it did, and the standard library gives you no way to do that. The layer therefore rests on a small helper, `test/subprocess_helper.h` and `test/subprocess_helper.cpp`.
 
-**The interface is fixed; the implementation is not.** Every test in the layer is written against `run()`, so that shape is the rule: it takes a binary path and an argument list, and returns a `RunResult` carrying `stdout_output`, `stderr_output`, `returncode` and `timed_out`, with a `RunOptions` for optional stdin input and a working directory. How those are obtained is a project's own business. These projects build the helper on `subprocess.h` (below), which is the part that handles the platform differences; anything presenting the same interface serves equally well.
+**The interface is fixed; the implementation is not.** Every test in the layer is written against `Run()`, so that shape is the rule: it takes a binary path and an argument list, and returns a `RunResult` carrying `stdout_output`, `stderr_output`, `returncode` and `timed_out`, with a `RunOptions` for optional stdin input and a working directory. How those are obtained is a project's own business. These projects build the helper on `subprocess.h` (below), which is the part that handles the platform differences; anything presenting the same interface serves equally well.
 
 Usage in a functional test:
 
 ```cpp
-#include "../subprocess_helper.h"
+#include "subprocess_helper.h"
 
 TEST_CASE("create: target does not exist", "[create]") {
-    auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
+    auto result = Run(MYAPP_BINARY_PATH, {"create", "no-such-file"});
     REQUIRE(result.returncode == 1);
 }
 ```
@@ -74,7 +74,7 @@ namespace fs = std::filesystem;
 
 /// Singleton that exposes CMake-baked build and source paths to functional tests.
 struct TestEnvironment {
-    static const TestEnvironment &instance() {
+    static const TestEnvironment &Instance() {
         static TestEnvironment env;
         return env;
     }
@@ -116,17 +116,19 @@ Instantiate in a test:
 TEST_CASE("add file to archive", "[add]") {
     TestFiles files;
     auto result =
-        run(MYAPP_BINARY_PATH, {"add", (files.files_dir / "sample.txt").string(), "out.dat"});
+        Run(MYAPP_BINARY_PATH, {"add", (files.files_dir / "sample.txt").string(), "out.dat"});
     REQUIRE(result.returncode == 0);
 }
 ```
 
 ## Asserting on CLI output
 
-Use a `lines_to_set` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it as a static function at the top of each functional test file:
+Use a `LinesToSet` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it in an anonymous namespace at the top of each functional test file:
 
 ```cpp
-static std::set<std::string> lines_to_set(const std::string &output, bool skip_empty = false) {
+namespace {
+
+std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = false) {
     std::set<std::string> result;
     std::istringstream stream(output);
     std::string line;
@@ -139,12 +141,14 @@ static std::set<std::string> lines_to_set(const std::string &output, bool skip_e
     }
     return result;
 }
+
+} // namespace
 ```
 
 Usage:
 
 ```cpp
-auto output = lines_to_set(result.stdout_output);
+auto output = LinesToSet(result.stdout_output);
 std::set<std::string> expected = {"cats.txt", "dogs.txt"};
 REQUIRE(output == expected);
 ```
@@ -159,10 +163,10 @@ Inputs and expected values are handled differently. Prefer a portable input; con
 
 ```cpp
 // Wrong - parsed as an option on Windows, exits 106 (CLI11 RequiredError)
-run(binary, {"info", "/does/not/exist.bin"});
+Run(binary, {"info", "/does/not/exist.bin"});
 
 // Right - means the same thing on every platform
-run(binary, {"info", "no-such-file.bin"});
+Run(binary, {"info", "no-such-file.bin"});
 ```
 
 A relative path needs no `#ifdef`, which is the point: a conditional here would compile two tests that assert different things, when one value works for both. Reach for a portable input first and a branch only when there is not one.
@@ -188,9 +192,9 @@ Use Catch2's `SKIP()` macro when a test depends on a file or resource that may n
 
 ```cpp
 TEST_CASE("verify signature", "[verify]") {
-    fs::path data = TestEnvironment::instance().test_dir / "data" / "sample.dat";
+    fs::path data = TestEnvironment::Instance().test_dir / "data" / "sample.dat";
     if (!fs::exists(data)) {
-        SKIP("Test data not found - run scripts/download_test_data.sh");
+        SKIP("Test data not found - see the README for how to obtain it");
     }
     // test body
 }
@@ -219,7 +223,7 @@ The functional layer owns the exit-code contract, because it is the only layer t
 
 ```cpp
 TEST_CASE("create: target does not exist", "[create]") {
-    auto result = run(MYAPP_BINARY_PATH, {"create", "/does/not/exist"});
+    auto result = Run(MYAPP_BINARY_PATH, {"create", "no-such-file"});
     REQUIRE(result.returncode == 1);
     REQUIRE_THAT(result.stderr_output, Catch::Matchers::ContainsSubstring("does not exist"));
 }

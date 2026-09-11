@@ -2,6 +2,8 @@
 
 What happens when a user presses Ctrl-C part-way through. Assumes the error handling and output fragments.
 
+Applies to every tier. A library implements "Passing it down" and defines the `Interrupted` type; the handler, the re-raise and the Windows notes belong to the tier with an `app/` binary.
+
 Without handling, an interrupt kills the process where it stands. Destructors do not run, so a half-written archive stays on disk, a temporary directory is never removed, and a file handle is closed by the kernel rather than flushed. The point of handling a signal is not politeness; it is that RAII cannot do its job if the process never unwinds.
 
 ## When a command needs it

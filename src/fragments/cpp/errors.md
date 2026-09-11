@@ -2,6 +2,8 @@
 
 How a failure travels from library code to a user. Assumes the C++ style fragment.
 
+Applies to every tier. The boundary and the hierarchy are library rules; "Catching in the app" and "Exit codes" apply only in a tier with an `app/` binary. A plain library stops at the hierarchy and leaves the rest to whoever links it.
+
 These rules are the concrete form of the `src/`-versus-`app/` split: they are what makes a CLI wrapper thin, rather than merely short.
 
 ## The boundary

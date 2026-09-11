@@ -107,15 +107,15 @@ Use one `TEST_CASE` per function under test, with `SECTION` blocks for individua
 
 #include "helpers.h"
 
-TEST_CASE("next_power_of_two", "[helpers]") {
+TEST_CASE("NextPowerOfTwo", "[helpers]") {
     SECTION("returns the same value for exact powers of two") {
-        REQUIRE(next_power_of_two(1) == 1);
-        REQUIRE(next_power_of_two(32) == 32);
+        REQUIRE(NextPowerOfTwo(1) == 1);
+        REQUIRE(NextPowerOfTwo(32) == 32);
     }
 
     SECTION("rounds up to the next power for non-powers") {
-        REQUIRE(next_power_of_two(5) == 8);
-        REQUIRE(next_power_of_two(33) == 64);
+        REQUIRE(NextPowerOfTwo(5) == 8);
+        REQUIRE(NextPowerOfTwo(33) == 64);
     }
 }
 ```
@@ -125,8 +125,8 @@ TEST_CASE("next_power_of_two", "[helpers]") {
 Tag each `TEST_CASE` with the name of the source file under test:
 
 ```cpp
-TEST_CASE("next_power_of_two", "[helpers]") { ... }
-TEST_CASE("parse_config", "[config]") { ... }
+TEST_CASE("NextPowerOfTwo", "[helpers]") { ... }
+TEST_CASE("ParseConfig", "[config]") { ... }
 ```
 
 Run a subset during development:
@@ -156,7 +156,7 @@ A fixture that builds synthetic input is what keeps tests in the unit layer, so 
 
 /// Builds a minimal in-memory archive for tests that need a real one to read
 struct SyntheticArchive {
-    std::vector<std::byte> bytes_;
+    std::vector<std::byte> bytes;
 
     SyntheticArchive() { /* assemble header, table, entries */ }
 };

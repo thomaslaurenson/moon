@@ -2,6 +2,8 @@
 
 What a project is allowed to depend on, and what it builds with. Assumes the CMake fragment, which owns the mechanics: submodules under `extern/`, pinning, existence checks, and the `SYSTEM` include rules.
 
+Applies to every tier. The embedded assets example is a CLI's completion scripts, but the mechanism is the same for a library that embeds a resource of its own.
+
 ## The toolchain
 
 | Tool | Purpose |

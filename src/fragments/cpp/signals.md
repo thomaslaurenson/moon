@@ -98,7 +98,7 @@ Catch it above the other handlers in `main`, then restore the default dispositio
 } catch (const myproj::Interrupted &) {
     std::signal(SIGINT, SIG_DFL);
     std::raise(SIGINT);
-    return 1; // not reached
+    return 1; // Not reached
 }
 ```
 

@@ -132,8 +132,8 @@ TEST_CASE("ParseConfig", "[config]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/myproj_unit_tests [helpers]
-./build/dev/bin/myproj_unit_tests [config]
+./build/dev/bin/myproj_unit_tests '[helpers]'
+./build/dev/bin/myproj_unit_tests '[config]'
 ```
 
 ### What to unit test

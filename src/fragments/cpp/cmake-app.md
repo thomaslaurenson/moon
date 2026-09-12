@@ -107,12 +107,12 @@ target_compile_definitions(myproj_functional_tests PRIVATE
 )
 ```
 
-`MYPROJ_TEST_DIR` provides the path to the `test/` source directory, replacing any runtime `__file__`-style path discovery. Tests access both via the `TestEnvironment` singleton; see the C++ testing-functional fragment.
+`MYPROJ_TEST_DIR` provides the path to the `test/` source directory, replacing any runtime path discovery relative to the test binary. Tests access both via the `TestEnvironment` singleton; see the C++ testing-functional fragment.
 
 In test code:
 
 ```cpp
-auto result = Run(MYPROJ_BINARY_PATH, {"create", "--version", "1", input_dir});
+auto result = Run(MYPROJ_BINARY_PATH, {"create", input_dir, "out.dat"});
 REQUIRE(result.returncode == 0);
 ```
 

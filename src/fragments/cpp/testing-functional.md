@@ -72,7 +72,7 @@ The general fixture conventions live in cpp/testing.md and apply here unchanged;
 
 namespace fs = std::filesystem;
 
-/// Singleton that exposes CMake-baked build and source paths to functional tests.
+/// Singleton that exposes CMake-baked build and source paths to functional tests
 struct TestEnvironment {
     static const TestEnvironment &Instance() {
         static TestEnvironment env;
@@ -98,15 +98,15 @@ All other fixtures (for example `TestFiles`) are ordinary function-scoped struct
 
 namespace fs = std::filesystem;
 
-/// Creates the static input files used across functional tests.
+/// Creates the static input files used across functional tests
 struct TestFiles {
     fs::path files_dir;
 
     TestFiles() {
-        // create files, set timestamps etc.
+        // Create files, set timestamps etc.
     }
 
-    ~TestFiles() = default; // or clean up if needed
+    ~TestFiles() = default; // Or clean up if needed
 };
 ```
 
@@ -217,7 +217,7 @@ TEST_CASE("list with filter", "[list]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/myproj_functional_tests [create]
+./build/dev/bin/myproj_functional_tests '[create]'
 ```
 
 ## Asserting on the CLI contract

@@ -90,13 +90,12 @@ Each subcommand is a `Register<Name>(CLI::App &app)` function declared in `comma
 
 ```cpp
 // app/list.cpp
-#include "commands.h"
-
 #include <iostream>
 #include <memory>
+#include <myproj/archive.h>
 #include <string>
 
-#include <myproj/archive.h>
+#include "commands.h"
 
 void RegisterList(CLI::App &app) {
     struct Options {

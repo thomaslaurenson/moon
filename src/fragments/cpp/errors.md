@@ -95,7 +95,7 @@ Never use exceptions for control flow across a loop body; the cost is real and t
 
 int main(int argc, char **argv) {
     try {
-        // parse arguments, call into myproj
+        // Parse arguments, call into myproj
         return 0;
     } catch (const myproj::Error &e) {
         std::cerr << "[!] " << e.what() << "\n";
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-The line is marked `[!]`, like every other warning or error the program prints (see the core conventions). Never an `error:` prefix, which carries nothing the marker does not.
+The line is marked `[!]`, like every other warning or error the program prints (see the command line output fragment). Never an `error:` prefix, which carries nothing the marker does not.
 
 ## Exit codes
 

@@ -70,7 +70,7 @@ namespace fs = std::filesystem;
 
 namespace myproj::testing {
 
-/// Returns the path to the real integration dataset, or an empty optional.
+/// Returns the path to the real integration dataset, or an empty optional
 ///
 /// Checks in order:
 ///   1. MYPROJ_INTEGRATION_DATA compile-time define (from -DMYPROJ_INTEGRATION_DATA=...)

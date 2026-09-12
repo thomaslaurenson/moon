@@ -51,7 +51,13 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/completion_data.h.in"
 ```cpp
 // cmake/completion_data.h.in
 // Generated from completion/myproj.bash, do not edit
-static constexpr char BashCompletionScript[] = R"BASH_MYPROJ(@BASH_COMPLETION_SCRIPT@)BASH_MYPROJ";
+#pragma once
+
+namespace myproj {
+
+inline constexpr char bash_completion_script[] = R"BASH_MYPROJ(@BASH_COMPLETION_SCRIPT@)BASH_MYPROJ";
+
+} // namespace myproj
 ```
 
 Two details are load-bearing, and both fail quietly when missed.

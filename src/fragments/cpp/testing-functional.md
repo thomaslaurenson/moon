@@ -123,12 +123,11 @@ TEST_CASE("add file to archive", "[add]") {
 
 ## Asserting on CLI output
 
-Use a `LinesToSet` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it in an anonymous namespace at the top of each functional test file:
+Use a `LinesToSet` helper to split stdout or stderr into a set of lines for order-independent comparison. It lives in `test/subprocess_helper.h` beside `Run()`, so every test file gets the same one rather than a copy that drifts:
 
 ```cpp
-namespace {
-
-std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = false) {
+// test/subprocess_helper.h
+inline std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = false) {
     std::set<std::string> result;
     std::istringstream stream(output);
     std::string line;
@@ -141,8 +140,6 @@ std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = fa
     }
     return result;
 }
-
-} // namespace
 ```
 
 Usage:

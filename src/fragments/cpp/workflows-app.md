@@ -215,11 +215,11 @@ Set `MYPROJ_BUILD_TESTING=OFF` on the release builds: they ship the binary, and 
 
 #### Where CI does not go through `make`
 
-`build.yml` is the exception to the rule that CI calls `make <target>` and never `cmake` directly, and it is the exception on both platforms rather than only Windows. The Linux jobs build inside a container, so the recipe lives in the Dockerfile; the Windows job invokes `cmake` directly.
+`build.yml` does not go through `make`, on either platform rather than only Windows. The Linux jobs build inside a container, so the recipe lives in the Dockerfile; the Windows job invokes `cmake` directly.
 
 Windows has the strongest reason: the Makefile sets `SHELL := /bin/bash` and its targets rely on `find | xargs` and GNU-only flags, none of which a Windows runner provides. A release build also wants an explicit build type and output path rather than the everyday `build/dev` configuration the Makefile is built around, which is the reason that holds on any platform.
 
-Do not add a second, platform-specific Makefile to preserve the rule. `lint.yml` and `test.yml` do go through `make`, and those are the workflows the rule is really about, because they run the same checks a developer runs.
+Do not add a second, platform-specific Makefile to change that. `lint.yml` and `test.yml` do go through `make`, because they run the same checks a developer runs, which is what the Makefile fragment's rule is for.
 
 #### Smoke-run every artefact
 

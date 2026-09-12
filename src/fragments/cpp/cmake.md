@@ -1,13 +1,6 @@
 # CMake conventions
 
-Conventions for CMake-based C++ projects. Universal to every tier; the target definitions themselves (what `src/` builds, whether there is an `app/` binary or a public include path, and the test layers each implies) live in the tier fragment: cmake-lib, cmake-app, or cmake-lib-cli.
-
-## Design principles
-
-- CMake is the build system for all C++ projects; never use raw compiler invocations
-- The Makefile wraps CMake and CI calls `make <target>` rather than `cmake`, as the Makefile conventions fragment requires; the targets themselves are defined in the C++ Makefile targets fragment
-- All build output lives under `build/`, one subdirectory per configuration; see Build directory
-- Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
+Conventions for CMake-based C++ projects. Universal to every tier; the target definitions themselves (what `src/` builds, whether there is an `app/` binary or a public include path, and the test layers each implies) live in the tier fragment: cmake-lib, cmake-app, or cmake-lib-cli. CMake is the only build system, wrapped by the targets in the Makefile targets fragment; nothing invokes a compiler directly.
 
 ## Repository layout
 

@@ -151,11 +151,9 @@ jobs:
 
 ## Changelog extraction
 
-Never extract the changelog with inline awk or bash in a workflow step. Use the `get_changelog` Makefile target instead. Pass the tag explicitly; the target writes the matching entry to stdout:
+Release notes come from the `get_changelog` Makefile target, never from inline awk or bash in a workflow step. Pass the tag explicitly. The target writes the matching entry to stdout, strips the `v` the tag carries and the changelog header does not, and exits non-zero on an empty `TAG` or a missing entry, so a release never publishes empty notes; see the Makefile targets fragment:
 
 ```yaml
 - name: Extract release notes from CHANGELOG.md
   run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
 ```
-
-The target exits non-zero if TAG is empty or no matching entry is found, failing the release before it can publish with an empty changelog. `TAG` is `${GITHUB_REF_NAME}`, a `v`-prefixed tag (`v1.2.3`), but changelog headers are bare (`## 1.2.3 - ...`, see `github/changelog.md`), so the target strips the leading `v` from `TAG` before matching.

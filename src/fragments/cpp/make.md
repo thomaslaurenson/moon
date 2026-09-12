@@ -214,6 +214,17 @@ check_lint: configure_lint ## Run clang-tidy static analysis
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
+
+.PHONY: check_embed
+check_embed: ## Syntax-check the embedded completion scripts with every shell present
+	bash -n completion/myproj.bash
+	@if command -v zsh >/dev/null; then zsh -n completion/myproj.zsh; \
+	  else echo "[*] zsh not installed, skipped"; fi
+	@if command -v fish >/dev/null; then fish --no-execute completion/myproj.fish; \
+	  else echo "[*] fish not installed, skipped"; fi
+	@if command -v pwsh >/dev/null; then pwsh -NoProfile -Command \
+	  '[scriptblock]::Create((Get-Content -Raw completion/myproj.ps1)) | Out-Null'; \
+	  else echo "[*] pwsh not installed, skipped"; fi
 ```
 
 - `configure_lint` writes its own directory with the compiler pinned to clang, because clang-tidy resolves headers through the compiler that produced `compile_commands.json` and a GCC-configured tree leaves it emitting diagnostics from a broken AST; see Configuring for clang-tidy in the CMake fragment. It only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
@@ -224,7 +235,7 @@ check_lint: configure_lint ## Run clang-tidy static analysis
 - `include/` is formatted but not tidied directly: its headers carry no `.cpp` of their own, and clang-tidy reaches them through the `--header-filter` when it analyses the `src/` files that include them.
 - `--header-filter="$(CURDIR)/(include|src|app)/.*"` limits diagnostic output to project headers; `extern/` headers are already excluded as system headers (see Including extern/ headers in the CMake fragment) but this provides belt-and-suspenders coverage.
 - `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe.
-- `check_embed`: validate embedded content if the project embeds any (see the tooling fragment); omit for a project with nothing embedded.
+- `check_embed` parses each completion script with its own shell, because the compiler proves only that the file was read (see the tooling fragment). `bash` is unconditional, since the Makefile already needs it; the other three run where the shell is installed and say so where it is not, so a developer without fish sees a skip rather than a failure. A library that embeds a resource of its own writes the matching check the same way, and a project that embeds nothing omits the target.
 
 ## GET
 

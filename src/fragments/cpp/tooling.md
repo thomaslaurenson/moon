@@ -64,7 +64,7 @@ Two details are load-bearing, and both fail quietly when missed.
 
 The template lives in `cmake/` and the generated header goes to the build tree; neither belongs in `src/`. See the tier fragment for the include path.
 
-Where a project embeds something that has to be valid, add a `check_embed` target to the Makefile and to `check_all`; see the Makefile targets fragment. The compiler proves only that the file was read, never that its contents work, so an embedded shell script with a syntax error compiles in and fails at the user's prompt. What the target runs is project-specific: `bash -n` over the embedded shell scripts, or the matching check for whatever the asset is. A project that embeds nothing omits the target.
+Where a project embeds something that has to be valid, add a `check_embed` target to the Makefile and to `check_all`; see the Makefile targets fragment. The compiler proves only that the file was read, never that its contents work, so an embedded shell script with a syntax error compiles in and fails at the user's prompt. The Makefile targets fragment has the recipe for the completion scripts every CLI embeds; a library embedding something else writes the matching check for whatever the asset is, and a project that embeds nothing omits the target.
 
 ## Vulnerability scanning
 

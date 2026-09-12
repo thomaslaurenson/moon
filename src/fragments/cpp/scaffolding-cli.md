@@ -176,6 +176,6 @@ completion/
 
 The generated header goes to the build tree, never into `src/` or `completion/`; see the tier fragment for the `configure_file` wiring. Declare the scripts with `CMAKE_CONFIGURE_DEPENDS` so editing one regenerates the header.
 
-The scripts are embedded assets, so every CLI has a `check_embed` target and `check_all` includes it: `bash -n` over the bash script and the matching syntax check for each other shell the runner has. A completion script is code a user runs in their shell, and a syntax error in it compiles into the binary without complaint; see the tooling and Makefile targets fragments.
+The scripts are embedded assets, so every CLI has a `check_embed` target and `check_all` includes it. A completion script is code a user runs in their shell, and a syntax error in it compiles into the binary without complaint; the recipe is in the Makefile targets fragment.
 
 Installing the script is the user's job. Nothing in the release tooling writes to a user's shell configuration.

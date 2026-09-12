@@ -112,7 +112,7 @@ Cleanup must be safe to run twice: an interrupt during shutdown is normal, not e
 
 ## Reporting an interrupt
 
-A user who pressed Ctrl-C does not need an error message about it. Do not print `context canceled` as a failure; it is the requested outcome. Exit non-zero without a message, using the shell convention of 128 plus the signal number, so 130 for SIGINT.
+A user who pressed Ctrl-C does not need an error message about it. Do not print `context canceled` as a failure; it is the requested outcome. Exit non-zero without a message, using the shell convention of 128 plus the signal number, so 130 for SIGINT. Exit with the code rather than re-raising the signal: re-raising is what makes a shell treat the death as an interrupt of its own, but Go has no portable way to do it, since `syscall.Kill` does not exist on Windows, and one behaviour on every platform is worth more than that nicety on some.
 
 Ask the context, not the returned error. A cancelled operation usually reports its own symptom rather than the cancellation: `exec.CommandContext` returns `signal: killed`, and an interrupted read returns whatever it was part-way through. Matching on the error therefore misses the common cases, and the interrupt is reported as a failure with a confusing message. Only the context knows why the work stopped.
 

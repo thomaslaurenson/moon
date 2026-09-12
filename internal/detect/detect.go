@@ -31,12 +31,12 @@ var skipDirs = map[string]bool{
 }
 
 type presence struct {
-	goMod, cmakeLists, toc, ps1, pyproject, py, sh bool
-	mainGo                                         bool // a main.go anywhere suggests a Go binary, not a library
-	includeDir                                     bool // a root include/ dir is this repo's C++ public-API marker
-	appDir                                         bool // a root app/ dir is this repo's C++ shipped-binary marker
-	pyBuildSystem                                  bool // pyproject.toml has [build-system] -> installable package (library)
-	pyScripts                                      bool // pyproject.toml has [project.scripts] -> ships a console script
+	goMod, cmakeLists, ps1, pyproject, py, sh bool
+	mainGo                                    bool // a main.go anywhere suggests a Go binary, not a library
+	includeDir                                bool // a root include/ dir is this repo's C++ public-API marker
+	appDir                                    bool // a root app/ dir is this repo's C++ shipped-binary marker
+	pyBuildSystem                             bool // pyproject.toml has [build-system] -> installable package (library)
+	pyScripts                                 bool // pyproject.toml has [project.scripts] -> ships a console script
 }
 
 // Detect walks fsys (rooted at a project directory) and returns the bundles
@@ -68,8 +68,6 @@ func Detect(fsys fs.FS) ([]Match, error) {
 			p.mainGo = true
 		case name == "CMakeLists.txt":
 			p.cmakeLists = true
-		case strings.HasSuffix(name, ".toc"):
-			p.toc = true
 		case strings.HasSuffix(name, ".ps1"):
 			p.ps1 = true
 		case name == "pyproject.toml":
@@ -114,9 +112,6 @@ func Detect(fsys fs.FS) ([]Match, error) {
 			// is an application whether or not it has split main() into app/ yet.
 			add("cpp-app")
 		}
-	}
-	if p.toc {
-		add("wow-addon")
 	}
 	if p.ps1 {
 		add("powershell-script")

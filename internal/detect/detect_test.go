@@ -87,11 +87,6 @@ func TestDetect(t *testing.T) {
 			wantBundles: []string{"cpp-lib"},
 		},
 		{
-			name:        "wow addon",
-			fsys:        fstest.MapFS{"MyAddon.toc": {}, "MyAddon.lua": {}},
-			wantBundles: []string{"wow-addon"},
-		},
-		{
 			name:        "bash project",
 			fsys:        fstest.MapFS{"install.sh": {}},
 			wantBundles: []string{"bash-script"},

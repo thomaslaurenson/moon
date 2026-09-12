@@ -8,7 +8,6 @@ var globByPrefix = map[string]string{
 	"cpp":        "**/*.{cpp,cc,h,hpp}",
 	"bash":       "**/*.sh",
 	"powershell": "**/*.ps1",
-	"wow":        "**/*.lua",
 }
 
 var globByName = map[string]string{
@@ -20,11 +19,11 @@ var globByName = map[string]string{
 // source files (code-authoring rules, single scripts). Only these get a narrow
 // language glob; a full-project bundle carries repo-wide rules (Makefile, CI,
 // dependabot) that should attach to every file, so it falls back to "**".
-var scopedSuffixes = []string{"-code", "-script", "-lua"}
+var scopedSuffixes = []string{"-code", "-script"}
 
 // GlobForBundle returns a best-guess applyTo glob for a bundle name, used to scope
 // a Copilot instructions file. Single-purpose bundles (markdown, docker) and
-// language-scoped bundles (names ending in -code, -script, -lua) get a narrow glob;
+// language-scoped bundles (names ending in -code, -script) get a narrow glob;
 // full-project bundles get "**" so their repo-wide rules apply everywhere. Falls
 // back to "**" when the language can't be inferred, which is safe (broader than
 // ideal) rather than wrong.

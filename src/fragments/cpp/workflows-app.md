@@ -1,6 +1,6 @@
 # C++ shipped-binary workflows
 
-Applies to any tier that ships a distributable binary: an application, or a library with a bundled CLI. A plain library has no artifact to build and ships nothing, so it builds and tests in one plain job instead; see workflows-lib.md.
+Applies to any tier that ships a distributable binary: an application, or a library with a bundled CLI. A plain library has no artefact to build and ships nothing, so it builds and tests in one plain job instead; see workflows-lib.md.
 
 `@vN` in the examples below means pin the current major at authoring time (for example `@v5`); Dependabot keeps it current. Do not copy a version number from this document as the target to match. Majors are for `actions/*` and for actions you publish yourself; every other action pins to a full SHA (see the GitHub Actions fragment).
 
@@ -10,21 +10,21 @@ Add `Dockerfile` and `.dockerignore` to the shared paths filter (see cpp/workflo
 
 ## Depth is a function of the trigger
 
-These tiers add a `build.yml` that produces the distributable artifacts. Running the whole of it on every pull request is the expensive default and buys the least: a pull request needs to know the code compiles and the tests pass, not that a shippable artifact for every platform is correct. A tag needs the second, and only a tag can act on it.
+These tiers add a `build.yml` that produces the distributable artefacts. Running the whole of it on every pull request is the expensive default and buys the least: a pull request needs to know the code compiles and the tests pass, not that a shippable artefact for every platform is correct. A tag needs the second, and only a tag can act on it.
 
-The GitHub Actions fragment warns that a `build.yml` beside tests that build what they test is a second compile of the same sources. It is, and these tiers pay it knowingly: `build.yml` is the only job that exercises the Dockerfile and runs the bytes that ship, and `test.yml` could only do the same by becoming the artifact pipeline it was deliberately decoupled from. The generic rule holds for a library, which is why workflows-lib.md has no `build.yml`.
+The GitHub Actions fragment warns that a `build.yml` beside tests that build what they test is a second compile of the same sources. It is, and these tiers pay it knowingly: `build.yml` is the only job that exercises the Dockerfile and runs the bytes that ship, and `test.yml` could only do the same by becoming the artefact pipeline it was deliberately decoupled from. The generic rule holds for a library, which is why workflows-lib.md has no `build.yml`.
 
 So the caller decides the depth, and `build.yml` takes an input:
 
 | Trigger | Runs | Why |
 |---|---|---|
-| `pr.yml` | lint, test, and the one artifact job a test cannot cover | Cheapest signal that catches a real break |
-| `main.yml` | the above plus the full artifact set and `prerelease` | The rolling channel has to contain everything a release would |
+| `pr.yml` | lint, test, and the one artefact job a test cannot cover | Cheapest signal that catches a real break |
+| `main.yml` | the above plus the full artefact set and `prerelease` | The rolling channel has to contain everything a release would |
 | `tag.yml` | everything, plus `release` | This is the run whose output people install |
 
 Concretely, `inputs.artifacts` gates `build_windows` and `build_docker`; `build_linux` runs on every trigger. That split is the whole cost control, and it is worth stating why it falls where it does rather than the other way round. `build_linux` builds through the Dockerfile, so running it is the only thing that proves the release container recipe still works, and it runs on the cheapest runner there is. The other three are either a second compile of a platform `test.yml` already covers, or an image tar nothing consumes until a release. On a private repository the gated jobs are also the more expensive ones: a Windows runner bills at twice a Linux one, so leaving it ungated means a pull request pays for the platform it least needs.
 
-"An artifact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
+"An artefact job a test cannot cover" is a narrow set. A container image built from the same Dockerfile the release uses is one: nothing else exercises that file, and a break in it is invisible until release day. A second compile of a platform the test job already compiles is not: it is the same sources through the same compiler, at that platform's billing rate, for no new information.
 
 ```yaml
 # build.yml
@@ -32,7 +32,7 @@ on:
   workflow_call:
     inputs:
       artifacts:
-        description: Build the full release artifact set, not just the cheap subset
+        description: Build the full release artefact set, not just the cheap subset
         type: boolean
         default: false
 ```
@@ -61,7 +61,7 @@ jobs:
       contents: write
 ```
 
-**No `needs:` on `lint`, `test` or `build`.** None of the three consumes another's output: lint configures its own tree, test builds the binaries it runs, and build produces artifacts that nothing reads until a release. All three start at once, so the fastest signal is never held behind the slowest job. Only `release` and `prerelease` genuinely need the artifacts, and they say so.
+**No `needs:` on `lint`, `test` or `build`.** None of the three consumes another's output: lint configures its own tree, test builds the binaries it runs, and build produces artefacts that nothing reads until a release. All three start at once, so the fastest signal is never held behind the slowest job. Only `release` and `prerelease` genuinely need the artefacts, and they say so.
 
 This is what the decoupling in `test.yml` buys, and it is worth protecting. The moment `test` downloads something `build` produced, that edge has to exist, and gating a platform off a pull request then breaks the test matrix rather than just saving money.
 
@@ -75,17 +75,17 @@ No `secrets: inherit`: every job here authenticates with the automatic `github.t
 
 ### `build.yml`
 
-Builds one release binary per target platform and uploads each as an artifact for the release and prerelease workflows to consume. Linux builds go through Docker; Windows builds natively on its own runner, because there is no container route to it.
+Builds one release binary per target platform and uploads each as an artefact for the release and prerelease workflows to consume. Linux builds go through Docker; Windows builds natively on its own runner, because there is no container route to it.
 
 **Which platforms is a decision, not a default.** The jobs below are the full set for the platforms these projects target, and a project takes the ones matching where its users actually run the binary. The test is the one in cpp/workflows.md: a platform earns a job by being a deployment target, not by adding confidence.
 
 **No C++ project here targets macOS.** There is no macOS job, no `darwin` asset and no `darwin` entry in `.gpipe.yml`, and that is a decision rather than an omission: nobody runs these tools there, and a macOS runner bills at ten times a Linux one. Adding it later means more than a build job, which is why the absence is recorded here rather than left to be noticed: macOS needs a matching `test.yml` job, `darwin_amd64` and `darwin_arm64` entries in `.gpipe.yml`, two more lines in the release asset list, and a `codesign --force --sign -` step after any `strip`, because stripping invalidates the ad-hoc signature the linker applies and the binary is then killed on launch rather than failing to build.
 
-Once a platform is in, it stays consistent all the way through: a job in `build.yml`, a matching entry in `test.yml`, an asset in `.gpipe.yml`, and a line in the release asset list. A platform built but not tested ships an artifact nothing has run.
+Once a platform is in, it stays consistent all the way through: a job in `build.yml`, a matching entry in `test.yml`, an asset in `.gpipe.yml`, and a line in the release asset list. A platform built but not tested ships an artefact nothing has run.
 
 #### Asset naming
 
-Name every artifact `myproj-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows. The table is the naming for whichever platforms a project builds, not a list of platforms it must:
+Name every artefact `myproj-<os>-<arch>`, using `x86_64`/`aarch64` rather than `amd64`/`arm64`, and append `.exe` on Windows. The table is the naming for whichever platforms a project builds, not a list of platforms it must:
 
 | Platform | Asset |
 |---|---|
@@ -108,7 +108,7 @@ on:
   workflow_call:
     inputs:
       artifacts:
-        description: Build the full release artifact set, not just the cheap subset
+        description: Build the full release artefact set, not just the cheap subset
         type: boolean
         default: false
 
@@ -147,13 +147,13 @@ jobs:
           docker cp "$CONTAINER_ID":/myproj ./${{ matrix.asset }}
           docker rm "$CONTAINER_ID"
 
-      # Run the bytes that will ship. See Smoke-run every artifact.
-      - name: Smoke-run the artifact
+      # Run the bytes that will ship. See Smoke-run every artefact.
+      - name: Smoke-run the artefact
         run: |
           chmod +x ./${{ matrix.asset }}
           ./${{ matrix.asset }} --version
 
-      - name: Upload binary as artifact
+      - name: Upload binary as artefact
         uses: actions/upload-artifact@vN
         with:
           name: ${{ matrix.asset }}
@@ -176,11 +176,11 @@ jobs:
           cmake --build build/release --config Release
           mv build/release/bin/myproj.exe ./myproj-windows-x86_64.exe
 
-      - name: Smoke-run the artifact
+      - name: Smoke-run the artefact
         shell: bash
         run: ./myproj-windows-x86_64.exe --version
 
-      - name: Upload binary as artifact
+      - name: Upload binary as artefact
         uses: actions/upload-artifact@vN
         with:
           name: myproj-windows-x86_64.exe
@@ -203,7 +203,7 @@ jobs:
       - name: Save image as a tar
         run: docker save myproj -o myproj-docker.tar
 
-      - name: Upload image as artifact
+      - name: Upload image as artefact
         uses: actions/upload-artifact@vN
         with:
           name: myproj-docker
@@ -211,7 +211,7 @@ jobs:
           retention-days: 1
 ```
 
-Set `MYPROJ_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artifact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
+Set `MYPROJ_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artefact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
 
 `build/release/bin/myproj.exe` rather than `build/release/bin/Release/myproj.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
 
@@ -223,16 +223,16 @@ Windows has the strongest reason: the Makefile sets `SHELL := /bin/bash` and its
 
 Do not add a second, platform-specific Makefile to preserve the rule. `lint.yml` and `test.yml` do go through `make`, and those are the workflows the rule is really about, because they run the same checks a developer runs.
 
-#### Smoke-run every artifact
+#### Smoke-run every artefact
 
-Every build job runs the binary it just produced, on the runner that produced it, before uploading it. `--version` is enough: the point is not to test behaviour, which `test.yml` already does, but to prove the artifact starts at all.
+Every build job runs the binary it just produced, on the runner that produced it, before uploading it. `--version` is enough: the point is not to test behaviour, which `test.yml` already does, but to prove the artefact starts at all.
 
 This is the whole class of failure a build-only job cannot see, and each member of it ships silently:
 
 - a `scratch` image binary that was not statically linked, so there is no loader and the container exits with `no such file or directory` on a file that plainly exists
 - a binary linked against a library version the runner has and a user does not
 
-It costs seconds on a runner already holding the binary, and it is the reason `test.yml` can build its own binary rather than downloading this one: between them, `test.yml` proves the code is correct and `build.yml` proves the artifact runs.
+It costs seconds on a runner already holding the binary, and it is the reason `test.yml` can build its own binary rather than downloading this one: between them, `test.yml` proves the code is correct and `build.yml` proves the artefact runs.
 
 Where a project's binary has no `--version`, use the cheapest subcommand that exits zero without arguments. A binary with no such entry point should still be executed with `--help`.
 
@@ -240,9 +240,9 @@ Where a project's binary has no `--version`, use the cheapest subcommand that ex
 
 Builds and tests on each platform the project supports. It does not download anything from `build.yml`: it compiles the library, the binary and the test binaries itself, and the functional layer spawns the binary it just built.
 
-**`test.yml` never consumes a build artifact, and that is a deliberate decoupling.** Downloading the shipped binary and testing that instead sounds stronger, and it ties the test matrix to whatever `build.yml` happened to produce on this trigger. The moment a platform is gated off a pull request to save runner minutes, its test job has nothing to download and fails, so the test matrix has to start varying by trigger too. Building what it tests keeps `test.yml` identical on every trigger, and leaves gating a decision that only `build.yml` has to know about.
+**`test.yml` never consumes a build artefact, and that is a deliberate decoupling.** Downloading the shipped binary and testing that instead sounds stronger, and it ties the test matrix to whatever `build.yml` happened to produce on this trigger. The moment a platform is gated off a pull request to save runner minutes, its test job has nothing to download and fails, so the test matrix has to start varying by trigger too. Building what it tests keeps `test.yml` identical on every trigger, and leaves gating a decision that only `build.yml` has to know about.
 
-What that gives up is running the functional suite against the exact bytes that ship. `build.yml` covers the part of that which actually breaks by executing each artifact where it was built; see Smoke-run every artifact below.
+What that gives up is running the functional suite against the exact bytes that ship. `build.yml` covers the part of that which actually breaks by executing each artefact where it was built; see Smoke-run every artefact below.
 
 Check out with submodules: the test binaries link Catch2 and `subprocess.h`, which are submodules.
 
@@ -297,6 +297,6 @@ Four details in there are load-bearing:
 
 Each job tests on the runner it built on, so the functional layer always spawns a binary the runner can execute and there is no skip branch anywhere in this workflow.
 
-That is also the argument for building release artifacts on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artifact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime.
+That is also the argument for building release artefacts on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artefact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime.
 
-The workflows that publish these artifacts, `release.yml` and `prerelease.yml`, live in cpp/release-app.md.
+The workflows that publish these artefacts, `release.yml` and `prerelease.yml`, live in cpp/release-app.md.

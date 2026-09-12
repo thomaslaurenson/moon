@@ -95,7 +95,7 @@ endif()
 
 # MYPROJ_BINARY_PATH_OVERRIDE points the functional tests at a binary other than
 # the one just built: a downloaded release asset, or an installed copy, to check
-# a published artifact behaves. Unset, which is the normal case including in CI,
+# a published artefact behaves. Unset, which is the normal case including in CI,
 # the build-tree path above is used.
 if(MYPROJ_BINARY_PATH_OVERRIDE)
     set(MYPROJ_BINARY_PATH "${MYPROJ_BINARY_PATH_OVERRIDE}")

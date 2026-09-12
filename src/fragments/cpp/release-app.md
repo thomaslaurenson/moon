@@ -2,15 +2,15 @@
 
 How a shipped binary becomes a published release. Applies to any tier that ships one: an application, or a library with a bundled CLI. A plain library releases a tagged commit and nothing else; see workflows-lib.md.
 
-Assumes cpp/workflows-app.md, which owns the paths filter, the caller wiring and the `build.yml` that produces the artifacts these workflows consume. The gpipe fragment covers the config surface and the action inputs.
+Assumes cpp/workflows-app.md, which owns the paths filter, the caller wiring and the `build.yml` that produces the artefacts these workflows consume. The gpipe fragment covers the config surface and the action inputs.
 
 `@vN` means pin the current major at authoring time; Dependabot keeps it current. Do not copy a version number from this document as the target to match.
 
 ## `release.yml`
 
-Publishes a GitHub release: downloads every build artifact, generates install scripts and checksums with gpipe, signs them, and creates the release with changelog notes.
+Publishes a GitHub release: downloads every build artefact, generates install scripts and checksums with gpipe, signs them, and creates the release with changelog notes.
 
-This is the build -> gpipe -> release pattern; the gpipe fragment covers what gpipe writes and how it is configured. The C++ specific part is that the build step is `build.yml` rather than a single builder, so the binaries arrive as downloaded artifacts.
+This is the build -> gpipe -> release pattern; the gpipe fragment covers what gpipe writes and how it is configured. The C++ specific part is that the build step is `build.yml` rather than a single builder, so the binaries arrive as downloaded artefacts.
 
 ```yaml
 name: Release
@@ -32,7 +32,7 @@ jobs:
       # CHANGELOG.md from the working tree, and gh release create uses the API.
       - uses: actions/checkout@vN
 
-      - name: Download all build artifacts
+      - name: Download all build artefacts
         uses: actions/download-artifact@vN
         with:
           path: dist
@@ -46,7 +46,7 @@ jobs:
           cosign_sign: true
 
       # Name every asset. A dist/myproj-* glob is shorter and wrong: with
-      # merge-multiple every artifact lands flat in dist/, so the Docker image
+      # merge-multiple every artefact lands flat in dist/, so the Docker image
       # tar matches too and is attached to the release as if it were a binary.
       - name: Create release
         run: |
@@ -67,7 +67,7 @@ jobs:
     needs: release
     runs-on: ubuntu-24.04
     steps:
-      - name: Download image artifact
+      - name: Download image artefact
         uses: actions/download-artifact@vN
         with:
           name: myproj-docker
@@ -95,7 +95,7 @@ The `release_docker` job is the Docker fragment's publishing pattern, repeated h
 
 ### `.gpipe.yml`
 
-The gpipe fragment covers the config surface and the action inputs. What is C++ specific is that the `path` entries must match where `download-artifact` puts the binaries: with `path: dist` and `merge-multiple: true` every artifact lands flat in `dist/`, so the paths are `./dist/<asset>`.
+The gpipe fragment covers the config surface and the action inputs. What is C++ specific is that the `path` entries must match where `download-artifact` puts the binaries: with `path: dist` and `merge-multiple: true` every artefact lands flat in `dist/`, so the paths are `./dist/<asset>`.
 
 ```yaml
 binary: myproj
@@ -144,7 +144,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - name: Download all build artifacts
+      - name: Download all build artefacts
         uses: actions/download-artifact@vN
         with:
           path: dist
@@ -175,7 +175,7 @@ jobs:
     needs: prerelease
     runs-on: ubuntu-24.04
     steps:
-      - name: Download image artifact
+      - name: Download image artefact
         uses: actions/download-artifact@vN
         with:
           name: myproj-docker

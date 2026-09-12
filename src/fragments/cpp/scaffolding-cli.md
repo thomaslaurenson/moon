@@ -18,7 +18,7 @@ Dockerfile             # static musl build into scratch; see the C++ Docker frag
 .dockerignore
 .gpipe.yml             # installer and checksum config; see the release fragment
 .github/workflows/
-  build.yml            # the artifacts; see the shipped-binary workflows fragment
+  build.yml            # the artefacts; see the shipped-binary workflows fragment
   release.yml
   prerelease.yml
 ```

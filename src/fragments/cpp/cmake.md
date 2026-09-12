@@ -95,7 +95,7 @@ endforeach()
 - `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
 - `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
-- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myproj.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
+- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myproj.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artefact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
 
 ## Version header
 

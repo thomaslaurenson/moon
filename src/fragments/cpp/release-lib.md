@@ -1,6 +1,6 @@
 # C++ library release workflow
 
-How a library is released. Applies to a plain library: a tagged commit with changelog notes and no artifact, since consumers take a git ref and compile it themselves. A tier that ships a binary uses release-app.md instead.
+How a library is released. Applies to a plain library: a tagged commit with changelog notes and no artefact, since consumers take a git ref and compile it themselves. A tier that ships a binary uses release-app.md instead.
 
 Assumes cpp/workflows-lib.md, which owns the caller wiring that runs this workflow on a `v*` tag.
 
@@ -8,7 +8,7 @@ Assumes cpp/workflows-lib.md, which owns the caller wiring that runs this workfl
 
 ## `release.yml`
 
-A library's release is a tagged commit; there is no compiled artifact to attach. `release.yml` creates a GitHub Release with changelog notes and nothing else:
+A library's release is a tagged commit; there is no compiled artefact to attach. `release.yml` creates a GitHub Release with changelog notes and nothing else:
 
 ```yaml
 name: Release
@@ -43,4 +43,4 @@ Two details match the application flow rather than diverging from it, and both a
 
 ## No prerelease
 
-There is no `prerelease.yml` and no rolling `dev` release. A library has no artifact to roll, and a consumer wanting the tip of `main` points a submodule at it; `main.yml` is lint and test alone. See github/actions.md for the rule and cpp/workflows-lib.md for the file set.
+There is no `prerelease.yml` and no rolling `dev` release. A library has no artefact to roll, and a consumer wanting the tip of `main` points a submodule at it; `main.yml` is lint and test alone. See github/actions.md for the rule and cpp/workflows-lib.md for the file set.

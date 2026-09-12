@@ -6,7 +6,7 @@ Applies to libraries. A library isn't distributed as a prebuilt binary (consumer
 
 ## Workflow set
 
-Five files, not seven. There is no `build.yml`, because `test.yml` builds what it tests, and no `prerelease.yml`, because a library has no artifact to roll into one (see github/actions.md):
+Five files, not seven. There is no `build.yml`, because `test.yml` builds what it tests, and no `prerelease.yml`, because a library has no artefact to roll into one (see github/actions.md):
 
 ```text
 .github/workflows/

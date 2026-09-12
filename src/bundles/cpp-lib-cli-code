@@ -8,6 +8,7 @@ cpp/style.md
 cpp/doxygen.md
 cpp/scaffolding-lib.md
 cpp/errors.md
+cli/output.md
 cpp/logging.md
 cpp/scaffolding-cli.md
 cpp/signals.md

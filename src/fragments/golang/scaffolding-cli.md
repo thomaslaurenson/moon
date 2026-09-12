@@ -11,6 +11,7 @@ main.go        # minimal entry point, delegates to cmd/
   dependabot.yml
 .goreleaser.yml
 .goreleaser.prerelease.yml
+.gpipe.yml
 go.mod
 go.sum
 Makefile

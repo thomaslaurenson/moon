@@ -23,7 +23,7 @@ func main() {
 
     root := cmd.NewRootCmd(os.Stdout, os.Stderr)
     if err := root.ExecuteContext(ctx); err != nil {
-        // see the errors fragment for the rest of this block
+        // See the errors fragment for the rest of this block
     }
 }
 ```

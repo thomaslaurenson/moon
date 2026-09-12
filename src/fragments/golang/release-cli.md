@@ -6,12 +6,11 @@ How a CLI project builds and publishes release binaries. Applies to every Go pro
 
 Every project has two configs: `.goreleaser.yml` (versioned releases via `release.yml`) and `.goreleaser.prerelease.yml` (dev snapshot via `prerelease.yml`).
 
-- GoReleaser builds binaries only; it does not create checksums, sign, or publish.
+- GoReleaser builds binaries only. Checksums, install scripts and signing are gpipe's job (see the gpipe fragment), and `gh release create` publishes.
 - Always inject version via `ldflags`. Default matrix is `linux`/`darwin`/`windows` x `amd64`/`arm64`, excluding `windows/arm64`.
 - Windows on ARM runs x64 binaries under emulation, so the excluded `windows/arm64` build is a performance optimisation rather than a compatibility requirement. A project that ships `install.ps1` may include it: `Get-Platform` reports `windows_arm64`, and if no such asset exists the installer fails outright rather than falling back to the emulated x64 build. Include it in both goreleaser configs and in `.gpipe.yml`, or in neither.
 - Always set `no_unique_dist_dir: true` so binaries land flat in `dist/`.
 - Prefer `CGO_ENABLED=0` and `mod_timestamp` for reproducible static builds.
-- Checksums, install scripts, and signing are gpipe's job, not goreleaser's; see the gpipe fragment.
 
 ```yaml
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json

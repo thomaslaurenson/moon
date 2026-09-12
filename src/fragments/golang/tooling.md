@@ -37,11 +37,11 @@ The workflows pass `go-version-file: go.mod` (see the workflows fragment), so th
 | `go 1.27` | the newest 1.27.x available | arrive automatically |
 | `go 1.27.0` | exactly 1.27.0 | frozen until the line is edited |
 
-**Write the minor-only form.** A patch release of Go is security and bug fixes for the same language version, and pinning one holds a signed public binary on a standard library that is known to be superseded. Verify with `go version -m <binary>` against a published artifact rather than assuming; the directive alone does not tell you what shipped.
+**Write the minor-only form.** A patch release of Go is security and bug fixes for the same language version, and pinning one holds a signed public binary on a standard library that is known to be superseded. Verify with `go version -m <binary>` against a published artefact rather than assuming; the directive alone does not tell you what shipped.
 
 The trade-off is that rebuilding an old tag later may use a newer toolchain and produce a different binary. That is the right way round: a rebuild should pick up the fixes.
 
-Locally the directive is only a minimum, and a newer installed toolchain always wins. A developer therefore never sees the pin, and the released artifact is the only place it takes effect.
+Locally the directive is only a minimum, and a newer installed toolchain always wins. A developer therefore never sees the pin, and the released artefact is the only place it takes effect.
 
 Dependabot does not bump the `go` directive; it updates module requirements only. Raise the minor version deliberately when moving to a new Go release, and raise it with `go mod edit`:
 

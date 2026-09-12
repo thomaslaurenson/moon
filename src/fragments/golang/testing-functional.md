@@ -1,6 +1,6 @@
 # Go functional testing
 
-Asserts the CLI contract: that a flag reaches the code it names, that output lands on the right stream, and that a failure is reported rather than swallowed. It is the same layer as the C++ functional fragment, without the subprocess. Cobra hands the command tree and its writers over as values, so the test runs in-process and needs no compiled binary, no subprocess helper, and no platform handling.
+Asserts the CLI contract: that a flag reaches the code it names, that output lands on the right stream, and that a failure is reported rather than swallowed. Cobra hands the command tree and its writers over as values, so the test runs in-process and needs no compiled binary, no subprocess helper, and no platform handling.
 
 ## What it is for
 

@@ -87,21 +87,21 @@ jobs:
           cosign_sign: true
 
       - name: Get changelog
-        run: make get_changelog TAG=${{ github.ref_name }} > /tmp/release-notes.md
+        run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
 
       - name: Create release
         run: |
-          gh release create "${{ github.ref_name }}" \
+          gh release create "${GITHUB_REF_NAME}" \
             dist/<name>-* \
             install.sh install.ps1 \
             checksums.txt checksums.txt.sigstore.json \
-            --title "${{ github.ref_name }}" \
+            --title "${GITHUB_REF_NAME}" \
             --notes-file /tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
 ```
 
-Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action.
+Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action. The tag reaches the shell as `${GITHUB_REF_NAME}`, never as an interpolated `${{ github.ref_name }}`: an expression inside `run:` is pasted into the script as text before it runs, while an environment variable is only ever a value.
 
 The `actions/setup-go` here is for goreleaser, and gpipe rides on it. gpipe installs no Go of its own and builds with whatever is on `PATH`, so this step is what settles the version both of them get (see the gpipe fragment).
 
@@ -168,7 +168,7 @@ jobs:
         run: |
           gh release create dev \
             --title "Dev (Pre-release)" \
-            --notes "Built from commit ${{ github.sha }}" \
+            --notes "Built from commit ${GITHUB_SHA}" \
             --prerelease \
             dist/<name>-*
         env:

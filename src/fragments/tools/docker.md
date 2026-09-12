@@ -46,7 +46,7 @@ FROM python:3.12-slim
 
 Always prefer Docker Official Images (no namespace prefix). Use Vendor Verified Publisher images only when no official alternative exists:
 
-```
+```text
 # Docker Official - always preferred
 alpine, python, postgres, nginx, redis
 
@@ -86,13 +86,14 @@ USER 1001:1001
 
 ### Package installation
 
-Avoid installing packages wherever possible. Every package that is installed must have an inline comment explaining why it is needed. Each package goes on its own line to allow per-package comments:
+Avoid installing packages wherever possible. Every package that is installed has a comment on the line above it saying what needs it. Each package goes on its own line so that each can carry one:
 
 ```dockerfile
 # Good
 RUN apk add --no-cache \
+    # TLS roots for the outbound HTTPS calls
     ca-certificates \
-    # required for timezone handling in the scheduler
+    # Timezone handling in the scheduler
     tzdata
 
 # Bad - no comments, packages on one line
@@ -115,8 +116,8 @@ When `ADD` is used, add a comment explaining why `COPY` is insufficient:
 COPY config/ /app/config/
 COPY --from=builder /app/bin/mytool /mytool
 
-# Only acceptable use of ADD
-ADD archive.tar.gz /app/  # extracting tar - COPY does not support this
+# Only acceptable use of ADD: extracting a tar, which COPY does not do
+ADD archive.tar.gz /app/
 ```
 
 ### ENTRYPOINT and CMD
@@ -207,7 +208,9 @@ COPY --from=builder /usr/bin/wget /usr/bin/wget
 COPY --from=builder /app/bin/mytool /mytool
 ```
 
-Package comments are the exception; every non-obvious package always gets a comment regardless of this rule.
+Package comments are the exception; every installed package gets one regardless of this rule.
+
+A comment is a whole line. Dockerfile has no trailing comments: a `#` after an instruction is passed to it as an argument.
 
 ### .dockerignore
 
@@ -245,7 +248,7 @@ Tags:
 
 `latest` tracks releases only. Pointing it at a rolling build makes `docker pull` without a tag return whatever last landed on the default branch, which is the opposite of what the tag means to everyone who uses it.
 
-**Build the image once and push the bytes that were built.** The build job saves the image with `docker save` and uploads it as an artifact; the publishing job downloads it, `docker load`s it and pushes. Rebuilding at publish time produces an image nobody tested, and the difference only shows up when the two disagree.
+**Build the image once and push the bytes that were built.** The build job saves the image with `docker save` and uploads it as an artefact; the publishing job downloads it, `docker load`s it and pushes. Rebuilding at publish time produces an image nobody tested, and the difference only shows up when the two disagree.
 
 **Publish in a separate job, gated on the release having succeeded.** A registry outage then leaves a complete release with no image, which is recoverable, rather than an image with no release.
 
@@ -273,7 +276,7 @@ Each service lives in its own directory containing a `Dockerfile` and, when need
 
 **Standalone docker or infrastructure project**: service directories at the project root:
 
-```
+```text
 api/
   Dockerfile
 postgres/
@@ -283,7 +286,7 @@ docker-compose.yml
 
 **Monorepo**: service directories under a `docker/` folder:
 
-```
+```text
 docker/
   api/
     Dockerfile

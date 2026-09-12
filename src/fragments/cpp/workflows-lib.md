@@ -2,8 +2,6 @@
 
 Applies to libraries. A library isn't distributed as a prebuilt binary (consumers pull it in as a git submodule and compile it themselves), so CI is a single plain build-and-test job: no Docker, no libc/arch matrix, no separate build.yml. The release is in release-lib.md.
 
-`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
-
 ## Workflow set
 
 Six files, not eight. There is no `build.yml`, because `test.yml` builds what it tests, and no `prerelease.yml`, because a library has no artefact to roll into one (see github/actions.md):

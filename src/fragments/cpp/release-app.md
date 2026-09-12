@@ -4,8 +4,6 @@ How a shipped binary becomes a published release. Applies to any tier that ships
 
 Assumes cpp/workflows-app.md, which owns the paths filter, the caller wiring and the `build.yml` that produces the artefacts these workflows consume. The gpipe fragment covers the config surface and the action inputs.
 
-`@vN` means pin the current major at authoring time; Dependabot keeps it current. Do not copy a version number from this document as the target to match.
-
 ## `release.yml`
 
 Publishes a GitHub release: downloads every build artefact, generates install scripts and checksums with gpipe, signs them, and creates the release with changelog notes.

@@ -4,8 +4,6 @@ How a library is released. Applies to a plain library: a tagged commit with chan
 
 Assumes cpp/workflows-lib.md, which owns the caller wiring that runs this workflow on a `v*` tag.
 
-`@vN` means pin the current major at authoring time; Dependabot keeps it current. Do not copy a version number from this document as the target to match.
-
 ## `release.yml`
 
 A library's release is a tagged commit; there is no compiled artefact to attach. `release.yml` creates a GitHub Release with changelog notes and nothing else:

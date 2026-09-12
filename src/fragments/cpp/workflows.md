@@ -2,6 +2,8 @@
 
 Supplements the GitHub Actions fragment. Universal rules (runners, action versions, workflow structure, caller patterns, concurrency, permissions) apply unchanged. This file covers what's common to any C++ project's CI; the build and release pattern itself differs by tier (see workflows-app or workflows-lib).
 
+`@vN` in every C++ workflow fragment means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from these documents as the target to match. Majors are for `actions/*` and for actions you publish yourself; every other action pins to a full SHA (see the GitHub Actions fragment).
+
 ## Paths filter
 
 Use these entries in the `paths:` filter for `pr.yml` and `main.yml`:
@@ -30,8 +32,6 @@ The two failure modes are not symmetric. A stale entry is inert: it names a path
 ## Checkout
 
 Always check out with `submodules: true`. C++ projects use git submodules for all dependencies and the build will fail without them:
-
-`@vN` means pin the current major of the action at authoring time (for example `@v5`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
 
 ```yaml
 - uses: actions/checkout@vN

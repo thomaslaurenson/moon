@@ -24,7 +24,7 @@ CLANG_CXX     ?= $(shell command -v clang++-$(CLANG_VERSION) || echo clang++)
 CLANG_TIDY    ?= $(shell command -v clang-tidy-$(CLANG_VERSION) || echo clang-tidy)
 LLVM_PROFDATA ?= $(shell command -v llvm-profdata-$(CLANG_VERSION) || echo llvm-profdata)
 LLVM_COV      ?= $(shell command -v llvm-cov-$(CLANG_VERSION) || echo llvm-cov)
-GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev/null)
+GCC_INSTALL_DIR := $(shell f=$$(gcc -print-libgcc-file-name 2>/dev/null) && dirname "$$f")
 ```
 
 - `CPP_DIRS` and `CPP_LINT_DIRS` take their directory list from `wildcard`, so one Makefile covers every tier: a library has no `app/`, an application has no `include/`, and the expansion simply omits what is absent rather than failing. `examples/` is formatted but not tidied, because its programs are only configured when the examples option is on, so a lint configure has no compile commands for them; `test/` is formatted but not tidied for the reason the CMake fragment gives.
@@ -34,7 +34,7 @@ GCC_INSTALL_DIR := $(shell dirname "$(shell gcc -print-libgcc-file-name)" 2>/dev
 - `INTEGRATION_DATA` defaults to the environment variable named after the CMake cache variable, so a machine that already exports it needs nothing on the command line.
 - The clang tools are resolved rather than named, because how the pinned major version is installed differs per platform (see Clang tooling in the CMake fragment): Debian and Ubuntu install versioned binaries such as `clang-format-18`, while Homebrew and the LLVM Windows installer provide an unversioned `clang-format` from a versioned install. Prefer the versioned name, fall back to the plain one, and let either be overridden from the command line (`make format CLANG_FORMAT=/opt/homebrew/opt/llvm/bin/clang-format`). Falling back to the bare name rather than failing keeps the failure legible: an absent tool reports `clang-format: command not found`, which is clearer than a Make-level error about an empty variable.
 - `llvm-profdata` and `llvm-cov` are resolved here with the rest, rather than beside the coverage target that uses them, so every clang tool the project shells out to is named in one block. They are packaged and versioned exactly like `clang-format`, so they need the same fallback.
-- `GCC_INSTALL_DIR` is empty on a machine with no GCC, and `configure_lint` passes the flag only when it is set; see LINT.
+- `GCC_INSTALL_DIR` is empty on a machine with no GCC, and `configure_lint` passes the flag only when it is set; see LINT. The `&&` is what keeps it empty: `dirname` of an empty string is `.`, so a form that runs `dirname` unconditionally passes `--gcc-install-dir=.` wherever GCC is absent.
 - `CLANG_CC` is used only by a project that compiles C, which adds `-DCMAKE_C_COMPILER=$(CLANG_CC)` beside the C++ compiler in `configure_lint`, `configure_coverage` and `configure_fuzz`; see Projects that compile C in the CMake fragment. It is resolved here regardless, so a C dependency added later is one flag per configure rather than a new variable.
 
 ## BUILD
@@ -214,6 +214,17 @@ check_lint: configure_lint ## Run clang-tidy static analysis
 	--header-filter="$(CURDIR)/(include|src|app)/.*" $$(find $(CPP_LINT_DIRS) -name "*.cpp") 2>&1 \
 	| grep -v " warnings generated"; \
 	exit $${PIPESTATUS[0]}
+
+.PHONY: check_embed
+check_embed: ## Syntax-check the embedded completion scripts with every shell present
+	bash -n completion/myproj.bash
+	@if command -v zsh >/dev/null; then zsh -n completion/myproj.zsh; \
+	  else echo "[*] zsh not installed, skipped"; fi
+	@if command -v fish >/dev/null; then fish --no-execute completion/myproj.fish; \
+	  else echo "[*] fish not installed, skipped"; fi
+	@if command -v pwsh >/dev/null; then pwsh -NoProfile -Command \
+	  '[scriptblock]::Create((Get-Content -Raw completion/myproj.ps1)) | Out-Null'; \
+	  else echo "[*] pwsh not installed, skipped"; fi
 ```
 
 - `configure_lint` writes its own directory with the compiler pinned to clang, because clang-tidy resolves headers through the compiler that produced `compile_commands.json` and a GCC-configured tree leaves it emitting diagnostics from a broken AST; see Configuring for clang-tidy in the CMake fragment. It only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
@@ -224,7 +235,7 @@ check_lint: configure_lint ## Run clang-tidy static analysis
 - `include/` is formatted but not tidied directly: its headers carry no `.cpp` of their own, and clang-tidy reaches them through the `--header-filter` when it analyses the `src/` files that include them.
 - `--header-filter="$(CURDIR)/(include|src|app)/.*"` limits diagnostic output to project headers; `extern/` headers are already excluded as system headers (see Including extern/ headers in the CMake fragment) but this provides belt-and-suspenders coverage.
 - `grep -v " warnings generated"` strips the per-file progress counter, which counts all warnings before any filtering and is always misleading when third-party headers are present; `exit $${PIPESTATUS[0]}` preserves clang-tidy's exit code through the pipe.
-- `check_embed`: validate embedded content if the project embeds any (see the tooling fragment); omit for a project with nothing embedded.
+- `check_embed` parses each completion script with its own shell, because the compiler proves only that the file was read (see the tooling fragment). `bash` is unconditional, since the Makefile already needs it; the other three run where the shell is installed and say so where it is not, so a developer without fish sees a skip rather than a failure. A library that embeds a resource of its own writes the matching check the same way, and a project that embeds nothing omits the target.
 
 ## GET
 
@@ -251,7 +262,7 @@ get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
 ```
 
 - `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style.md makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox.
-- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artifacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes.
+- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artefacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes.
 
 ## CI
 

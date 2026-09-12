@@ -20,9 +20,11 @@ Do not point it at the everyday `build/dev` instead. That build uses whatever co
 
 When clang-tidy processes multiple files it prints a running cumulative count:
 
-```
+```text
 [1/6] Processing file src/helpers.cpp.
+1523 warnings generated.
 [2/6] Processing file src/main.cpp.
+3046 warnings generated.
 ```
 
 This counter reflects warnings found across the entire translation unit, including all `#include`d headers, before any filtering. It is always high and always misleading. It is **not** a count of findings in project code.
@@ -75,7 +77,7 @@ The `CheckOptions` implement the naming conventions defined in the C++ style fra
 |---|---|---|
 | `FunctionCase`, `MethodCase` | `CamelCase` | `PascalCase` for all functions |
 | `ClassCase`, `StructCase`, `EnumCase` | `CamelCase` | `PascalCase` for all types |
-| `EnumConstantCase` | `UPPER_CASE` | `SCREAMING_SNAKE` for enum values |
+| `EnumConstantCase` | `UPPER_CASE` | `UPPER_SNAKE_CASE` for enum values |
 | `VariableCase`, `ParameterCase` | `lower_case` | `snake_case` for variables and parameters |
 | `MemberCase` | `lower_case` | `snake_case` for struct members and public class members |
 | `PrivateMemberCase` / `ProtectedMemberCase`, both with suffix `_` | `lower_case` + `_` | `snake_case_` for private and protected class members |
@@ -93,7 +95,7 @@ The `CheckOptions` implement the naming conventions defined in the C++ style fra
 
 Additional checks are added per project. Before adding a check:
 
-1. Run it in isolation to confirm it fires on real issues, against the clang-configured build: `make configure_lint && $(CLANG_TIDY) --checks="-*,<check>" -p build/lint $(find src app -name "*.cpp")`
+1. Run it in isolation to confirm it fires on real issues, against the clang-configured build; see Verifying a check before adding it
 2. Decide whether the findings should be fixed or suppressed
 3. Add the check by name, never by wildcard
 4. If suppressed, add a comment above the `Checks:` block explaining why

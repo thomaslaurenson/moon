@@ -1,19 +1,12 @@
 # CMake conventions
 
-Conventions for CMake-based C++ projects. Universal to every tier; the target definitions themselves (what `src/` builds, whether there is an `app/` binary or a public include path, and the test layers each implies) live in the tier fragment: cmake-lib, cmake-app, or cmake-lib-cli.
-
-## Design principles
-
-- CMake is the build system for all C++ projects; never use raw compiler invocations
-- The Makefile wraps CMake and CI calls `make <target>` rather than `cmake`, as the Makefile conventions fragment requires; the targets themselves are defined in the C++ Makefile targets fragment
-- All build output lives under `build/`, one subdirectory per configuration; see Build directory
-- Dependencies are always git submodules pinned to a specific commit, never system-installed libraries
+Conventions for CMake-based C++ projects. Universal to every tier; the target definitions themselves (what `src/` builds, whether there is an `app/` binary or a public include path, and the test layers each implies) live in the tier fragment: cmake-lib, cmake-app, or cmake-lib-cli. CMake is the only build system, wrapped by the targets in the Makefile targets fragment; nothing invokes a compiler directly.
 
 ## Repository layout
 
 Every C++ project contains at least these at the root; the tier's scaffolding fragment (scaffolding-lib, scaffolding-cli, or both for a lib-cli) adds `include/`, `app/`, `completion/` and the release files as its tier requires:
 
-```
+```text
 .clang-format
 .clang-tidy
 .github/
@@ -35,7 +28,7 @@ test/                 # see cpp/testing.md for internal structure
 Two rules hold across every tier, and the tier fragments assume them:
 
 - **`src/` never contains `main()`.** The entry point lives in `app/`, in the tiers that have one. Keeping it out of `src/` is what allows the whole implementation to be compiled once, linked by both the binary and the test binaries, and reused by another project later.
-- **`src/` always builds a library target.** For a library that target is the deliverable; for an application it is an internal detail with no `include/` and no alias. Either way, tests link it rather than recompiling its sources, so the test build cannot drift from the real one.
+- **`src/` always builds a library target.** For a library that target is the deliverable; for an application it is an internal detail with no `include/`. Either way, tests link it rather than recompiling its sources, so the test build cannot drift from the real one.
 
 The two questions that place a project in a tier are therefore independent: does it expose a public API (`include/`, so cmake-lib or cmake-lib-cli), and does it ship a binary (`app/`, so cmake-app or cmake-lib-cli)?
 
@@ -51,7 +44,7 @@ CMake 3.21 is the oldest version found on any supported build environment. Never
 
 ## C++ standard
 
-All projects must set a minimum C++ standard of 17. New projects should prefer 20:
+The standard is C++20. A project that predates it may still be on 17, and raises it deliberately; see the tooling fragment:
 
 ```cmake
 set(CMAKE_CXX_STANDARD 20)
@@ -95,7 +88,7 @@ endforeach()
 - `CMAKE_POSITION_INDEPENDENT_CODE ON`: required for shared libraries and good practice for all targets
 - `CMAKE_EXPORT_COMPILE_COMMANDS ON`: generates `compile_commands.json` in the build directory, required for clang-tidy
 - `CMAKE_RUNTIME_OUTPUT_DIRECTORY`: all executables (the app binary, or a library's test binaries) land in the configuration's own `bin/` (`build/dev/bin/`) regardless of how many targets the project defines
-- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myproj.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artifact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
+- The per-config loop is what keeps that true on a multi-config generator. Without it, a Visual Studio build emits `build/dev/bin/Release/myproj.exe`, and every consumer of the path (a functional test's baked-in binary path, a CI step that moves the artefact) silently looks in the wrong place. Set all four configs, not just `RELEASE`, so a Debug build in an IDE behaves the same way
 
 ## Version header
 
@@ -157,10 +150,10 @@ cmake --build build/dev
 | Directory | Why it is separate |
 |---|---|
 | `build/dev` | The default: everything testable, the daily build |
-| `build/release` | The shipped artifact: optimised, testing off, produced by the Dockerfile or a release job |
+| `build/release` | The shipped artefact: optimised, testing off, produced by the Dockerfile or a release job |
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
-| `build/coverage` | Different code generation: clang instrumentation, and clang whatever the default compiler is |
+| `build/coverage` | Different code generation: clang's instrumentation, so pinned to clang whatever the everyday compiler is |
 | `build/32` | Different architecture |
 | `build/lint` | Different compiler: clang, so clang-tidy can parse the sources |
 
@@ -180,7 +173,7 @@ Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin
 
 Every directory that produces a target or manages a distinct concern has its own `CMakeLists.txt`. The root never defines a project target; it orchestrates. The one kind of target it does define is a wrapper for a dependency that ships no `CMakeLists.txt` of its own: the `INTERFACE` library around a header-only dependency, or the `STATIC` target around vendored C sources (see Dependencies). Each sits beside the existence check for the dependency it wraps, which is what keeps it from being mistaken for project code.
 
-```
+```text
 CMakeLists.txt        # project settings, dependencies, add_subdirectory calls
 src/
   CMakeLists.txt      # defines the library target; see the tier fragment
@@ -385,7 +378,7 @@ A sanitized build changes code generation, so it gets its own `build/asan` direc
 
 All external dependencies are git submodules pinned to a specific commit, stored under `extern/`:
 
-```
+```text
 extern/
   ThirdPartyLib/
   Catch2/

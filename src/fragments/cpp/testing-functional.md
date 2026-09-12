@@ -6,7 +6,7 @@ Applies to any tier that ships a binary: an application, or a library with a bun
 
 ## Structure addition
 
-```
+```text
 test/
   functional/             # Catch2 functional tests against the compiled binary
     test_create.cpp       # mirrors the create subcommand
@@ -72,7 +72,7 @@ The general fixture conventions live in cpp/testing.md and apply here unchanged;
 
 namespace fs = std::filesystem;
 
-/// Singleton that exposes CMake-baked build and source paths to functional tests.
+/// Singleton that exposes CMake-baked build and source paths to functional tests
 struct TestEnvironment {
     static const TestEnvironment &Instance() {
         static TestEnvironment env;
@@ -98,15 +98,15 @@ All other fixtures (for example `TestFiles`) are ordinary function-scoped struct
 
 namespace fs = std::filesystem;
 
-/// Creates the static input files used across functional tests.
+/// Creates the static input files used across functional tests
 struct TestFiles {
     fs::path files_dir;
 
     TestFiles() {
-        // create files, set timestamps etc.
+        // Create files, set timestamps etc.
     }
 
-    ~TestFiles() = default; // or clean up if needed
+    ~TestFiles() = default; // Or clean up if needed
 };
 ```
 
@@ -123,12 +123,11 @@ TEST_CASE("add file to archive", "[add]") {
 
 ## Asserting on CLI output
 
-Use a `LinesToSet` helper to split stdout or stderr into a set of lines for order-independent comparison. Define it in an anonymous namespace at the top of each functional test file:
+Use a `LinesToSet` helper to split stdout or stderr into a set of lines for order-independent comparison. It lives in `test/subprocess_helper.h` beside `Run()`, so every test file gets the same one rather than a copy that drifts:
 
 ```cpp
-namespace {
-
-std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = false) {
+// test/subprocess_helper.h
+inline std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = false) {
     std::set<std::string> result;
     std::istringstream stream(output);
     std::string line;
@@ -141,8 +140,6 @@ std::set<std::string> LinesToSet(const std::string &output, bool skip_empty = fa
     }
     return result;
 }
-
-} // namespace
 ```
 
 Usage:
@@ -217,7 +214,7 @@ TEST_CASE("list with filter", "[list]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/myproj_functional_tests [create]
+./build/dev/bin/myproj_functional_tests '[create]'
 ```
 
 ## Asserting on the CLI contract

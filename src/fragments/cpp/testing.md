@@ -32,7 +32,7 @@ A library that computes rather than parses, and needs no input it cannot build i
 
 Every layer lives under `test/`, including fuzz harnesses. A project with modules under `src/<module>/` mirrors that structure inside `test/unit/`:
 
-```
+```text
 test/
   CMakeLists.txt
   data/                   # static inputs; tests read, never write
@@ -70,7 +70,7 @@ cd extern/Catch2 && git checkout v3.6.0
 
 Catch2 v3 is not a single-header library; it is a compiled library with multiple headers. Always use it as a submodule, never copy individual headers.
 
-The CMake wiring (the project-scoped testing option, `enable_testing()`, and `include(Catch)`, all in the root `CMakeLists.txt`) is defined in the universal CMake fragment; each test executable's own definition is defined in the tier fragment.
+The CMake wiring (the project-scoped testing option, `enable_testing()`, and `include(Catch)`, all in the root `CMakeLists.txt`) is defined in the universal CMake fragment; each test executable is defined in the tier fragment.
 
 ### Registering tests
 
@@ -132,15 +132,15 @@ TEST_CASE("ParseConfig", "[config]") { ... }
 Run a subset during development:
 
 ```bash
-./build/dev/bin/myproj_unit_tests [helpers]
-./build/dev/bin/myproj_unit_tests [config]
+./build/dev/bin/myproj_unit_tests '[helpers]'
+./build/dev/bin/myproj_unit_tests '[config]'
 ```
 
 ### What to unit test
 
 A function gets a unit test if its behaviour can be provoked from data the test itself can build. That covers far more than pure logic: a parser gets a unit test driven by a synthetic file written to a temp directory, a socket layer gets one driven over loopback, an archive reader gets one against an archive the fixture assembled in memory. Reach for a fixture rather than reaching for the integration layer.
 
-That includes a private helper in `src/` that no public header declares. It is tested like anything else, and the unit binary has `src/` on its include path so the test reaches the header by the same path the implementation does; see the tier fragment. It is the only test binary that does.
+That includes a private helper in `src/` that no public header declares. It is tested like anything else, and the unit binary has `src/` on its include path so the test reaches the header by the same path the implementation does; see the tier fragment. A fuzz harness gets the same path for the same reason, and no other test binary does.
 
 A function only escapes to the integration layer when the input cannot be synthesised: when the test is meaningful precisely because the data is real (an actual production dataset, a live server's handshake).
 

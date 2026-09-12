@@ -43,7 +43,7 @@ IncludeCategories:
 
 ### What each override does
 
-**`IndentWidth: 4`**. The LLVM default is `2`. Four spaces is more readable at the nesting depths typical in this codebase.
+**`IndentWidth: 4`**. The LLVM default is `2`. Four spaces is more readable at the nesting depths typical in these projects.
 
 **`ColumnLimit: 100`**. The LLVM default is `80`. A hundred-column limit avoids wrapping long API call chains while still preventing runaway line lengths.
 

@@ -2,7 +2,7 @@
 
 Application-specific CMake conventions. Assumes the universal CMake conventions.
 
-An application ships a binary and has no public API: nothing outside the repository links its code, so there is no `include/` directory and no alias. If external consumers do need the core, it is a lib-cli; see cmake-lib-cli.
+An application ships a binary and has no public API: nothing outside the repository links its code, so there is no `include/` directory. If external consumers do need the core, it is a lib-cli; see cmake-lib-cli.
 
 ## Layout
 
@@ -10,9 +10,9 @@ The directories an application adds, `app/`, `completion/` and the release files
 
 ## Targets
 
-An application defines two targets: an internal core library holding all the logic, and a thin executable that wires up the CLI and links it. The executable takes the bare project name, `myproj`, and the core is `myproj_core`; see Target names in the universal fragment.
+An application defines two targets: an internal core library holding all the logic, and a thin executable that wires up the CLI and links it. The executable takes the bare project name, `myproj`, and the core is `myproj_core`, linked as `myproj::core`; see Target names in the universal fragment.
 
-`src/CMakeLists.txt` builds the core. It is a normal `STATIC` library with no `include/` and no alias, because nothing outside this repository links it:
+`src/CMakeLists.txt` builds the core. It is a normal `STATIC` library with no `include/`, because nothing outside this repository links it:
 
 ```cmake
 add_library(myproj_core STATIC
@@ -25,9 +25,11 @@ target_include_directories(myproj_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(myproj_core PRIVATE myproj::warnings)
 
 target_compile_features(myproj_core PUBLIC cxx_std_20)
+
+add_library(myproj::core ALIAS myproj_core)
 ```
 
-The core carries no alias of its own, but it links one: `myproj::warnings` is the warning bar from the universal fragment, and the no-alias rule above is about the core being unreachable from outside the repository, not about the targets it links.
+The alias is for the configure-time typo check the universal fragment describes, not for consumers: nothing outside the repository links the core, and an alias changes nothing about that. `myproj::warnings` is the warning bar from the same fragment.
 
 `app/CMakeLists.txt` builds the binary:
 
@@ -37,7 +39,7 @@ add_executable(myproj
     options.cpp
 )
 
-target_link_libraries(myproj PRIVATE myproj_core myproj::warnings)
+target_link_libraries(myproj PRIVATE myproj::core myproj::warnings)
 
 target_include_directories(myproj SYSTEM PRIVATE
     "${PROJECT_SOURCE_DIR}/extern/CLI11/include"
@@ -52,7 +54,7 @@ There is no one-file exemption. The smallest application still has `src/` and a 
 
 The binary lands in the build configuration's `bin/` (for example `build/dev/bin/`) via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
 
-```
+```text
 build/
   dev/
     bin/
@@ -95,7 +97,7 @@ endif()
 
 # MYPROJ_BINARY_PATH_OVERRIDE points the functional tests at a binary other than
 # the one just built: a downloaded release asset, or an installed copy, to check
-# a published artifact behaves. Unset, which is the normal case including in CI,
+# a published artefact behaves. Unset, which is the normal case including in CI,
 # the build-tree path above is used.
 if(MYPROJ_BINARY_PATH_OVERRIDE)
     set(MYPROJ_BINARY_PATH "${MYPROJ_BINARY_PATH_OVERRIDE}")
@@ -107,12 +109,12 @@ target_compile_definitions(myproj_functional_tests PRIVATE
 )
 ```
 
-`MYPROJ_TEST_DIR` provides the path to the `test/` source directory, replacing any runtime `__file__`-style path discovery. Tests access both via the `TestEnvironment` singleton; see the C++ testing-functional fragment.
+`MYPROJ_TEST_DIR` provides the path to the `test/` source directory, replacing any runtime path discovery relative to the test binary. Tests access both via the `TestEnvironment` singleton; see the C++ testing-functional fragment.
 
 In test code:
 
 ```cpp
-auto result = Run(MYPROJ_BINARY_PATH, {"create", "--version", "1", input_dir});
+auto result = Run(MYPROJ_BINARY_PATH, {"create", input_dir, "out.dat"});
 REQUIRE(result.returncode == 0);
 ```
 
@@ -130,7 +132,7 @@ target_include_directories(myproj_unit_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 target_link_libraries(myproj_unit_tests PRIVATE
-    myproj_core
+    myproj::core
     myproj::warnings
     Catch2::Catch2WithMain
 )

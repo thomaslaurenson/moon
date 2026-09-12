@@ -25,7 +25,7 @@ Default `OFF`: the integration binary is not built at all in a normal configure,
 
 ## Test target
 
-Guard the whole target on the option. It links the library through its alias, the same as the unit binary:
+Guard the whole target on the option. It links the library through its alias, the same as the unit binary; in an application that is `myproj::core` rather than `myproj::myproj`:
 
 ```cmake
 if(MYPROJ_INTEGRATION)
@@ -38,7 +38,11 @@ if(MYPROJ_INTEGRATION)
         "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     )
 
-    target_link_libraries(myproj_integration_tests PRIVATE myproj::myproj Catch2::Catch2WithMain)
+    target_link_libraries(myproj_integration_tests PRIVATE
+        myproj::myproj
+        myproj::warnings
+        Catch2::Catch2WithMain
+    )
 
     # Bake the data path in at configure time when given. If absent, the tests
     # fall back to an environment variable at runtime and skip cleanly if
@@ -70,7 +74,7 @@ namespace fs = std::filesystem;
 
 namespace myproj::testing {
 
-/// Returns the path to the real integration dataset, or an empty optional.
+/// Returns the path to the real integration dataset, or an empty optional
 ///
 /// Checks in order:
 ///   1. MYPROJ_INTEGRATION_DATA compile-time define (from -DMYPROJ_INTEGRATION_DATA=...)
@@ -103,7 +107,7 @@ Two sources rather than one because they serve different people: the CMake defin
 
 Whether that variable has a default, and what it is, is the project's decision. The test that matters is whether the default means the same thing on every machine. A path inside the repository does: a conventional directory the project sets aside for inputs it cannot commit is the same path for everyone who clones it, so defaulting to it makes the layer work with no configuration once the files are in place. A path outside the repository does not: an install location varies by machine, by operating system and by how the thing was installed, so a default pointing there is a guess that is wrong more often than right. Guess at neither, and never hardcode a path in a test.
 
-`fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable: an `MYPROJ_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
+`fs::exists` rather than `fs::is_directory`, so the one resolver accepts a dataset that is a single file or a whole directory; a test that needs a particular shape asserts it itself. A dependency that is a live service rather than data on disk follows the same shape with a separate variable: a `MYPROJ_INTEGRATION_ENDPOINT` holding a URL instead of a path, resolved from the same compile-time-define-then-environment order and skipped the same way when unset.
 
 ## Skipping
 

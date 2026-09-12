@@ -6,7 +6,7 @@ Language-agnostic Makefile conventions. Language-specific targets live in the re
 - A target name reads as an instruction: `build`, `test`, `format`, `check_mod`. Name the action, not the artefact it leaves behind. Where a short established name is clearer than a manufactured verb, use it (`ci`, `clean`, `help`, `snapshot`, `vuln`) rather than inventing `run_ci` or `scan_vulnerabilities`.
 - A workflow step calls `make <target>` when the step is useful locally, appears in more than one workflow, or contains non-trivial logic. A one-line `gh release create` or `docker push` that only ever runs in CI stays in the workflow.
 - Target names use underscores: `check_format`, `test_coverage`.
-- Related targets share a prefix, so tab completion lists the family: `check_format`, `check_mod`, `check_cross`; `get_changelog`, `get_version`. A family prefix is never also a bare target, since completing it would stop at the bare one instead of offering the family. `test` is the one deliberate exception, because `make test` is a convention across every ecosystem and worth more than the ambiguity.
+- Related targets share a prefix, so tab completion lists the family: `check_format`, `check_mod`, `check_cross`; `get_changelog`, `get_version`. A bare target that is also a family prefix is the family's everyday member and nothing else: `test` runs the unit layer beside `test_coverage`, and `configure` and `build` act on the everyday tree beside `configure_lint` and `build_fuzz`. Any other prefix stays a prefix, since completing it would otherwise stop at the bare target instead of offering the family.
 - Keep lines to 100 characters.
 
 Non-negotiable:

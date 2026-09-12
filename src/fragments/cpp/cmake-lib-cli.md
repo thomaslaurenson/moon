@@ -4,7 +4,7 @@ CMake conventions for a project that is a reusable library first and ships a thi
 
 This tier is both of its neighbours at once: a public API behind `include/` like a library, and a shipped binary with functional tests and a release matrix like an application. It is the single CMake fragment for a lib-cli project and states the combined target shape in full, so nothing here defers to cmake-lib or cmake-app for a target; the layout comes from the two scaffolding fragments, one per half.
 
-How it differs from those neighbours: a plain library has no compiled binary to ship or spawn, so it needs no `app/`, no Docker release and no functional test layer. A plain application has a binary but no reusable core behind a public API, so its `src/` builds an internal core library with no `include/` and no alias. A lib-cli has both halves. All real logic lives in the library so it stays unit-testable and reusable by other projects; the executable is a thin wrapper that parses arguments and calls into the library.
+How it differs from those neighbours: a plain library has no compiled binary to ship or spawn, so it needs no `app/`, no Docker release and no functional test layer. A plain application has a binary but no reusable core behind a public API, so its `src/` builds an internal core library with no `include/`. A lib-cli has both halves. All real logic lives in the library so it stays unit-testable and reusable by other projects; the executable is a thin wrapper that parses arguments and calls into the library.
 
 ## Layout
 

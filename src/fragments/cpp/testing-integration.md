@@ -25,7 +25,7 @@ Default `OFF`: the integration binary is not built at all in a normal configure,
 
 ## Test target
 
-Guard the whole target on the option. It links the library through its alias, the same as the unit binary:
+Guard the whole target on the option. It links the library through its alias, the same as the unit binary; in an application that is `myproj::core` rather than `myproj::myproj`:
 
 ```cmake
 if(MYPROJ_INTEGRATION)

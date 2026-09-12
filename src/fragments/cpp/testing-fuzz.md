@@ -51,7 +51,7 @@ The instrumentation is global and independent of `MYPROJ_ASAN`, for the reason t
 
 ## Harness target
 
-Each harness links its library and the libFuzzer runtime. The runtime is the only thing added here; the instrumentation came from the option above and is already on every object the harness links.
+Each harness links its library, `myproj::core` in an application, and the libFuzzer runtime. The runtime is the only thing added here; the instrumentation came from the option above and is already on every object the harness links.
 
 ```cmake
 # test/fuzz/CMakeLists.txt

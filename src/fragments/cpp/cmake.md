@@ -28,7 +28,7 @@ test/                 # see cpp/testing.md for internal structure
 Two rules hold across every tier, and the tier fragments assume them:
 
 - **`src/` never contains `main()`.** The entry point lives in `app/`, in the tiers that have one. Keeping it out of `src/` is what allows the whole implementation to be compiled once, linked by both the binary and the test binaries, and reused by another project later.
-- **`src/` always builds a library target.** For a library that target is the deliverable; for an application it is an internal detail with no `include/` and no alias. Either way, tests link it rather than recompiling its sources, so the test build cannot drift from the real one.
+- **`src/` always builds a library target.** For a library that target is the deliverable; for an application it is an internal detail with no `include/`. Either way, tests link it rather than recompiling its sources, so the test build cannot drift from the real one.
 
 The two questions that place a project in a tier are therefore independent: does it expose a public API (`include/`, so cmake-lib or cmake-lib-cli), and does it ship a binary (`app/`, so cmake-app or cmake-lib-cli)?
 

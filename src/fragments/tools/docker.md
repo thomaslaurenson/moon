@@ -1,13 +1,6 @@
 # Docker conventions
 
-Conventions for Dockerfile and Docker Compose files across all projects.
-
-## Design principles
-
-- Every service is built from a Dockerfile; never reference images directly in Compose
-- Images are always pinned to a specific version; never use `latest` or untagged images
-- Keep images as close to the official base as possible; avoid unnecessary packages
-- Reproducibility over convenience; every build must produce the same result
+Conventions for every Dockerfile. Docker Compose has a fragment of its own.
 
 ## Images
 
@@ -31,10 +24,9 @@ FROM alpine
 
 Select the base image in this order:
 
-1. **Alpine**: default for all services. Minimal, small, and widely supported.
+1. **Alpine**: the default. Minimal, small, and widely supported. Where the official language image has an Alpine variant (`python:3.12-alpine`, `golang:1.22-alpine`), that is the same choice with the toolchain already installed, and beats installing the toolchain onto `alpine` by hand.
 2. **Debian slim**: when Alpine's musl libc causes compatibility issues with C extensions or native libraries. Always add a comment explaining why Alpine was not used.
 3. **`scratch`**: for precompiled static binaries. Zero OS overhead.
-4. **Language-specific Alpine variants**: e.g. `python:3.12-alpine`, `golang:1.22-alpine` where the official image provides an Alpine base.
 
 ```dockerfile
 # Deviating from Alpine - a native dependency ships no musllinux wheel, so Alpine
@@ -266,124 +258,4 @@ Authenticate with the automatic `github.token` and pass it through the environme
           docker tag myapp "$IMAGE:latest"
           docker push "$IMAGE:${GITHUB_REF_NAME}"
           docker push "$IMAGE:latest"
-```
-
-## Docker Compose
-
-### Structure
-
-Each service lives in its own directory containing a `Dockerfile` and, when needed, a `.dockerignore`. The location of service directories depends on the project type:
-
-**Standalone docker or infrastructure project**: service directories at the project root:
-
-```text
-api/
-  Dockerfile
-postgres/
-  Dockerfile
-docker-compose.yml
-```
-
-**Monorepo**: service directories under a `docker/` folder:
-
-```text
-docker/
-  api/
-    Dockerfile
-  postgres/
-    Dockerfile
-src/
-docker-compose.yml
-```
-
-`docker-compose.yml` always lives at the project root.
-
-### Build context
-
-Every service must use a Dockerfile with an explicit build context. Never use the `image:` key directly; even for unmodified third-party images. This is a hard rule:
-
-```yaml
-# Good - always use a Dockerfile
-services:
-  postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-
-# Bad - never reference an image directly
-services:
-  postgres:
-    image: postgres:16.2-alpine
-```
-
-A Dockerfile for an unmodified third-party image contains only the `FROM` line until customisation is needed:
-
-```dockerfile
-FROM postgres:16.2-alpine
-```
-
-### Version field
-
-Never include the `version:` field. It is deprecated in Docker Compose V2 and must not be added:
-
-```yaml
-# Good
-services:
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-
-# Bad - version field is deprecated
-version: "3.8"
-services:
-  api:
-    ...
-```
-
-### Volumes
-
-Use named volumes for all persistent data. Never use anonymous volumes; they are untrackable and difficult to manage. Always declare named volumes explicitly at the bottom of `docker-compose.yml`:
-
-```yaml
-services:
-  postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
-### Networking
-
-Single-service projects do not need explicit network configuration; Docker Compose provides a default network automatically.
-
-Multi-service projects must define a named `backend` network for private inter-service communication. Never expose internal services directly to the host network. Always declare networks explicitly at the bottom of `docker-compose.yml` alongside volumes:
-
-```yaml
-services:
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    networks:
-      - backend
-
-  postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-    networks:
-      - backend
-
-networks:
-  backend:
-    driver: bridge
-
-volumes:
-  postgres_data:
 ```

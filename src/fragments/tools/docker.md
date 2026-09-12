@@ -76,7 +76,13 @@ RUN useradd -m -u 1001 myapp
 USER myapp
 ```
 
-The `USER` instruction must appear before `CMD` or `ENTRYPOINT`. This rule does not apply to `scratch` images; there is no user system available.
+The `USER` instruction must appear before `CMD` or `ENTRYPOINT`.
+
+A `scratch` image has no `adduser` and no passwd file, and needs neither: `USER` accepts a numeric id, and the kernel needs no name to run as it. The rule holds there too:
+
+```dockerfile
+USER 1001:1001
+```
 
 ### Package installation
 
@@ -143,6 +149,7 @@ RUN <build a statically linked binary into /src/out/myapp>
 # Stage 2: Runtime
 FROM scratch
 COPY --from=build /src/out/myapp /myapp
+USER 1001:1001
 ENTRYPOINT ["/myapp"]
 ```
 
@@ -154,14 +161,14 @@ No multi-stage rule applies to interpreted languages; use project judgement.
 
 ### Healthchecks
 
-Every Dockerfile must define a `HEALTHCHECK`. Use these standard defaults unless the project has a specific reason to deviate:
+Every image that runs a service, meaning a container that stays up and answers, defines a `HEALTHCHECK`. An image for a command line tool defines none: its container runs one command and exits, so there is nothing to keep checking. Use these standard defaults unless the project has a specific reason to deviate:
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD <check command>
 ```
 
-This rule does not apply to `scratch`-based runtime images: there is no shell or userland for a check command to run in. A statically linked binary on `scratch` cannot host a `HEALTHCHECK`; rely on orchestrator-level probes (Kubernetes liveness/readiness, Compose `healthcheck` on a wrapping service) instead.
+On `scratch` there is no shell, so the shell form is unavailable and `wget`, `nc` and `pgrep` are absent. The exec form still runs, and the binary is the only thing there to run, so a service on `scratch` checks itself with a subcommand written for the purpose: `HEALTHCHECK CMD ["/myapp", "health"]`. A service with no such subcommand leaves the check to the orchestrator and says so in a comment on the final stage.
 
 Choose the check command appropriate to the service:
 
@@ -218,6 +225,7 @@ LABEL org.opencontainers.image.description="One sentence, the same as the reposi
 LABEL org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /src/build/bin/myapp /myapp
+USER 1001:1001
 ENTRYPOINT ["/myapp"]
 ```
 

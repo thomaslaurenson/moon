@@ -113,7 +113,7 @@ goreleaser writes the binaries into `dist/`. Everything else a release publishes
 
 The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums or signing, because gpipe cannot run against a `dev` tag at all (see the gpipe fragment). `prerelease.yml` therefore needs `contents: write` and not `id-token: write`.
 
-`dev` is a real git tag that moves, which is why checkout needs both `fetch-depth: 0` and `fetch-tags: true`: `git tag -f` has to see the existing tag.
+`dev` is a real git tag that moves. Deleting the old release with `--cleanup-tag` removes it, and `gh release create dev --target <sha>` then creates a fresh one at the built commit, so there is no `git tag -f` step and no push. Pass `--target` explicitly rather than letting `gh` default it to the head of the default branch, which can already have moved on by the time the job publishes. `fetch-depth: 0` stays, because goreleaser reads the release tags to compute the snapshot version.
 
 ```yaml
 # prerelease.yml
@@ -131,7 +131,6 @@ jobs:
       - uses: actions/checkout@vN
         with:
           fetch-depth: 0
-          fetch-tags: true
 
       - uses: actions/setup-go@vN
         with:
@@ -151,13 +150,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Tag and push dev
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f dev
-          git push origin dev --force
-
       - name: Build binaries
         uses: goreleaser/goreleaser-action@<sha> # v<version>
         with:
@@ -167,6 +159,7 @@ jobs:
       - name: Create dev release
         run: |
           gh release create dev \
+            --target "${GITHUB_SHA}" \
             --title "Dev (Pre-release)" \
             --notes "Built from commit ${GITHUB_SHA}" \
             --prerelease \
@@ -183,4 +176,4 @@ Three outcomes, three behaviours: the release exists, so delete it; `gh` reports
 
 `2>&1 >/dev/null` captures stderr while discarding stdout, and the order matters. Redirections apply left to right, so this points stderr at the still-open capture and only then sends stdout to `/dev/null`. Writing `>/dev/null 2>&1` sends both to `/dev/null`, leaves `err` empty, and the not-found branch can never match.
 
-Never write this as `gh release delete dev --yes --cleanup-tag || true`. That collapses all three outcomes into one and continues regardless. `--cleanup-tag` deletes the git tag along with the release, which step 2 then recreates at the new commit.
+Never write this as `gh release delete dev --yes --cleanup-tag || true`. That collapses all three outcomes into one and continues regardless. `--cleanup-tag` deletes the git tag along with the release, which `gh release create --target` then recreates at the new commit.

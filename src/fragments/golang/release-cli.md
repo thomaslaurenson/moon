@@ -35,7 +35,7 @@ git:
 
 `git.ignore_tags` belongs in both configs, not just the prerelease one. The prerelease channel publishes under a moving `dev` tag (see below), so once a developer has fetched tags, goreleaser's own tag discovery names that tag as the last release. A tagged CI release never sees it, because `GORELEASER_CURRENT_TAG` overrides discovery outright, and neither does the prerelease build, which already carried the setting. What it fixes is the local preview:
 
-```
+```text
 $ make snapshot        # without it
 dev-SNAPSHOT-120e4d7
 $ make snapshot        # with it

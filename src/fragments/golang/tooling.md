@@ -45,7 +45,7 @@ Locally the directive is only a minimum, and a newer installed toolchain always 
 
 Dependabot does not bump the `go` directive; it updates module requirements only. Raise the minor version deliberately when moving to a new Go release, and raise it with `go mod edit`:
 
-```
+```text
 go mod edit -go=1.27      # writes "go 1.27"
 go get go@1.27            # writes "go 1.27.4", the pinned form above
 ```

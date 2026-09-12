@@ -52,7 +52,7 @@ Golden files follow the same rule. If a test compares against a large expected o
 
 Naming the package is not a stylistic preference. `-update` is an ordinary `flag.Bool` registered by the test file that owns the goldens, so it exists only in that package's test binary. Every other package that has tests rejects it, which for a project built to these specs is at least `cmd/`:
 
-```
+```text
 $ go test ./... -update
 flag provided but not defined: -update
 FAIL    github.com/owner/mytool/cmd

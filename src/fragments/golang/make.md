@@ -6,13 +6,13 @@ Targets common to every Go project (see the Makefile conventions fragment for st
 
 `build` stamps `VERSION` into the binary, so it is declared at the top with the other variables:
 
-```make
+```makefile
 VERSION := $(shell git describe --tags --always --dirty --match 'v*' 2>/dev/null || echo dev)
 ```
 
 Declaring it at all is the first half. Make expands an undefined `VERSION` to the empty string rather than complaining, so `-X <module>/cmd.Version=` stamps an empty version. That is not the `"dev"` the version block falls back from, so it wins outright and the build-info recovery never runs (see the scaffolding fragment). Cobra then registers no `--version` flag, because it only adds one when `Version` is non-empty:
 
-```
+```text
 $ ./mytool version
                                      # empty
 $ ./mytool --version
@@ -25,7 +25,7 @@ Each flag is doing a job. `--always` falls back to a short commit hash where no 
 
 `--match 'v*'` is the one that is easy to leave off and wrong to. The prerelease process publishes its channel under a moving `dev` tag (see the release fragment), so as soon as a developer has fetched tags, an unmatched `git describe` names that tag instead of the last release:
 
-```
+```text
 $ git describe --tags --always --dirty              # dev tag fetched
 dev-dirty
 $ git describe --tags --always --dirty --match 'v*'
@@ -57,7 +57,7 @@ The testing fragments own the rules these recipes implement: `-race -count=1` on
 
 Prints the `CHANGELOG.md` section for one release to stdout. Git tags are `v`-prefixed (`v1.2.3`) but changelog headers are bare (`## 1.2.3 - ...`, see the changelog fragment), so the target strips a leading `v` from `TAG` before matching. It exits non-zero when `TAG` is empty or no entry matches, so a release never publishes empty notes. Use this implementation verbatim rather than rewriting the extraction per project:
 
-```make
+```makefile
 .PHONY: get_changelog
 get_changelog: ## Print release notes for TAG to stdout (TAG=v1.0.0)
 	@tag="$(TAG)"; tag="$${tag#v}"; \

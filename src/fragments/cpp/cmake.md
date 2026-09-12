@@ -150,7 +150,7 @@ cmake --build build/dev
 | Directory | Why it is separate |
 |---|---|
 | `build/dev` | The default: everything testable, the daily build |
-| `build/release` | The shipped artifact: optimised, testing off, produced by the Dockerfile or a release job |
+| `build/release` | The shipped artefact: optimised, testing off, produced by the Dockerfile or a release job |
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
 | `build/coverage` | Different code generation: clang's instrumentation, so pinned to clang whatever the everyday compiler is |

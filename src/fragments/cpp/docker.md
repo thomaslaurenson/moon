@@ -44,9 +44,9 @@ ENTRYPOINT ["/myproj"]
 ```
 
 - `alpine` is the builder because its libc is musl, and `-static` against musl is what produces a binary with no loader and no libc version floor; see One Linux binary, not two in cpp/workflows-app.md for why that is the Linux artefact. The Docker fragment prefers Alpine anyway, so nothing is overridden. Do not copy the tag from this document as the version to match: Dependabot keeps it current (see the Dependabot fragment).
-- `-DCMAKE_EXE_LINKER_FLAGS="-static"` is not optional, and leaving it out fails in a way that is easy to miss: the image builds fine, and the container then exits immediately with `no such file or directory` on a binary that plainly exists. What is missing is `/lib/ld-musl-x86_64.so.1`, the dynamic loader, which `scratch` does not have. The smoke run in `build.yml` is what catches it in CI (see cpp/workflows-app.md); locally, `docker run --rm <image> --version`, or `file` on the extracted binary, which should say `statically linked`.
+- `-DCMAKE_EXE_LINKER_FLAGS="-static"` is not optional. Leaving it out fails the way the Docker fragment describes for any `scratch` image, the missing loader here being `/lib/ld-musl-x86_64.so.1`. The smoke run in `build.yml` is what catches it in CI (see cpp/workflows-app.md).
 - `MYPROJ_BUILD_TESTING=OFF` keeps Catch2 out of an image that never runs tests, and `strip` cuts the binary substantially.
-- The build goes into `build/release`, the directory cpp/cmake.md reserves for the shipped artifact: optimised, testing off, nothing runs `ctest` against it.
+- The build goes into `build/release`, the directory cpp/cmake.md reserves for the shipped artefact: optimised, testing off, nothing runs `ctest` against it.
 - `build-base` rather than the individual packages, because it is Alpine's own name for the C and C++ toolchain and pulls in `musl-dev`, which the static link needs and which is easy to leave out of a hand-written list.
 - The whole checkout is the build context, submodules included: the image builds from the same `extern/` the tests do, so `docker build` follows `git submodule update --init` locally and a checkout with `submodules: true` in CI.
 
@@ -64,7 +64,7 @@ test/data/
 
 ## One Dockerfile
 
-The file is `Dockerfile`, with no suffix, so `docker build .` finds it and nothing needs `-f`. There is one because there is one Linux artifact: a static musl binary runs on every distribution, where a glibc build from the builder's distribution would not, and a second Dockerfile would be a strictly narrower duplicate of the first. The reasoning is in cpp/workflows-app.md.
+The file is `Dockerfile`, with no suffix, so `docker build .` finds it and nothing needs `-f`. There is one because there is one Linux artefact: a static musl binary runs on every distribution, where a glibc build from the builder's distribution would not, and a second Dockerfile would be a strictly narrower duplicate of the first. The reasoning is in cpp/workflows-app.md.
 
 ## Publishing
 

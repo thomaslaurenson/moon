@@ -6,7 +6,7 @@ Applies to any tier that ships a binary: an application, or a library with a bun
 
 ## Structure addition
 
-```
+```text
 test/
   functional/             # Catch2 functional tests against the compiled binary
     test_create.cpp       # mirrors the create subcommand

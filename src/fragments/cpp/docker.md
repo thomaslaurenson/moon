@@ -54,7 +54,7 @@ ENTRYPOINT ["/myproj"]
 
 Required, where the Docker fragment merely encourages it, because the context otherwise carries every local build directory into the image build:
 
-```
+```text
 build/
 .git/
 test/data/

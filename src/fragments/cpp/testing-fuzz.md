@@ -12,7 +12,7 @@ One harness per parser entry point. Do not write a harness for pure logic with n
 
 ## Structure
 
-```
+```text
 test/
   fuzz/
     CMakeLists.txt

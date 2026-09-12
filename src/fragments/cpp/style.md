@@ -37,7 +37,7 @@ Enforced by clang-tidy's `readability-identifier-naming`.
 
 Relying on a transitive include is not a style preference, it is a portability bug that only one of the three standard libraries reports. libstdc++ and libc++ pull in far more than they promise; MSVC's STL does not. The result is a file that compiles on Linux and macOS for years and fails the first time anyone builds it on Windows, with an error that names a type rather than the missing header:
 
-```
+```text
 error C2079: 'data' uses undefined class 'std::array<uint8_t,1>'
 ```
 

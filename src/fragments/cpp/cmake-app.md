@@ -52,7 +52,7 @@ There is no one-file exemption. The smallest application still has `src/` and a 
 
 The binary lands in the build configuration's `bin/` (for example `build/dev/bin/`) via the universal `CMAKE_RUNTIME_OUTPUT_DIRECTORY` setting:
 
-```
+```text
 build/
   dev/
     bin/

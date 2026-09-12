@@ -8,7 +8,7 @@ CLI11 is the argument parser, pinned as a submodule under `extern/CLI11` like ev
 
 A tier that ships a binary adds `app/` and the release files to the universal layout in the CMake fragment. In an application `src/` is an internal core with no `include/`; in a library with a bundled CLI it is the library the library scaffolding fragment lays out, and `app/` sits beside it unchanged:
 
-```
+```text
 src/                   # the core: every line of logic, built as a library; never main()
   CMakeLists.txt
 app/                   # the CLI: main() plus argument wiring, and nothing else
@@ -29,7 +29,7 @@ One Dockerfile, building a statically linked musl binary into a scratch image; t
 
 `app/` holds the entry point and one file per subcommand, and nothing else:
 
-```
+```text
 app/
   CMakeLists.txt
   main.cpp        # builds the App, registers subcommands, catches
@@ -167,7 +167,7 @@ The convention then costs a path shape and buys nothing. Leaving it on is what m
 
 Every C++ CLI ships a `completion` subcommand that prints the script for a named shell to stdout, for bash, zsh, fish and PowerShell, and the user installs it. CLI11 generates none of them, so they are written by hand and kept in a top-level `completion/` directory, one per shell, embedded at configure time with `configure_file` so the binary needs no files beside it:
 
-```
+```text
 completion/
   myproj.bash
   myproj.zsh

@@ -6,7 +6,7 @@ How a library is laid out and what a consumer sees of it. Assumes the C++ style 
 
 A library separates its public API from its implementation, and organises both by module:
 
-```
+```text
 include/myproj/         # public headers: the API consumers see, and nothing else
   errors.h              # the exception hierarchy; see the error handling fragment
   archive/

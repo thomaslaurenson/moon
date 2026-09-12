@@ -13,7 +13,7 @@ Conventions for CMake-based C++ projects. Universal to every tier; the target de
 
 Every C++ project contains at least these at the root; the tier's scaffolding fragment (scaffolding-lib, scaffolding-cli, or both for a lib-cli) adds `include/`, `app/`, `completion/` and the release files as its tier requires:
 
-```
+```text
 .clang-format
 .clang-tidy
 .github/
@@ -180,7 +180,7 @@ Because binaries land in `${PROJECT_BINARY_DIR}/bin`, a path that was `build/bin
 
 Every directory that produces a target or manages a distinct concern has its own `CMakeLists.txt`. The root never defines a project target; it orchestrates. The one kind of target it does define is a wrapper for a dependency that ships no `CMakeLists.txt` of its own: the `INTERFACE` library around a header-only dependency, or the `STATIC` target around vendored C sources (see Dependencies). Each sits beside the existence check for the dependency it wraps, which is what keeps it from being mistaken for project code.
 
-```
+```text
 CMakeLists.txt        # project settings, dependencies, add_subdirectory calls
 src/
   CMakeLists.txt      # defines the library target; see the tier fragment
@@ -385,7 +385,7 @@ A sanitized build changes code generation, so it gets its own `build/asan` direc
 
 All external dependencies are git submodules pinned to a specific commit, stored under `extern/`:
 
-```
+```text
 extern/
   ThirdPartyLib/
   Catch2/

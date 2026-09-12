@@ -20,7 +20,7 @@ Do not point it at the everyday `build/dev` instead. That build uses whatever co
 
 When clang-tidy processes multiple files it prints a running cumulative count:
 
-```
+```text
 [1/6] Processing file src/helpers.cpp.
 [2/6] Processing file src/main.cpp.
 ```

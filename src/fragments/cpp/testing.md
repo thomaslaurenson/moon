@@ -32,7 +32,7 @@ A library that computes rather than parses, and needs no input it cannot build i
 
 Every layer lives under `test/`, including fuzz harnesses. A project with modules under `src/<module>/` mirrors that structure inside `test/unit/`:
 
-```
+```text
 test/
   CMakeLists.txt
   data/                   # static inputs; tests read, never write

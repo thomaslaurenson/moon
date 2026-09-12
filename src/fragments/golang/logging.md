@@ -60,6 +60,8 @@ func newLogger(w io.Writer, debug bool) *slog.Logger {
 }
 ```
 
+A slog line carries no marker from the command line output fragment. Its `level=` field already says what kind of line it is, and the key=value form is for grepping rather than reading, which is the exemption that fragment gives to output shaped for another program. The markers belong on the lines the tool writes for a person with `fmt.Fprintf`: the `[!]` on a fatal error, the `[*]` on progress.
+
 Do not call `slog.Info` and friends, or `slog.Default`, from `internal/`. Those read a package-level logger, which is the process-global state the style fragment rules out, and it makes a test's output depend on what some other test configured.
 
 Pass attributes rather than interpolating them:

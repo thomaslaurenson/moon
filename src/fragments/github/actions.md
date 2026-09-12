@@ -4,7 +4,7 @@ Language-agnostic CI conventions. Per-language paths filters, setup steps, and r
 
 - Prefer official `actions/*` wherever one exists, and publish releases with the `gh` CLI rather than a release action. The third-party actions in the table below each do a job no `actions/*` covers. `goreleaser-action` is the one that looks like an exception and is not: it builds binaries and does not publish, so `gh release create` still does the publishing.
 - Which workflow steps become `make` targets is settled in the Makefile fragment; version and changelog extraction always are.
-- Minimal permissions: `contents: read` by default; `contents: write` only in release and prerelease workflows. Test workflows never declare `contents: write`.
+- Minimal permissions: `contents: read` by default; `contents: write` only in release and prerelease workflows. Test workflows never declare `contents: write`. Every caller declares `contents: read` at the top and widens it on the jobs that need more, since a caller with no block inherits the repository default, which may be read and write.
 - No `fetch-depth: 0` unless a step actually reads git history. Changelog extraction does not: `get_changelog` reads `CHANGELOG.md` out of the working tree, which a default depth-1 checkout has in full. The real cases are tools that inspect history or tags, such as goreleaser, tag-based versioning, and `git tag -f` against an existing tag. A release that only runs `gh release create` needs the default depth.
 - `gh` infers the repository from the local git remote, so any job that calls it without an `actions/checkout` step must set `GH_REPO: ${{ github.repository }}`. Otherwise every call fails with `not a git repository`, which is not a not-found answer and must not be treated as one. Set it at job level alongside `GH_TOKEN` rather than per step.
 - Never let a failed `gh` call stand in for a negative answer. An existence check has three outcomes, not two: it is there, it is not there, or the API could not say. Match the not-found message explicitly and fail the job on anything else. Both `|| true` and a bare `if gh view ...; then` collapse a rate limit, an auth failure or a flaky API into "it does not exist", and the step then does the wrong thing confidently.
@@ -101,6 +101,9 @@ concurrency:
   group: pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     uses: ./.github/workflows/lint.yml
@@ -121,6 +124,9 @@ concurrency:
   group: main-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     uses: ./.github/workflows/lint.yml
@@ -140,6 +146,9 @@ name: Tag
 on:
   push:
     tags: ["v*"]
+
+permissions:
+  contents: read
 
 jobs:
   lint:

@@ -63,8 +63,6 @@ jobs:
 
 This is what the decoupling in `test.yml` buys, and it is worth protecting. The moment `test` downloads something `build` produced, that edge has to exist, and gating a platform off a pull request then breaks the test matrix rather than just saving money.
 
-Declare `permissions: contents: read` at the top of every caller and widen it on the jobs that need more. A caller with no top-level block inherits the repository default, which may be read and write.
-
 No `secrets: inherit`: every job here authenticates with the automatic `github.token`, so nothing needs to be forwarded. Add `secrets: inherit` only if a workflow genuinely reads a repository secret.
 
 `id-token: write` has to appear on the caller's `release` job as well as inside `release.yml`. A reusable workflow cannot widen its own permissions beyond what the caller grants, so declaring it only in the callee fails at signing time with an OIDC token request error.

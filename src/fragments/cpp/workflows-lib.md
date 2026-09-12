@@ -64,8 +64,6 @@ jobs:
       contents: write
 ```
 
-Declare `permissions: contents: read` at the top of every caller and widen it on the single job that needs more. Without a top-level block the caller inherits the repository default, which may be read and write; a caller that has never said what it needs is one setting away from handing write access to every job it composes.
-
 No `needs:` between `lint` and `test`. Neither consumes the other's output, so wiring them in series only delays the faster signal behind the slower one.
 
 ## `test.yml`

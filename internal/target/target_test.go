@@ -21,8 +21,6 @@ func TestGlobForBundle(t *testing.T) {
 		{"bash-script", "**/*.sh"},
 		{"bash-project", "**"},
 		{"powershell-script", "**/*.ps1"},
-		{"wow-addon", "**"},
-		{"wow-lua", "**/*.lua"},
 		{"markdown", "**/*.md"},
 		{"docker", "**/{Dockerfile,docker-compose.yml,docker-compose.yaml}"},
 		{"totally-unknown-bundle", "**"},

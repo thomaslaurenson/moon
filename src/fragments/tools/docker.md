@@ -1,13 +1,6 @@
 # Docker conventions
 
-Conventions for Dockerfile and Docker Compose files across all projects.
-
-## Design principles
-
-- Every service is built from a Dockerfile; never reference images directly in Compose
-- Images are always pinned to a specific version; never use `latest` or untagged images
-- Keep images as close to the official base as possible; avoid unnecessary packages
-- Reproducibility over convenience; every build must produce the same result
+Conventions for every Dockerfile. Docker Compose has a fragment of its own.
 
 ## Images
 
@@ -31,10 +24,9 @@ FROM alpine
 
 Select the base image in this order:
 
-1. **Alpine**: default for all services. Minimal, small, and widely supported.
+1. **Alpine**: the default. Minimal, small, and widely supported. Where the official language image has an Alpine variant (`python:3.12-alpine`, `golang:1.22-alpine`), that is the same choice with the toolchain already installed, and beats installing the toolchain onto `alpine` by hand.
 2. **Debian slim**: when Alpine's musl libc causes compatibility issues with C extensions or native libraries. Always add a comment explaining why Alpine was not used.
 3. **`scratch`**: for precompiled static binaries. Zero OS overhead.
-4. **Language-specific Alpine variants**: e.g. `python:3.12-alpine`, `golang:1.22-alpine` where the official image provides an Alpine base.
 
 ```dockerfile
 # Deviating from Alpine - a native dependency ships no musllinux wheel, so Alpine
@@ -46,7 +38,7 @@ FROM python:3.12-slim
 
 Always prefer Docker Official Images (no namespace prefix). Use Vendor Verified Publisher images only when no official alternative exists:
 
-```
+```text
 # Docker Official - always preferred
 alpine, python, postgres, nginx, redis
 
@@ -76,17 +68,24 @@ RUN useradd -m -u 1001 myapp
 USER myapp
 ```
 
-The `USER` instruction must appear before `CMD` or `ENTRYPOINT`. This rule does not apply to `scratch` images; there is no user system available.
+The `USER` instruction must appear before `CMD` or `ENTRYPOINT`.
+
+A `scratch` image has no `adduser` and no passwd file, and needs neither: `USER` accepts a numeric id, and the kernel needs no name to run as it. The rule holds there too:
+
+```dockerfile
+USER 1001:1001
+```
 
 ### Package installation
 
-Avoid installing packages wherever possible. Every package that is installed must have an inline comment explaining why it is needed. Each package goes on its own line to allow per-package comments:
+Avoid installing packages wherever possible. Every package that is installed has a comment on the line above it saying what needs it. Each package goes on its own line so that each can carry one:
 
 ```dockerfile
 # Good
 RUN apk add --no-cache \
+    # TLS roots for the outbound HTTPS calls
     ca-certificates \
-    # required for timezone handling in the scheduler
+    # Timezone handling in the scheduler
     tzdata
 
 # Bad - no comments, packages on one line
@@ -109,8 +108,8 @@ When `ADD` is used, add a comment explaining why `COPY` is insufficient:
 COPY config/ /app/config/
 COPY --from=builder /app/bin/mytool /mytool
 
-# Only acceptable use of ADD
-ADD archive.tar.gz /app/  # extracting tar - COPY does not support this
+# Only acceptable use of ADD: extracting a tar, which COPY does not do
+ADD archive.tar.gz /app/
 ```
 
 ### ENTRYPOINT and CMD
@@ -143,6 +142,7 @@ RUN <build a statically linked binary into /src/out/myapp>
 # Stage 2: Runtime
 FROM scratch
 COPY --from=build /src/out/myapp /myapp
+USER 1001:1001
 ENTRYPOINT ["/myapp"]
 ```
 
@@ -154,14 +154,14 @@ No multi-stage rule applies to interpreted languages; use project judgement.
 
 ### Healthchecks
 
-Every Dockerfile must define a `HEALTHCHECK`. Use these standard defaults unless the project has a specific reason to deviate:
+Every image that runs a service, meaning a container that stays up and answers, defines a `HEALTHCHECK`. An image for a command line tool defines none: its container runs one command and exits, so there is nothing to keep checking. Use these standard defaults unless the project has a specific reason to deviate:
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD <check command>
 ```
 
-This rule does not apply to `scratch`-based runtime images: there is no shell or userland for a check command to run in. A statically linked binary on `scratch` cannot host a `HEALTHCHECK`; rely on orchestrator-level probes (Kubernetes liveness/readiness, Compose `healthcheck` on a wrapping service) instead.
+On `scratch` there is no shell, so the shell form is unavailable and `wget`, `nc` and `pgrep` are absent. The exec form still runs, and the binary is the only thing there to run, so a service on `scratch` checks itself with a subcommand written for the purpose: `HEALTHCHECK CMD ["/myapp", "health"]`. A service with no such subcommand leaves the check to the orchestrator and says so in a comment on the final stage.
 
 Choose the check command appropriate to the service:
 
@@ -200,7 +200,9 @@ COPY --from=builder /usr/bin/wget /usr/bin/wget
 COPY --from=builder /app/bin/mytool /mytool
 ```
 
-Package comments are the exception; every non-obvious package always gets a comment regardless of this rule.
+Package comments are the exception; every installed package gets one regardless of this rule.
+
+A comment is a whole line. Dockerfile has no trailing comments: a `#` after an instruction is passed to it as an argument.
 
 ### .dockerignore
 
@@ -218,6 +220,7 @@ LABEL org.opencontainers.image.description="One sentence, the same as the reposi
 LABEL org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /src/build/bin/myapp /myapp
+USER 1001:1001
 ENTRYPOINT ["/myapp"]
 ```
 
@@ -237,7 +240,7 @@ Tags:
 
 `latest` tracks releases only. Pointing it at a rolling build makes `docker pull` without a tag return whatever last landed on the default branch, which is the opposite of what the tag means to everyone who uses it.
 
-**Build the image once and push the bytes that were built.** The build job saves the image with `docker save` and uploads it as an artifact; the publishing job downloads it, `docker load`s it and pushes. Rebuilding at publish time produces an image nobody tested, and the difference only shows up when the two disagree.
+**Build the image once and push the bytes that were built.** The build job saves the image with `docker save` and uploads it as an artefact; the publishing job downloads it, `docker load`s it and pushes. Rebuilding at publish time produces an image nobody tested, and the difference only shows up when the two disagree.
 
 **Publish in a separate job, gated on the release having succeeded.** A registry outage then leaves a complete release with no image, which is recoverable, rather than an image with no release.
 
@@ -255,124 +258,4 @@ Authenticate with the automatic `github.token` and pass it through the environme
           docker tag myapp "$IMAGE:latest"
           docker push "$IMAGE:${GITHUB_REF_NAME}"
           docker push "$IMAGE:latest"
-```
-
-## Docker Compose
-
-### Structure
-
-Each service lives in its own directory containing a `Dockerfile` and, when needed, a `.dockerignore`. The location of service directories depends on the project type:
-
-**Standalone docker or infrastructure project**: service directories at the project root:
-
-```
-api/
-  Dockerfile
-postgres/
-  Dockerfile
-docker-compose.yml
-```
-
-**Monorepo**: service directories under a `docker/` folder:
-
-```
-docker/
-  api/
-    Dockerfile
-  postgres/
-    Dockerfile
-src/
-docker-compose.yml
-```
-
-`docker-compose.yml` always lives at the project root.
-
-### Build context
-
-Every service must use a Dockerfile with an explicit build context. Never use the `image:` key directly; even for unmodified third-party images. This is a hard rule:
-
-```yaml
-# Good - always use a Dockerfile
-services:
-  postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-
-# Bad - never reference an image directly
-services:
-  postgres:
-    image: postgres:16.2-alpine
-```
-
-A Dockerfile for an unmodified third-party image contains only the `FROM` line until customisation is needed:
-
-```dockerfile
-FROM postgres:16.2-alpine
-```
-
-### Version field
-
-Never include the `version:` field. It is deprecated in Docker Compose V2 and must not be added:
-
-```yaml
-# Good
-services:
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-
-# Bad - version field is deprecated
-version: "3.8"
-services:
-  api:
-    ...
-```
-
-### Volumes
-
-Use named volumes for all persistent data. Never use anonymous volumes; they are untrackable and difficult to manage. Always declare named volumes explicitly at the bottom of `docker-compose.yml`:
-
-```yaml
-services:
-  postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
-### Networking
-
-Single-service projects do not need explicit network configuration; Docker Compose provides a default network automatically.
-
-Multi-service projects must define a named `backend` network for private inter-service communication. Never expose internal services directly to the host network. Always declare networks explicitly at the bottom of `docker-compose.yml` alongside volumes:
-
-```yaml
-services:
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    networks:
-      - backend
-
-  postgres:
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
-    networks:
-      - backend
-
-networks:
-  backend:
-    driver: bridge
-
-volumes:
-  postgres_data:
 ```

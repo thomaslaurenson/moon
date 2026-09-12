@@ -11,7 +11,7 @@ Applies to every tier. A library follows "Library code takes a stream" and nothi
 
 The test is simple. Redirect stdout to a file and the file should contain the answer and nothing more. A progress line, an "added 3 files" note, or a warning landing in that file means the split is wrong.
 
-Which marker each message takes is settled in the core conventions, and the vocabulary there is the whole of it. A marker says what kind of message a line is, never which stream it goes to; those are separate decisions and this fragment owns the second.
+Which marker each message takes is settled in the command line output fragment, and the vocabulary there is the whole of it. A marker says what kind of message a line is, never which stream it goes to; those are separate decisions and this fragment owns the second.
 
 ## Library code takes a stream
 

@@ -2,8 +2,10 @@
 # No Doxygen fragment: an application has no public API, so its headers are internal and
 # documented where they are not self-evident rather than as a contract to strangers.
 _core.md
+git/commits.md
 cpp/style.md
 cpp/errors.md
+cli/output.md
 cpp/logging.md
 cpp/scaffolding-cli.md
 cpp/signals.md

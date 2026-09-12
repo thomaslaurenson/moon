@@ -1,3 +1,5 @@
 # Authoring Dockerfiles and Docker Compose files.
 _core.md
+git/commits.md
 tools/docker.md
+tools/compose.md

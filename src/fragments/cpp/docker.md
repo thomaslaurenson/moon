@@ -4,7 +4,7 @@ Supplements the Docker fragment. Applies to any tier that ships a binary: an app
 
 ## What it inherits
 
-The Docker fragment's rules apply unchanged: a minor-version pin on the base image, official images only, `COPY` over `ADD`, exec-form `ENTRYPOINT`, stage heading comments and no others that narrate, OCI labels on the final stage, and the registry rules for tags, building once and publishing in a separate job. Two of its exceptions are the permanent state here rather than a special case: the runtime stage is `scratch`, so there is no `HEALTHCHECK` and no `USER`, because a statically linked binary has no shell or userland for either to run in.
+The Docker fragment's rules apply unchanged: a minor-version pin on the base image, official images only, `COPY` over `ADD`, exec-form `ENTRYPOINT`, stage heading comments and no others that narrate, OCI labels on the final stage, and the registry rules for tags, building once and publishing in a separate job. Two of its rules take their `scratch` form here: `USER` is a numeric id, since there is no passwd file to name one, and there is no `HEALTHCHECK`, because the image runs a command line tool rather than a service.
 
 What this fragment settles is the recipe those rules leave open: one Dockerfile, named `Dockerfile`, building a statically linked musl binary into a `scratch` image.
 
@@ -39,6 +39,7 @@ LABEL org.opencontainers.image.description="One sentence, the same as the reposi
 LABEL org.opencontainers.image.licenses="MIT"
 
 COPY --from=build /src/build/release/bin/myproj /myproj
+USER 1001:1001
 ENTRYPOINT ["/myproj"]
 ```
 

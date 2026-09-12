@@ -5,6 +5,6 @@ tools/makefile.md
 github/actions.md
 bash/workflows.md
 github/badges.md
-github/commits.md
+github/pulls.md
 github/changelog.md
 github/dependabot.md

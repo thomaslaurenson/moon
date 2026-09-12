@@ -2,9 +2,11 @@
 # Adds the public-API concerns an application does not have: Doxygen as a consumer
 # contract, and an exception hierarchy consumers can catch at the root.
 _core.md
+git/commits.md
 cpp/style.md
 cpp/doxygen.md
 cpp/scaffolding-lib.md
 cpp/errors.md
+cli/output.md
 cpp/logging.md
 cpp/signals.md

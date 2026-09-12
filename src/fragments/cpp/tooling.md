@@ -13,7 +13,7 @@ Applies to every tier. The embedded assets example is a CLI's completion scripts
 | `clang-format` | Format source files |
 | `clang-tidy` | Static analysis and naming |
 
-That is the whole list, and it is deliberately short. There is no second formatter, no second analyser, and no build system behind CMake. All four are pinned or version-resolved in the Makefile; see the CMake fragment for how, and why clang is pinned to one major version.
+That is the whole list, and it is deliberately short. There is no second formatter, no second analyser, and no build system behind CMake. The two clang tools are version-resolved in the Makefile; see the CMake fragment for how, and why clang is pinned to one major version.
 
 ## Choosing a dependency
 
@@ -30,11 +30,7 @@ Where the answer is a dependency, the bar is that it does something the project 
 
 Prefer header-only or single-purpose libraries that build with the project. A dependency that wants a system package, a package manager, or its own build step is a dependency that breaks somebody's build; everything here compiles from `extern/` with no prerequisites beyond a compiler.
 
-## Why the Go rules do not transfer
-
-The Go fragment bans third-party test frameworks, logging packages and CLI libraries, because Go's standard library and toolchain already provide all three well enough. C++ provides none of them, so the same ban would mean writing a test runner and an argument parser by hand in every project.
-
-What does transfer is the reasoning rather than the list. A dependency is worth taking when the standard library has no answer and the problem is genuinely hard. It is not worth taking to avoid twenty lines, because in this ecosystem it costs a submodule, a pin, an existence check, a `SYSTEM` include, and a Dependabot pull request every time upstream moves.
+A dependency is worth taking when the standard library has no answer and the problem is genuinely hard. It is not worth taking to avoid twenty lines, because here it costs a submodule, a pin, an existence check, a `SYSTEM` include, and a Dependabot pull request every time upstream moves.
 
 ## Embedded assets
 

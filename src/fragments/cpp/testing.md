@@ -70,7 +70,7 @@ cd extern/Catch2 && git checkout v3.6.0
 
 Catch2 v3 is not a single-header library; it is a compiled library with multiple headers. Always use it as a submodule, never copy individual headers.
 
-The CMake wiring (the project-scoped testing option, `enable_testing()`, and `include(Catch)`, all in the root `CMakeLists.txt`) is defined in the universal CMake fragment; each test executable's own definition is defined in the tier fragment.
+The CMake wiring (the project-scoped testing option, `enable_testing()`, and `include(Catch)`, all in the root `CMakeLists.txt`) is defined in the universal CMake fragment; each test executable is defined in the tier fragment.
 
 ### Registering tests
 

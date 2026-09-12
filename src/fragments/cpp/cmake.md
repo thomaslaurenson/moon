@@ -44,7 +44,7 @@ CMake 3.21 is the oldest version found on any supported build environment. Never
 
 ## C++ standard
 
-All projects must set a minimum C++ standard of 17. New projects should prefer 20:
+The standard is C++20. A project that predates it may still be on 17, and raises it deliberately; see the tooling fragment:
 
 ```cmake
 set(CMAKE_CXX_STANDARD 20)
@@ -153,7 +153,7 @@ cmake --build build/dev
 | `build/release` | The shipped artifact: optimised, testing off, produced by the Dockerfile or a release job |
 | `build/fuzz` | Needs Clang and `-fsanitize=fuzzer` |
 | `build/asan` | Different code generation |
-| `build/coverage` | Different code generation: clang instrumentation, and clang whatever the default compiler is |
+| `build/coverage` | Different code generation: clang's instrumentation, so pinned to clang whatever the everyday compiler is |
 | `build/32` | Different architecture |
 | `build/lint` | Different compiler: clang, so clang-tidy can parse the sources |
 

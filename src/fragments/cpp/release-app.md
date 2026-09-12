@@ -90,7 +90,6 @@ A project publishing an image adds `packages: write` to this workflow's `permiss
 
 The `release_docker` job is the Docker fragment's publishing pattern, repeated here rather than referenced so that `release.yml` is complete: the bytes pushed are the ones `build.yml` saved, the tags are the ones its table gives, and the job is separate and gated so a registry outage cannot leave a release half published.
 
-
 ### `.gpipe.yml`
 
 The gpipe fragment covers the config surface and the action inputs. What is C++ specific is that the `path` entries must match where `download-artifact` puts the binaries: with `path: dist` and `merge-multiple: true` every artefact lands flat in `dist/`, so the paths are `./dist/<asset>`.

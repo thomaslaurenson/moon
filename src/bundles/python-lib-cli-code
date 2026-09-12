@@ -3,6 +3,7 @@
 # leaving stack configuration to the consumer. Same rules as python-lib-code; the
 # logging fragment covers the entry-point-configures / modules-only-log split.
 _core.md
+git/commits.md
 python/style.md
 python/types.md
 python/docstrings.md

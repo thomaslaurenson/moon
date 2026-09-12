@@ -1,6 +1,7 @@
 # Turning agreed review findings into commits, one finding at a time. Point an agent here after a review; pair with review-findings for producing the list.
 _core.md
+git/commits.md
 tools/markdown.md
 review/fixes.md
-github/commits.md
+github/pulls.md
 github/changelog.md

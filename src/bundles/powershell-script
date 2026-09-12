@@ -1,3 +1,4 @@
 # PowerShell script (e.g. an installer). PowerShell here is script-tier only.
 _core.md
+git/commits.md
 powershell/style.md

@@ -3,6 +3,7 @@
 # the library half carries the public API, and the errors fragment covers both sides of
 # the library/app boundary that the CLI layer sits on.
 _core.md
+git/commits.md
 cpp/style.md
 cpp/doxygen.md
 cpp/scaffolding-lib.md

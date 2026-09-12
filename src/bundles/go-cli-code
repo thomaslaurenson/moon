@@ -1,5 +1,6 @@
 # Go - code-authoring rules. Point an agent here when writing or reviewing Go code.
 _core.md
+git/commits.md
 golang/style.md
 golang/scaffolding-cli.md
 golang/errors.md

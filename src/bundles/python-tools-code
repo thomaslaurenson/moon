@@ -4,5 +4,6 @@
 # not configure a logging stack. No errors/typecheck rules either - a tools project is
 # managed but not a distributed package.
 _core.md
+git/commits.md
 python/style.md
 python/types.md

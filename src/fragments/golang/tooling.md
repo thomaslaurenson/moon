@@ -10,10 +10,11 @@ Standard library first even so. Reach for an `x/` module where the standard libr
 
 | Tool | Purpose |
 |---|---|
-| `gofmt` | Format source files |
+| `goimports` | Format source files and group imports; `gofmt` alone cannot group (see the style fragment) |
 | `go vet` | Static analysis |
 | `go test` | Run tests |
 | `go mod tidy` | Keep go.mod/go.sum clean |
+| `govulncheck` | Scan for reachable vulnerabilities, on a schedule |
 
 - No `replace` directives in committed code. Run `go mod tidy` before committing.
 - Third-party release tools (`goreleaser`, `cosign`) are permitted, since they build and sign the release rather than judge the source.
@@ -60,7 +61,7 @@ It can arrive without anyone choosing it, since `go get toolchain@go1.27.0` adds
 
 ## Vulnerability scanning
 
-`govulncheck` is the one permitted addition to the toolchain table above. It is maintained by the Go team, has no configuration, and answers a question no other tool here can.
+`govulncheck` earns its row in the toolchain table: it is maintained by the Go team, has no configuration, and answers a question no other tool here can.
 
 Dependabot covers dependencies and cannot see the standard library, since the toolchain is not a go.mod requirement. On a project with a handful of dependencies the standard library is most of the attack surface, so the small dependency count argues for the scan rather than against it.
 

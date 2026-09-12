@@ -38,7 +38,11 @@ if(MYPROJ_INTEGRATION)
         "${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     )
 
-    target_link_libraries(myproj_integration_tests PRIVATE myproj::myproj Catch2::Catch2WithMain)
+    target_link_libraries(myproj_integration_tests PRIVATE
+        myproj::myproj
+        myproj::warnings
+        Catch2::Catch2WithMain
+    )
 
     # Bake the data path in at configure time when given. If absent, the tests
     # fall back to an environment variable at runtime and skip cleanly if

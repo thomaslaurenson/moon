@@ -140,7 +140,7 @@ Run a subset during development:
 
 A function gets a unit test if its behaviour can be provoked from data the test itself can build. That covers far more than pure logic: a parser gets a unit test driven by a synthetic file written to a temp directory, a socket layer gets one driven over loopback, an archive reader gets one against an archive the fixture assembled in memory. Reach for a fixture rather than reaching for the integration layer.
 
-That includes a private helper in `src/` that no public header declares. It is tested like anything else, and the unit binary has `src/` on its include path so the test reaches the header by the same path the implementation does; see the tier fragment. It is the only test binary that does.
+That includes a private helper in `src/` that no public header declares. It is tested like anything else, and the unit binary has `src/` on its include path so the test reaches the header by the same path the implementation does; see the tier fragment. A fuzz harness gets the same path for the same reason, and no other test binary does.
 
 A function only escapes to the integration layer when the input cannot be synthesised: when the test is meaningful precisely because the data is real (an actual production dataset, a live server's handshake).
 

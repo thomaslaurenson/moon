@@ -23,6 +23,7 @@ The changelog tells someone who uses the project what changed between releases. 
 - File header is `# Changelog`. Version line `## X.Y.Z - YYYY-MM-DD` (ISO date, no `v` prefix). Git tags are `v`-prefixed (`v1.2.3`); the changelog header stays bare. The release workflow's `get_changelog` target strips the leading `v` from the tag before matching this header, so the tag convention and the changelog convention never need to share a prefix.
 - Section order: Added > Changed > Fixed > Removed > Updated > Thanks.
 - Never invent a section or qualify one. There is no "Changed (testing)"; those entries go under Changed.
+- Updated holds dependency and toolchain bumps. It is the one section whose entries need no visible change in behaviour, because a consumer's own build sees them. Thanks credits people outside the project whose report or patch landed in the release, by GitHub handle.
 
 ## Length
 

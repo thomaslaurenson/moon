@@ -19,7 +19,7 @@ func TestFragmentList(t *testing.T) {
 			args: []string{"fragment", "list"},
 			check: func(t *testing.T, stdout string) {
 				if stdout != "_core\npython/style\n" {
-					t.Errorf("stdout = %q, want all fragment paths sorted", stdout)
+					t.Errorf("stdout = %q, want all fragment names sorted", stdout)
 				}
 			},
 		},

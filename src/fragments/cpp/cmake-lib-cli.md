@@ -42,7 +42,7 @@ add_library(myproj::myproj ALIAS myproj_lib)
 - The `myproj::myproj` `ALIAS` gives a consistent namespaced link name whether the library is added by this project or by a consumer's superbuild. Use the alias in every `target_link_libraries`, never the bare target name, so nothing changes if the linking mechanism does.
 - Headers live in `include/myproj/`, not directly in `include/`, so includes read `#include <myproj/parser.h>` and cannot collide with another dependency's `parser.h`.
 
-A library half that has grown modules takes the module and aggregate shape from cmake-lib.md unchanged, with one difference: the aggregate `INTERFACE` target is `myproj_lib`, not `myproj`, because the executable holds the bare name, and the alias stays `myproj::myproj` so nothing that links it changes. The examples option, the `EXCLUDE_FROM_ALL` consumption and the generated header carried by each module all apply as written there.
+A library half that has grown modules takes the module and aggregate shape from cmake-lib unchanged, with one difference: the aggregate `INTERFACE` target is `myproj_lib`, not `myproj`, because the executable holds the bare name, and the alias stays `myproj::myproj` so nothing that links it changes. The examples option, the `EXCLUDE_FROM_ALL` consumption and the generated header carried by each module all apply as written there.
 
 ## Generated version header
 
@@ -83,10 +83,10 @@ The executable stays thin: it parses arguments, calls library functions, and tur
 
 A lib-cli is the one tier that can have all four layers. Unit, integration and fuzz link the library; functional spawns the binary:
 
-- Unit tests link `myproj::myproj` and test logic, with fixtures supplying whatever input they need (see cpp/testing.md).
-- Integration tests link `myproj::myproj` and run against real data the machine must already have. Opt-in (see cpp/testing-integration.md).
-- Functional tests spawn the compiled `myproj` and verify its CLI behaviour end-to-end (see cpp/testing-functional.md). This layer applies because a lib-cli ships a binary, unlike a plain library.
-- Fuzz harnesses link `myproj::myproj` and drive its parsers with hostile input. Built on demand (see cpp/testing-fuzz.md).
+- Unit tests link `myproj::myproj` and test logic, with fixtures supplying whatever input they need (see cpp/testing).
+- Integration tests link `myproj::myproj` and run against real data the machine must already have. Opt-in (see cpp/testing-integration).
+- Functional tests spawn the compiled `myproj` and verify its CLI behaviour end-to-end (see cpp/testing-functional). This layer applies because a lib-cli ships a binary, unlike a plain library.
+- Fuzz harnesses link `myproj::myproj` and drive its parsers with hostile input. Built on demand (see cpp/testing-fuzz).
 
 ```cmake
 # test/CMakeLists.txt
@@ -135,7 +135,7 @@ The unit binary links the library rather than listing `src/*.cpp` again: the lib
 
 The split between those two is the tier's main testing question, and it has a default answer: a lib-cli puts its logic in the library, so almost everything is unit-testable without a subprocess. Test the library through the library, and keep the functional layer for what only it can see: argv parsing, exit codes, and stdout.
 
-`enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.md.
+`enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.
 
 ## Baking paths into test binaries
 
@@ -168,7 +168,7 @@ target_compile_definitions(myproj_unit_tests PRIVATE
 )
 ```
 
-This eliminates a whole class of path-resolution bugs and makes each test binary self-contained. Tests reach the baked paths through the `TestEnvironment` singleton; see cpp/testing-functional.md.
+This eliminates a whole class of path-resolution bugs and makes each test binary self-contained. Tests reach the baked paths through the `TestEnvironment` singleton; see cpp/testing-functional.
 
 ## Release
 

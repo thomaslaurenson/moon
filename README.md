@@ -42,8 +42,8 @@ moon bundle list --long        # see every bundle with a one-line description
 moon bundle list --json        # machine-readable output (also on: fragment list)
 moon bundle show <name>        # print an assembled bundle to stdout
 moon bundle expand <name>      # list the fragments a bundle expands to
-moon fragment list [filter]    # list fragment paths (optionally filtered)
-moon fragment show <path>      # print a single fragment to stdout
+moon fragment list [filter]    # list fragment names (optionally filtered)
+moon fragment show <name>      # print a single fragment to stdout
 moon init <target> [bundle...] # populate a repo for claude, agents, or copilot
 moon check                     # validate every bundle, exit non-zero on problems
 ```

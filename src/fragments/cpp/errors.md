@@ -65,7 +65,7 @@ private:
 - Public API functions throw the library's own types, never a bare `std::runtime_error`, `std::invalid_argument`, or a third-party library's exception. Catch a dependency's exception at the boundary and rethrow as your own with `std::throw_with_nested` where the original matters.
 - Carry structured data as members (`path()`, `error_code()`), not just a formatted string. A caller that wants to retry needs the path, not prose.
 - A path member is a `std::filesystem::path`, for the same reason a path parameter is; see the C++ style fragment. Building the message then needs an explicit `path.string()`, because there is no `operator+` between a string literal and a path. That conversion is the one place the narrow form is correct: the message is prose for a human, not something anyone reopens the file with.
-- Exception types live in `include/myproj/errors.h` in a tier with a public API, so a consumer imports them from one place. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app.md).
+- Exception types live in `include/myproj/errors.h` in a tier with a public API, so a consumer imports them from one place. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app).
 - `Interrupted`, thrown by library code when the cancellation flag it was handed is set, derives from `Error` like every other type and is declared in the same header; see the interrupts fragment.
 
 ## What is not an exception

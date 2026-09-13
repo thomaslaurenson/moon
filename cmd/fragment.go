@@ -24,7 +24,7 @@ func (a *App) newFragmentListCmd() *cobra.Command {
 	var asJSON bool
 	c := &cobra.Command{
 		Use:   "list [filter]",
-		Short: "List fragment paths, optionally filtered by a substring",
+		Short: "List fragment names, optionally filtered by a substring",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var filter string
@@ -38,8 +38,8 @@ func (a *App) newFragmentListCmd() *cobra.Command {
 	return c
 }
 
-// fragmentList writes fragment paths to out, keeping only those containing filter
-// when it is non-empty. asJSON emits a JSON array instead of one path per line.
+// fragmentList writes fragment names to out, keeping only those containing filter
+// when it is non-empty. asJSON emits a JSON array instead of one name per line.
 func (a *App) fragmentList(out io.Writer, filter string, asJSON bool) error {
 	paths, err := a.e.ListFragments()
 	if err != nil {
@@ -67,7 +67,7 @@ func (a *App) fragmentList(out io.Writer, filter string, asJSON bool) error {
 
 func (a *App) newFragmentShowCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:               "show <path>",
+		Use:               "show <name>",
 		Short:             "Print a single fragment to stdout",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: a.completeFragments,

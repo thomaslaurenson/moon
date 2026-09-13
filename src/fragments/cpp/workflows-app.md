@@ -1,16 +1,16 @@
 # C++ shipped-binary workflows
 
-Applies to any tier that ships a distributable binary: an application, or a library with a bundled CLI. A plain library has no artefact to build and ships nothing, so it builds and tests in one plain job instead; see workflows-lib.md.
+Applies to any tier that ships a distributable binary: an application, or a library with a bundled CLI. A plain library has no artefact to build and ships nothing, so it builds and tests in one plain job instead; see workflows-lib.
 
 ## Paths filter addition
 
-Add `Dockerfile` and `.dockerignore` to the shared paths filter (see cpp/workflows.md), plus `.gpipe.yml`, which the gpipe fragment requires in the filter for its own reason.
+Add `Dockerfile` and `.dockerignore` to the shared paths filter (see cpp/workflows), plus `.gpipe.yml`, which the gpipe fragment requires in the filter for its own reason.
 
 ## Depth is a function of the trigger
 
 These tiers add a `build.yml` that produces the distributable artefacts. Running the whole of it on every pull request is the expensive default and buys the least: a pull request needs to know the code compiles and the tests pass, not that a shippable artefact for every platform is correct. A tag needs the second, and only a tag can act on it.
 
-The GitHub Actions fragment warns that a `build.yml` beside tests that build what they test is a second compile of the same sources. It is, and these tiers pay it knowingly: `build.yml` is the only job that exercises the Dockerfile and runs the bytes that ship, and `test.yml` could only do the same by becoming the artefact pipeline it was deliberately decoupled from. The generic rule holds for a library, which is why workflows-lib.md has no `build.yml`.
+The GitHub Actions fragment warns that a `build.yml` beside tests that build what they test is a second compile of the same sources. It is, and these tiers pay it knowingly: `build.yml` is the only job that exercises the Dockerfile and runs the bytes that ship, and `test.yml` could only do the same by becoming the artefact pipeline it was deliberately decoupled from. The generic rule holds for a library, which is why workflows-lib has no `build.yml`.
 
 So the caller decides the depth, and `build.yml` takes an input:
 
@@ -51,7 +51,7 @@ jobs:
     needs: [build, lint, test]
     permissions:
       contents: write
-      id-token: write                   # cosign keyless signing, see cpp/release-app.md
+      id-token: write                   # cosign keyless signing, see cpp/release-app
   prerelease:                           # main.yml only
     uses: ./.github/workflows/prerelease.yml
     needs: [build, lint, test]
@@ -73,7 +73,7 @@ No `secrets: inherit`: every job here authenticates with the automatic `github.t
 
 Builds one release binary per target platform and uploads each as an artefact for the release and prerelease workflows to consume. Linux builds go through Docker; Windows builds natively on its own runner, because there is no container route to it.
 
-**Which platforms is a decision, not a default.** The jobs below are the full set for the platforms these projects target, and a project takes the ones matching where its users actually run the binary. The test is the one in cpp/workflows.md: a platform earns a job by being a deployment target, not by adding confidence.
+**Which platforms is a decision, not a default.** The jobs below are the full set for the platforms these projects target, and a project takes the ones matching where its users actually run the binary. The test is the one in cpp/workflows: a platform earns a job by being a deployment target, not by adding confidence.
 
 **No C++ project here targets macOS.** There is no macOS job, no `darwin` asset and no `darwin` entry in `.gpipe.yml`, and that is a decision rather than an omission: nobody runs these tools there, and a macOS runner bills at ten times a Linux one. Adding it later means more than a build job, which is why the absence is recorded here rather than left to be noticed: macOS needs a matching `test.yml` job, `darwin_amd64` and `darwin_arm64` entries in `.gpipe.yml`, two more lines in the release asset list, and a `codesign --force --sign -` step after any `strip`, because stripping invalidates the ad-hoc signature the linker applies and the binary is then killed on launch rather than failing to build.
 
@@ -89,7 +89,7 @@ Name every artefact `myproj-<os>-<arch>`, using `x86_64`/`aarch64` rather than `
 | Linux ARM64 | `myproj-linux-aarch64` |
 | Windows x86_64 | `myproj-windows-x86_64.exe` |
 
-This is gpipe's platform vocabulary, so the names map onto `.gpipe.yml` with no translation; the identifiers are the `platforms` keys shown in cpp/release-app.md, and `gpipe validate` checks a config against them. Pick the naming before the first release: the assets are a public interface, and renaming them later breaks anyone's install script.
+This is gpipe's platform vocabulary, so the names map onto `.gpipe.yml` with no translation; the identifiers are the `platforms` keys shown in cpp/release-app, and `gpipe validate` checks a config against them. Pick the naming before the first release: the assets are a public interface, and renaming them later breaks anyone's install script.
 
 #### One Linux binary, not two
 
@@ -209,7 +209,7 @@ jobs:
 
 Set `MYPROJ_BUILD_TESTING=OFF` on the release builds: they ship the binary, and compiling Catch2 for an artefact nobody tests from is wasted runner time. The test workflow configures its own build with testing on.
 
-`build/release/bin/myproj.exe` rather than `build/release/bin/Release/myproj.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake.md. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
+`build/release/bin/myproj.exe` rather than `build/release/bin/Release/myproj.exe` depends on the per-config `CMAKE_RUNTIME_OUTPUT_DIRECTORY_<CFG>` settings being present in the root `CMakeLists.txt`; see cpp/cmake. Without them the Visual Studio generator writes to the per-config subdirectory and the `mv` fails.
 
 #### Where CI does not go through `make`
 
@@ -252,7 +252,7 @@ permissions:
   contents: read
 
 jobs:
-  # test_linux and test_asan are the shared jobs from cpp/workflows.md, with one
+  # test_linux and test_asan are the shared jobs from cpp/workflows, with one
   # line added: a tier that ships a binary runs the functional layer too.
   #
   #   - run: make test_functional
@@ -287,7 +287,7 @@ Four details in there are load-bearing:
 - **No clang tools installed.** `test.yml` does not lint, so clang-format and clang-tidy are not needed to build or run tests. Installing them here would also mean a per-runner branch, since the apt packages exist only on the Linux runner.
 - **Both build types are covered, without a third job.** Pairing `Release` with one compiler and `Debug` with the other costs nothing extra and stops `NDEBUG` and the optimiser from being exercised for the first time by a release. Testing only `Debug` leaves the shipped configuration untested; testing both under both compilers doubles the matrix for very little.
 - **The layers run as separate steps** (`make test`, which is the unit layer alone, then `make test_functional`; or two `ctest -L` calls) rather than one `make test_all`, so a failure names the layer that broke. Use the target names the Makefile fragments actually define - `test`, `test_functional`, `test_all` - and do not invent a `test_unit`.
-- **`MYPROJ_WERROR` is on here as on Linux.** MSVC's `/W4` is a different bar (see Warnings in cpp/cmake.md), so a project's first MSVC build may leave it off until the tree compiles clean, with a comment saying that is why. It does not stay off: a warning only MSVC reports is still a warning nobody else will see.
+- **`MYPROJ_WERROR` is on here as on Linux.** MSVC's `/W4` is a different bar (see Warnings in cpp/cmake), so a project's first MSVC build may leave it off until the tree compiles clean, with a comment saying that is why. It does not stay off: a warning only MSVC reports is still a warning nobody else will see.
 
 #### Every platform tests natively
 
@@ -295,4 +295,4 @@ Each job tests on the runner it built on, so the functional layer always spawns 
 
 That is also the argument for building release artefacts on a native runner rather than cross-compiling. A skip is not a weaker test, it is no test: the artefact goes out having been compiled and nothing more, and the failures it hides are exactly the ones that only appear at runtime.
 
-The workflows that publish these artefacts, `release.yml` and `prerelease.yml`, live in cpp/release-app.md.
+The workflows that publish these artefacts, `release.yml` and `prerelease.yml`, live in cpp/release-app.

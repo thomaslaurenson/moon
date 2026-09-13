@@ -39,7 +39,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 ```
 
-`fetch-depth: 0` is required by tag-based versioning, which reads the tag history to derive the version, not by `get_changelog`, which reads `CHANGELOG.md` from the working tree and is satisfied by the default depth. A project pinning its version in `pyproject.toml` instead does not need it. `get_changelog` strips the leading `v` from the tag before matching the bare changelog header (see `python/make.md` and `github/changelog.md`). The version comes from the tag via the build backend's tag-based versioning, or from `[project]` in `pyproject.toml`; either way, never inject it by hand.
+`fetch-depth: 0` is required by tag-based versioning, which reads the tag history to derive the version, not by `get_changelog`, which reads `CHANGELOG.md` from the working tree and is satisfied by the default depth. A project pinning its version in `pyproject.toml` instead does not need it. `get_changelog` strips the leading `v` from the tag before matching the bare changelog header (see `python/make` and `github/changelog`). The version comes from the tag via the build backend's tag-based versioning, or from `[project]` in `pyproject.toml`; either way, never inject it by hand.
 
 ## Caller wiring
 
@@ -60,11 +60,11 @@ jobs:
 
 ## Optional: publish to PyPI (trusted publishing)
 
-Publishing to PyPI is opt-in. A library consumed only from git or a private index does not need it, and by default the badge row uses the static Python badge (see `python/badges.md`) rather than any PyPI-derived badge.
+Publishing to PyPI is opt-in. A library consumed only from git or a private index does not need it, and by default the badge row uses the static Python badge (see `python/badges`) rather than any PyPI-derived badge.
 
 To publish, first register the repository and workflow as a trusted publisher in the PyPI project settings, then use PyPI trusted publishing (OIDC) never a long-lived API token in a secret. Restructure `release.yml` into two jobs:
 
 - `build`: run `uv build`, then upload `dist/` with `actions/upload-artifact@vN`.
 - `publish` (`needs: build`): download the artifact with `actions/download-artifact@vN` into `dist/`, run `pypa/gh-action-pypi-publish@vN`, then the same checkout (`fetch-depth: 0`), `get_changelog`, and `gh release create dist/*` steps as the baseline job. Grant this job `id-token: write` alongside `contents: write`.
 
-The caller (`tag.yml`) must then also grant `id-token: write` on the `release` job. When publishing to PyPI, you may switch the Python-version badge to the live PyPI badge (see `python/badges.md`).
+The caller (`tag.yml`) must then also grant `id-token: write` on the `release` job. When publishing to PyPI, you may switch the Python-version badge to the live PyPI badge (see `python/badges`).

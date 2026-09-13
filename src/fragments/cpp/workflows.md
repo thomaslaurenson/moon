@@ -21,9 +21,9 @@ paths:
   - ".clang-tidy"
 ```
 
-`cmake/**` is not optional. Every project has that directory, because `version.h.in` lives there (see cpp/cmake.md), and it also holds helper modules such as `mark_system.cmake`. A filter that omits it lets a change to the version template or a helper module merge with no CI run at all.
+`cmake/**` is not optional. Every project has that directory, because `version.h.in` lives there (see cpp/cmake), and it also holds helper modules such as `mark_system.cmake`. A filter that omits it lets a change to the version template or a helper module merge with no CI run at all.
 
-Include `extern/**` only if the project uses git submodules for dependencies. Drop `include/**` in an application and `app/**` in a library; a path filter naming a directory the tier does not have is dead configuration that outlives the reason it was copied. A tier that ships a binary adds `Dockerfile` and `.dockerignore` to this list; see workflows-app.md.
+Include `extern/**` only if the project uses git submodules for dependencies. Drop `include/**` in an application and `app/**` in a library; a path filter naming a directory the tier does not have is dead configuration that outlives the reason it was copied. A tier that ships a binary adds `Dockerfile` and `.dockerignore` to this list; see workflows-app.
 
 The two failure modes are not symmetric. A stale entry is inert: it names a path that never changes, so it never triggers anything. A missing entry fails silently in the dangerous direction, letting a real change skip CI entirely, which is why a directory every project has belongs in the list rather than being left to each project to remember.
 
@@ -95,13 +95,13 @@ jobs:
       - run: make test_asan
 ```
 
-This is the whole of `test.yml` for a library. A tier that ships a binary adds `make test_functional` to `test_linux` and the native platform jobs; see workflows-app.md. Both tiers get `test_asan` unchanged.
+This is the whole of `test.yml` for a library. A tier that ships a binary adds `make test_functional` to `test_linux` and the native platform jobs; see workflows-app. Both tiers get `test_asan` unchanged.
 
-`test_asan` is the CI job the sanitizer section of cpp/cmake.md asks for. It is a Linux job at the lowest billing rate and it runs on every trigger, because a memory error is exactly the kind of defect that is cheapest to find on the pull request that introduced it. A project whose unit layer is slow enough for the doubled runtime to matter can gate it to `main.yml` and `tag.yml`, at the cost of learning about the finding later.
+`test_asan` is the CI job the sanitizer section of cpp/cmake asks for. It is a Linux job at the lowest billing rate and it runs on every trigger, because a memory error is exactly the kind of defect that is cheapest to find on the pull request that introduced it. A project whose unit layer is slow enough for the doubled runtime to matter can gate it to `main.yml` and `tag.yml`, at the cost of learning about the finding later.
 
 Two compilers on one platform is a better use of a budget than one compiler on two platforms. Both run on Linux at the lowest billing rate, where a second platform costs two to ten times as much and mostly re-runs the same compiler. Reach for another platform when it is a deployment target, not for extra confidence in the code.
 
-`MYPROJ_WERROR` is off by default so a developer upgrading a compiler is not blocked by new warnings, and on in CI so those warnings are never merged; see cpp/cmake.md.
+`MYPROJ_WERROR` is off by default so a developer upgrading a compiler is not blocked by new warnings, and on in CI so those warnings are never merged; see cpp/cmake.
 
 ## Clang tools
 
@@ -116,13 +116,13 @@ Install the clang toolchain as a workflow step before running any lint step:
   run: sudo apt-get install -y clang-18 clang-format-18 clang-tidy-18
 ```
 
-`clang-18` itself, not only the two tools: `make check_all` configures its own clang build directory so clang-tidy can resolve libstdc++ headers (see cpp/cmake.md), which needs the compiler present.
+`clang-18` itself, not only the two tools: `make check_all` configures its own clang build directory so clang-tidy can resolve libstdc++ headers (see cpp/cmake), which needs the compiler present.
 
 Installing the toolchain is a workflow step, not a Makefile target: it is specific to the runner image, and a `make` target doing it would fail on the macOS and Windows runners. Install the major version the CMake fragment pins under Clang tooling, so a runner image bump cannot silently change formatting output; that fragment owns the number, and the package names here follow it. CMake 3.21+ ships with `ubuntu-24.04`, so no CMake install step is needed.
 
 ## `lint.yml`
 
-Installs the clang toolchain and runs format check and clang-tidy. No `make configure` step: `check_lint` depends on `configure_lint`, which produces the `compile_commands.json` clang-tidy reads (see cpp/cmake.md).
+Installs the clang toolchain and runs format check and clang-tidy. No `make configure` step: `check_lint` depends on `configure_lint`, which produces the `compile_commands.json` clang-tidy reads (see cpp/cmake).
 
 ```yaml
 name: Lint

@@ -1,6 +1,6 @@
 # C++ functional testing
 
-The subprocess/functional testing layer, which spawns the compiled binary and verifies its CLI behaviour end-to-end. Assumes cpp/testing.md and the tier fragment.
+The subprocess/functional testing layer, which spawns the compiled binary and verifies its CLI behaviour end-to-end. Assumes cpp/testing and the tier fragment.
 
 Applies to any tier that ships a binary: an application, or a library with a bundled CLI. A plain library has no compiled binary to spawn and stops at the unit and integration layers.
 
@@ -26,7 +26,7 @@ catch_discover_tests(myproj_functional_tests
     PROPERTIES LABELS "functional" SKIP_RETURN_CODE 4)
 ```
 
-See cpp/testing.md for why the label rather than `-R`, and why the skip code matters.
+See cpp/testing for why the label rather than `-R`, and why the skip code matters.
 
 ## Subprocess helper
 
@@ -60,7 +60,7 @@ Always pin to an immutable reference: a release tag or a commit hash, never a mo
 
 ## The test environment fixture
 
-The general fixture conventions live in cpp/testing.md and apply here unchanged; `test/fixtures/` is shared by every layer.
+The general fixture conventions live in cpp/testing and apply here unchanged; `test/fixtures/` is shared by every layer.
 
 `test_environment.h` is the one fixture that is not function-scoped: it is a singleton holding the CMake-baked paths (`MYPROJ_BINARY_PATH`, `MYPROJ_TEST_DIR`). A singleton is right here and nowhere else, because these values are constant for the whole run and cannot vary per test:
 
@@ -185,7 +185,7 @@ REQUIRE(result.stdout_output.find(expected_size) != std::string::npos);
 
 ## Skipping tests with optional dependencies
 
-A functional test that needs a real input the repository does not hold resolves it the way the integration layer does: through `IntegrationDataPath()` from `test/fixtures/integration_data.h`, skipping with `SKIP()` when it is absent, and the functional target gets the same guarded `target_compile_definitions` for `MYPROJ_INTEGRATION_DATA` that cpp/testing-integration.md gives the integration target. One resolver, so the same environment variable and the same configure flag serve both layers, and the README's one answer for obtaining the inputs covers both:
+A functional test that needs a real input the repository does not hold resolves it the way the integration layer does: through `IntegrationDataPath()` from `test/fixtures/integration_data.h`, skipping with `SKIP()` when it is absent, and the functional target gets the same guarded `target_compile_definitions` for `MYPROJ_INTEGRATION_DATA` that cpp/testing-integration gives the integration target. One resolver, so the same environment variable and the same configure flag serve both layers, and the README's one answer for obtaining the inputs covers both:
 
 ```cpp
 TEST_CASE("info: reads a real patch", "[info]") {

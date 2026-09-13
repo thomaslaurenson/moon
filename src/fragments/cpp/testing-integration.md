@@ -1,6 +1,6 @@
 # C++ integration testing
 
-The layer that tests against something real that the repository does not contain: a handful of genuine input files, an installed product, a live server, a populated API. Assumes cpp/testing.md and the tier fragment.
+The layer that tests against something real that the repository does not contain: a handful of genuine input files, an installed product, a live server, a populated API. Assumes cpp/testing and the tier fragment.
 
 An integration test links the library target exactly as a unit test does. What separates it is not that it touches the filesystem (a unit test may do that freely with its own fixtures) but that it depends on an environment it cannot construct. A test is an integration test when the point of it is that the input is real: a file produced by the software this one has to interoperate with rather than one a fixture assembled, a running server's real handshake rather than a recorded blob.
 
@@ -10,7 +10,7 @@ That dependency is also why the layer is opt-in. CI has none of those things, so
 
 Any tier can have an integration layer; whether it does depends on whether the project has real data worth testing against. A library reading a proprietary format needs one. A CLI wrapping that library may not: its functional layer already drives real files through the binary.
 
-Never use this layer as a dumping ground for tests that are awkward to write. If the input can be synthesised, the test belongs in the unit layer with a fixture; see cpp/testing.md.
+Never use this layer as a dumping ground for tests that are awkward to write. If the input can be synthesised, the test belongs in the unit layer with a fixture; see cpp/testing.
 
 ## Options
 
@@ -57,7 +57,7 @@ if(MYPROJ_INTEGRATION)
 endif()
 ```
 
-`SKIP_RETURN_CODE 4` is mandatory here, not optional. This layer skips by design whenever the data is absent, and without that property CTest reports every skip as a failure; see cpp/testing.md.
+`SKIP_RETURN_CODE 4` is mandatory here, not optional. This layer skips by design whenever the data is absent, and without that property CTest reports every skip as a failure; see cpp/testing.
 
 ## Finding the data
 
@@ -135,7 +135,7 @@ Resolve the whole set of inputs a test needs before asserting on any of them, an
 
 ## Running it
 
-Integration needs its own configure, because the option is off by default. `configure_integration` in the Makefile targets fragment turns it on in `build/dev` and bakes in `INTEGRATION_DATA`, and `test_integration` builds through it and runs the layer. `test_all`, defined in cpp/testing.md, then runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.
+Integration needs its own configure, because the option is off by default. `configure_integration` in the Makefile targets fragment turns it on in `build/dev` and bakes in `INTEGRATION_DATA`, and `test_integration` builds through it and runs the layer. `test_all`, defined in cpp/testing, then runs whatever the current configure contains, which is the unit layer alone unless integration was configured in.
 
 `configure_integration` fails with an actionable message when `INTEGRATION_DATA` is empty. That guard belongs in a project whose variable has no default: it stops the configure rather than producing a build whose integration tests all skip. A project that does default the variable drops the guard, because the condition can never be true and a check that cannot fire is one more thing to read.
 

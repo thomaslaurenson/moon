@@ -2,9 +2,11 @@
 @include bash-script
 bash/testing.md
 tools/makefile.md
+bash/make.md
 github/actions.md
 bash/workflows.md
 github/badges.md
+bash/badges.md
 github/pulls.md
 github/changelog.md
 github/dependabot.md

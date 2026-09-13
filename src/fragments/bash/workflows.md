@@ -16,15 +16,15 @@ paths:
 
 Extend the base list with every additional path the project lints, tests, or ships: directories such as `scripts/**`, `contrib/**`, `completion/**`, `man/**`, and top-level scripts such as `install.sh`. Use directory globs, not extension globs; bash projects ship extensionless files (completions, man pages, mock helpers) that `**/*.sh` misses.
 
-Derivation rule: the filter is correct when every path referenced by the Makefile's lint, test, and release targets is covered. If `make lint` or `make test` reads a file the filter misses, the filter is wrong, not the Makefile.
+Derivation rule: the filter is correct when every path referenced by the Makefile's check, test, and release targets is covered. If `make check_all` or `make test` reads a file the filter misses, the filter is wrong, not the Makefile.
 
 ## Lint and test jobs
 
-Lint job. Runs the syntax check and ShellCheck via the Makefile (see the bash testing fragment). ShellCheck is preinstalled on the `ubuntu-24.04` runner, so no install step is needed:
+Lint job. Runs every static check through the aggregate in the Makefile targets fragment. ShellCheck is preinstalled on the `ubuntu-24.04` runner, so no install step is needed:
 
 ```yaml
 - uses: actions/checkout@vN
-- run: make lint
+- run: make check_all
 ```
 
 Test job. bats is vendored as a git submodule, so check out with submodules and run the suite through the Makefile:
@@ -35,6 +35,8 @@ Test job. bats is vendored as a git submodule, so check out with submodules and 
     submodules: true
 - run: make test
 ```
+
+Dependabot carries the `github-actions` entry alone. Bash has no package ecosystem, and bats moves by `make bump_bats` rather than by the `gitsubmodule` ecosystem (see the testing fragment).
 
 ## Runner matrix
 
@@ -53,7 +55,7 @@ The macOS leg installs its own tooling behind `if: runner.os == 'macOS'` (`brew 
 
 The version is embedded in exactly one source file as a `VERSION` variable; that is the single source of truth. Every other place a version appears (man page, changelog) is checked against it, never edited independently. Git tags are `v`-prefixed; the embedded version is bare.
 
-Three Makefile targets carry the convention:
+Three Makefile targets carry the convention; the recipes are in the Makefile targets fragment:
 
 - `get_version` extracts the embedded version (all extraction goes through `##@ GET` targets; see the Makefile conventions).
 - `check_version` verifies every file that states the version agrees with the embedded one. It runs in the lint workflow and in `ci`.

@@ -53,31 +53,4 @@ This is the same trap `git.ignore_tags` covers on the goreleaser side, and it ha
 
 The testing fragments own the rules these recipes implement: `-race -count=1` on every run, coverage over `./internal/...` only, and coverage including `-tags=integration`. One detail belongs here, because it is about reading the output rather than choosing the flags. The per-package percentages `go test` prints are each measured against the whole `-coverpkg` set, so they read low and do not sum; the real figure is the `total:` line from `go tool cover -func`, which is also the number used for the coverage badge.
 
-## get_changelog
-
-Prints the `CHANGELOG.md` section for one release to stdout. Git tags are `v`-prefixed (`v1.2.3`) but changelog headers are bare (`## 1.2.3 - ...`, see the changelog fragment), so the target strips a leading `v` from `TAG` before matching. It exits non-zero when `TAG` is empty or no entry matches, so a release never publishes empty notes. Use this implementation verbatim rather than rewriting the extraction per project:
-
-```makefile
-.PHONY: get_changelog
-get_changelog: ## Print release notes for TAG to stdout (TAG=v1.0.0)
-	@tag="$(TAG)"; tag="$${tag#v}"; \
-	if [[ -z "$$tag" ]]; then \
-	  printf 'get_changelog: TAG is empty; pass TAG=v1.0.0\n' >&2; \
-	  exit 1; \
-	fi; \
-	notes="$$(awk -v tag="$$tag" ' \
-	  /^## / { if (found) exit; if (index($$0,"## "tag" ")==1 || $$0=="## "tag) found=1; next } \
-	  found { lines[n++]=$$0 } \
-	  END { \
-	    s=0; while (s<n && lines[s]~/^[[:space:]]*$$/) s++; \
-	    e=n-1; while (e>=s && lines[e]~/^[[:space:]]*$$/) e--; \
-	    for (i=s;i<=e;i++) print lines[i] \
-	  }' CHANGELOG.md)"; \
-	if [[ -z "$$notes" ]]; then \
-	  printf 'get_changelog: no CHANGELOG entry for %s\n' "$$tag" >&2; \
-	  exit 1; \
-	fi; \
-	printf '%s\n' "$$notes"
-```
-
-The `END` block trims blank lines from both ends of the captured section, so the release body starts at the first heading rather than an empty line. Matching is anchored with `index($$0,"## "tag" ")==1` rather than a regex, so `1.2` never matches the `1.2.3` header. It needs `SHELL := /bin/bash` for `[[`, which the Makefile conventions already require.
+`get_changelog` is the shared recipe in the Makefile conventions fragment; `release.yml` calls it directly (see the release fragment).

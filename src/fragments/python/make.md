@@ -9,17 +9,7 @@ Targets common to every Python project (see the Makefile conventions fragment fo
 - `fix`: `uv run ruff check --fix . && uv run ruff format .`
 - `get_ruff_version`: `grep -oP 'ruff>=\K[0-9.]+' pyproject.toml`
 - `get_python_required_version`: `grep -oP 'requires-python\s*=\s*">=\K[0-9.]+' pyproject.toml`
-- `get_changelog`: print the `CHANGELOG.md` section for a release, given `TAG`. Tags are `v`-prefixed (`v1.2.3`) but changelog headers are bare (`## 1.2.3 - ...`, see `github/changelog.md`), so the target strips a leading `v` from `TAG` before matching. It exits non-zero when `TAG` is empty or no entry matches, so a release never publishes empty notes:
-
-```make
-get_changelog:
-	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
-	@awk -v raw="$(TAG)" '\
-	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
-	  found { print } \
-	  END { if (!found) exit 1 }' CHANGELOG.md
-```
+- `get_changelog`: the shared recipe in the Makefile conventions fragment.
 
 `uv run` syncs the project and its default `dev` dependency group before running, and `dev` includes the `test` group (see the project fragment), so `make test` works on a fresh clone with no separate install step. `ruff` is likewise in `dev`, so `check_lint`, `check_format`, and `fix` need no install either.
 

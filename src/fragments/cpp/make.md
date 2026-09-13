@@ -1,6 +1,6 @@
 # C++ Makefile targets
 
-Targets common to every C++ project; see the Makefile conventions fragment for the structure they sit in, the help target and the `##@` sections. The rules these recipes implement live elsewhere: the CMake fragment owns the build directories and the clang pin, the testing fragments own the layers, and the tooling fragment owns embedded assets. This fragment is where every target is written down, so a workflow calling `make <target>` finds it defined in exactly one place. A workflow calling a target no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
+Targets common to every C++ project; see the Makefile conventions fragment for the structure they sit in, the help target and the `##@` sections. The rules these recipes implement live elsewhere: the CMake fragment owns the build directories and the clang pin, the testing fragments own the layers, and the tooling fragment owns embedded assets. This fragment is where every target is written down, so a workflow calling `make <target>` finds it defined in exactly one place; `get_changelog` is the one exception, being the same in every language, and lives in the Makefile conventions fragment. A workflow calling a target no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
 
 ## Variables
 
@@ -250,19 +250,10 @@ get_version: ## Print the project version from CMakeLists.txt (fails if absent)
 	    v = substr($$0, RSTART, RLENGTH); sub(/VERSION[ \t]+/, "", v); \
 	    print v; found = 1; exit } \
 	  END { if (!found) exit 1 }' CMakeLists.txt
-
-.PHONY: get_changelog
-get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
-	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
-	@awk -v raw="$(TAG)" '\
-	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
-	  found { print } \
-	  END { if (!found) exit 1 }' CHANGELOG.md
 ```
 
 - `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style.md makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox.
-- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artefacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes.
+- `get_changelog` is the shared recipe in the Makefile conventions fragment, and `release.yml` calls it directly (see cpp/workflows.md); a release that reaches that step without the target fails after the artefacts are already built.
 
 ## CI
 

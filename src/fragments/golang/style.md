@@ -6,7 +6,7 @@ Go-specific style. Assumes the core conventions.
 
 - Every package has a package comment immediately before `package`, starting `// Package <name>` followed by a summary sentence.
 - A `package main` starts `// Command <binary>` instead. It documents a program to run rather than a package to import, and `// Package main` names something nobody can import.
-- Exported functions, methods, and types have a doc comment starting with the identifier name, as a complete sentence on a single opening line. Add a blank comment line before further paragraphs.
+- Exported functions, methods, and types have a doc comment whose first sentence starts on the opening line with the identifier name, wrapping as it needs to. Add a blank comment line before further paragraphs.
 - Unexported functions do not require doc comments; add one when the purpose is not obvious.
 - For interfaces, describe what the type represents rather than listing its methods.
 - Put the package comment in `doc.go` when it runs to more than a couple of lines, so it is not buried above an unrelated file's code.

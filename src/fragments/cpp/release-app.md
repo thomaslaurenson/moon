@@ -161,9 +161,9 @@ jobs:
       - name: Create prerelease
         run: |
           gh release create dev --prerelease \
-            --target "${{ github.sha }}" \
-            --title "dev" \
-            --notes "Rolling build of ${{ github.sha }}" \
+            --target "${GITHUB_SHA}" \
+            --title "Dev (Pre-release)" \
+            --notes "Built from commit ${GITHUB_SHA}" \
             dist/myproj-linux-x86_64 \
             dist/myproj-linux-aarch64 \
             dist/myproj-windows-x86_64.exe

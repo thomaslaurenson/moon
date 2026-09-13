@@ -101,7 +101,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 ```
 
-Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action. The tag reaches the shell as `${GITHUB_REF_NAME}`, never as an interpolated `${{ github.ref_name }}`: an expression inside `run:` is pasted into the script as text before it runs, while an environment variable is only ever a value.
+Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action. The tag reaches the shell as `${GITHUB_REF_NAME}`, never as an interpolated `${{ github.ref_name }}`: an expression inside `run:` is pasted into the script as text before it runs, while an environment variable is only ever a value. The `dist/<name>-*` glob is safe here because goreleaser leaves nothing else in `dist/`; a project that puts anything else there names each asset instead.
 
 The `actions/setup-go` here is for goreleaser, and gpipe rides on it. gpipe installs no Go of its own and builds with whatever is on `PATH`, so this step is what settles the version both of them get (see the gpipe fragment).
 

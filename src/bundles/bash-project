@@ -1,12 +1,12 @@
 # Bash project - a maintained repo of scripts with tests and CI (e.g. an installer).
 @include bash-script
-bash/testing.md
-tools/makefile.md
-bash/make.md
-github/actions.md
-bash/workflows.md
-github/badges.md
-bash/badges.md
-github/pulls.md
-github/changelog.md
-github/dependabot.md
+bash/testing
+tools/makefile
+bash/make
+github/actions
+bash/workflows
+github/badges
+bash/badges
+github/pulls
+github/changelog
+github/dependabot

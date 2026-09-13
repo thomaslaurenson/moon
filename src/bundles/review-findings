@@ -1,5 +1,5 @@
 # Running a review and reporting what it found: scope, verification, and a phased findings table. Point an agent here to review; pair with review-fixes for what happens afterwards. Language-agnostic, so load the language's own code bundle alongside it for the standards being reviewed against.
-_core.md
-git/commits.md
-tools/markdown.md
-review/findings.md
+_core
+git/commits
+tools/markdown
+review/findings

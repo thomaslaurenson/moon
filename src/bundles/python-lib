@@ -1,18 +1,18 @@
 # Python library - full project (code rules + packaging + tests + scaffolding + docs + CI + repo conventions).
 @include python-lib-code
-python/packaging.md
-python/testing-unit.md
-python/testing-integration.md
-tools/makefile.md
-python/make.md
-python/tooling.md
-python/project-lib.md
-python/docs.md
-github/actions.md
-python/workflows.md
-python/release-lib.md
-github/badges.md
-python/badges.md
-github/dependabot.md
-github/pulls.md
-github/changelog.md
+python/packaging
+python/testing-unit
+python/testing-integration
+tools/makefile
+python/make
+python/tooling
+python/project-lib
+python/docs
+github/actions
+python/workflows
+python/release-lib
+github/badges
+python/badges
+github/dependabot
+github/pulls
+github/changelog

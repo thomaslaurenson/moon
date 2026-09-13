@@ -5,22 +5,22 @@
 # functional layer, having no binary to spawn; unit is always present, and integration
 # and fuzz apply where the project earns them. Use cpp-lib-cli if it also ships a CLI.
 @include cpp-lib-code
-cpp/cmake.md
-cpp/cmake-lib.md
-cpp/tooling.md
-cpp/clang-format.md
-cpp/clang-tidy.md
-cpp/testing.md
-cpp/testing-integration.md
-cpp/testing-fuzz.md
-tools/makefile.md
-cpp/make.md
-github/actions.md
-cpp/workflows.md
-cpp/workflows-lib.md
-cpp/release-lib.md
-github/badges.md
-cpp/badges.md
-github/dependabot.md
-github/pulls.md
-github/changelog.md
+cpp/cmake
+cpp/cmake-lib
+cpp/tooling
+cpp/clang-format
+cpp/clang-tidy
+cpp/testing
+cpp/testing-integration
+cpp/testing-fuzz
+tools/makefile
+cpp/make
+github/actions
+cpp/workflows
+cpp/workflows-lib
+cpp/release-lib
+github/badges
+cpp/badges
+github/dependabot
+github/pulls
+github/changelog

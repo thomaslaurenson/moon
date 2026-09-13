@@ -12,11 +12,11 @@ func testFS() fstest.MapFS {
 		"src/fragments/_core.md":        {Data: []byte("# Core\n")},
 		"src/fragments/python/style.md": {Data: []byte("# Style\n")},
 		"src/fragments/python/types.md": {Data: []byte("# Types\n")},
-		"src/bundles/py-code":           {Data: []byte("# a comment\n_core.md\npython/style.md\n")},
-		"src/bundles/py-app":            {Data: []byte("@include py-code\npython/types.md\n")},
+		"src/bundles/py-code":           {Data: []byte("# a comment\n_core\npython/style\n")},
+		"src/bundles/py-app":            {Data: []byte("@include py-code\npython/types\n")},
 		"src/bundles/cyc-a":             {Data: []byte("@include cyc-b\n")},
 		"src/bundles/cyc-b":             {Data: []byte("@include cyc-a\n")},
-		"src/bundles/broken":            {Data: []byte("python/ghost.md\n")},
+		"src/bundles/broken":            {Data: []byte("python/ghost\n")},
 	}
 }
 
@@ -29,8 +29,8 @@ func TestExpand(t *testing.T) {
 		bundle string
 		want   []string
 	}{
-		{name: "flat list with comment stripped", bundle: "py-code", want: []string{"_core.md", "python/style.md"}},
-		{name: "include expands in place", bundle: "py-app", want: []string{"_core.md", "python/style.md", "python/types.md"}},
+		{name: "flat list with comment stripped", bundle: "py-code", want: []string{"_core", "python/style"}},
+		{name: "include expands in place", bundle: "py-app", want: []string{"_core", "python/style", "python/types"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -53,7 +53,7 @@ func TestListFragments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListFragments: %v", err)
 	}
-	want := []string{"_core.md", "python/style.md", "python/types.md"}
+	want := []string{"_core", "python/style", "python/types"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("ListFragments() = %v, want %v", got, want)
 	}
@@ -132,13 +132,13 @@ func TestHasBundleAndHasFragment(t *testing.T) {
 		t.Error("HasBundle(nope) = true, want false")
 	}
 
-	if !e.HasFragment("python/style.md") {
-		t.Error("HasFragment(python/style.md) = false, want true")
+	if !e.HasFragment("python/style") {
+		t.Error("HasFragment(python/style) = false, want true")
 	}
-	if e.HasFragment("python/nope.md") {
-		t.Error("HasFragment(python/nope.md) = true, want false")
+	if e.HasFragment("python/nope") {
+		t.Error("HasFragment(python/nope) = true, want false")
 	}
-	if e.HasFragment("python") { // A directory, not a file
+	if e.HasFragment("python") { // A directory name, not a fragment
 		t.Error("HasFragment should not match a directory")
 	}
 }
@@ -175,7 +175,7 @@ func TestFragment(t *testing.T) {
 	t.Parallel()
 	e := New(testFS())
 
-	data, err := e.Fragment("python/style.md")
+	data, err := e.Fragment("python/style")
 	if err != nil {
 		t.Fatalf("Fragment: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestFragment(t *testing.T) {
 		t.Errorf("missing fragment content, got:\n%s", s)
 	}
 
-	if _, err := e.Fragment("python/ghost.md"); !errors.Is(err, ErrMissingFragment) {
+	if _, err := e.Fragment("python/ghost"); !errors.Is(err, ErrMissingFragment) {
 		t.Errorf("Fragment(ghost) error = %v, want errors.Is(_, ErrMissingFragment)", err)
 	}
 }
@@ -234,7 +234,7 @@ func TestResolveRejectsUnknownDirective(t *testing.T) {
 	t.Parallel()
 	fsys := fstest.MapFS{
 		"src/fragments/_core.md": {Data: []byte("# Core\n")},
-		"src/bundles/typo":       {Data: []byte("@includes _core.md\n")},
+		"src/bundles/typo":       {Data: []byte("@includes _core\n")},
 	}
 	e := New(fsys)
 	if _, err := e.Expand("typo"); !errors.Is(err, ErrUnknownDirective) {
@@ -248,9 +248,9 @@ func TestAssembleDedupDiamond(t *testing.T) {
 		"src/fragments/_core.md": {Data: []byte("# Core\n")},
 		"src/fragments/a.md":     {Data: []byte("# A\n")},
 		"src/fragments/b.md":     {Data: []byte("# B\n")},
-		"src/bundles/base":       {Data: []byte("_core.md\n")},
-		"src/bundles/left":       {Data: []byte("@include base\na.md\n")},
-		"src/bundles/right":      {Data: []byte("@include base\nb.md\n")},
+		"src/bundles/base":       {Data: []byte("_core\n")},
+		"src/bundles/left":       {Data: []byte("@include base\na\n")},
+		"src/bundles/right":      {Data: []byte("@include base\nb\n")},
 		"src/bundles/diamond":    {Data: []byte("@include left\n@include right\n")},
 	}
 	e := New(fsys)
@@ -270,7 +270,7 @@ func TestCheckFlagsBannedCharacters(t *testing.T) {
 		"src/fragments/dash.md": {Data: []byte("# Dash\n\nuse an em dash \u2014 here\n")},
 		// A non-ASCII letter in a translated string: the documented exception, must not be flagged
 		"src/fragments/umlaut.md": {Data: []byte("# Umlaut\n\n\"Auf Standard zur\u00fccksetzen\"\n")},
-		"src/bundles/all":         {Data: []byte("dash.md\numlaut.md\n")},
+		"src/bundles/all":         {Data: []byte("dash\numlaut\n")},
 	}
 	problems, _, err := New(fsys).Check()
 	if err != nil {

@@ -13,7 +13,14 @@ import (
 const (
 	fragmentsDir = "src/fragments"
 	bundlesDir   = "src/bundles"
+	fragmentExt  = ".md"
 )
+
+// fragmentPath maps a fragment name, as a bundle references it, to the file that
+// holds it. Names carry no extension; the .md is the file's business alone.
+func fragmentPath(name string) string {
+	return fragmentsDir + "/" + name + fragmentExt
+}
 
 // Sentinel errors, so callers can distinguish failure kinds with errors.Is rather
 // than matching on message text.
@@ -55,9 +62,10 @@ func (e *Engine) List() ([]string, error) {
 	return names, nil
 }
 
-// ListFragments returns every fragment path under src/fragments, sorted. Paths are
-// relative to src/fragments (the same strings Expand prints and a bundle definition
-// references), so a caller can feed one straight back to Fragment or Show.
+// ListFragments returns every fragment name under src/fragments, sorted. Names are
+// relative to src/fragments without the extension (the same strings Expand prints
+// and a bundle definition references), so a caller can feed one straight back to
+// Fragment or Show.
 func (e *Engine) ListFragments() ([]string, error) {
 	var paths []string
 	err := fs.WalkDir(e.fsys, fragmentsDir, func(p string, d fs.DirEntry, walkErr error) error {
@@ -67,7 +75,7 @@ func (e *Engine) ListFragments() ([]string, error) {
 		if d.IsDir() || !strings.HasSuffix(p, ".md") {
 			return nil
 		}
-		paths = append(paths, strings.TrimPrefix(p, fragmentsDir+"/"))
+		paths = append(paths, fragmentName(p))
 		return nil
 	})
 	if err != nil {
@@ -103,7 +111,7 @@ func (e *Engine) Description(name string) (string, error) {
 	return strings.Join(lines, " "), nil
 }
 
-// Expand returns the ordered fragment paths a bundle expands to, resolving @include.
+// Expand returns the ordered fragment names a bundle expands to, resolving @include.
 func (e *Engine) Expand(name string) ([]string, error) {
 	return e.resolve(name, nil)
 }
@@ -113,9 +121,9 @@ func (e *Engine) HasBundle(name string) bool {
 	return e.isFile(bundlesDir + "/" + name)
 }
 
-// HasFragment reports whether a fragment exists at this path under src/fragments.
-func (e *Engine) HasFragment(path string) bool {
-	return e.isFile(fragmentsDir + "/" + path)
+// HasFragment reports whether a fragment with this name exists under src/fragments.
+func (e *Engine) HasFragment(name string) bool {
+	return e.isFile(fragmentPath(name))
 }
 
 func (e *Engine) isFile(p string) bool {
@@ -125,15 +133,15 @@ func (e *Engine) isFile(p string) bool {
 
 // Fragment returns the raw content of a single fragment, prefixed with a minimal
 // header identifying where it came from. Unlike Assemble, it performs no bundle
-// resolution: the path must be an exact fragment path relative to src/fragments (the
+// resolution: the name must be an exact fragment name relative to src/fragments (the
 // same strings Expand or ListFragments print).
-func (e *Engine) Fragment(path string) ([]byte, error) {
-	data, err := fs.ReadFile(e.fsys, fragmentsDir+"/"+path)
+func (e *Engine) Fragment(name string) ([]byte, error) {
+	data, err := fs.ReadFile(e.fsys, fragmentPath(name))
 	if err != nil {
-		return nil, fmt.Errorf("%q: %w", path, ErrMissingFragment)
+		return nil, fmt.Errorf("%q: %w", name, ErrMissingFragment)
 	}
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "<!-- Fragment: %s/%s -->\n\n", fragmentsDir, path)
+	fmt.Fprintf(&buf, "<!-- Fragment: %s -->\n\n", fragmentPath(name))
 	buf.Write(data)
 	return buf.Bytes(), nil
 }
@@ -225,25 +233,31 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 		ordered = append(ordered, f)
 	}
 	for _, f := range ordered {
-		if _, err := fs.Stat(e.fsys, fragmentsDir+"/"+f); err != nil {
-			return nil, fmt.Errorf("%q (in bundle %q): %w", fragmentsDir+"/"+f, origin, ErrMissingFragment)
+		if _, err := fs.Stat(e.fsys, fragmentPath(f)); err != nil {
+			return nil, fmt.Errorf("%q (in bundle %q): %w", fragmentPath(f), origin, ErrMissingFragment)
 		}
 	}
 	var buf bytes.Buffer
 	buf.WriteString(header)
 	buf.WriteString("\n\n")
 	for _, f := range ordered {
-		data, err := fs.ReadFile(e.fsys, fragmentsDir+"/"+f)
+		data, err := fs.ReadFile(e.fsys, fragmentPath(f))
 		if err != nil {
 			return nil, fmt.Errorf("reading fragment %q: %w", f, err)
 		}
-		fmt.Fprintf(&buf, "<!-- %s/%s -->\n\n", fragmentsDir, f)
+		fmt.Fprintf(&buf, "<!-- %s -->\n\n", fragmentPath(f))
 		buf.Write(bytes.TrimRight(data, "\n"))
 		buf.WriteString("\n\n")
 	}
 	// End with exactly one trailing newline
 	out := append(bytes.TrimRight(buf.Bytes(), "\n"), '\n')
 	return out, nil
+}
+
+// fragmentName is the inverse of fragmentPath: the name a bundle would use for a
+// file under src/fragments.
+func fragmentName(path string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(path, fragmentsDir+"/"), fragmentExt)
 }
 
 // bannedChar reports whether r is a non-ASCII rune that moon's house style forbids:
@@ -291,7 +305,7 @@ func (e *Engine) Check() (problems, orphans []string, err error) {
 		}
 		for _, f := range frags {
 			referenced[f] = true
-			if _, serr := fs.Stat(e.fsys, fragmentsDir+"/"+f); serr != nil {
+			if _, serr := fs.Stat(e.fsys, fragmentPath(f)); serr != nil {
 				problems = append(problems, fmt.Sprintf("%s: missing fragment %s", name, f))
 			}
 		}
@@ -303,8 +317,8 @@ func (e *Engine) Check() (problems, orphans []string, err error) {
 		if d.IsDir() || !strings.HasSuffix(p, ".md") {
 			return nil
 		}
-		if rel := strings.TrimPrefix(p, fragmentsDir+"/"); !referenced[rel] {
-			orphans = append(orphans, rel)
+		if name := fragmentName(p); !referenced[name] {
+			orphans = append(orphans, name)
 		}
 		data, rerr := fs.ReadFile(e.fsys, p)
 		if rerr != nil {

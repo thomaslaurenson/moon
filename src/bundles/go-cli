@@ -1,17 +1,17 @@
 # Go CLI application - full project (code + testing + scaffolding + release + CI).
 @include go-cli-code
-golang/tooling.md
-golang/testing.md
-golang/testing-functional.md
-golang/testing-integration.md
-tools/makefile.md
-golang/make.md
-github/actions.md
-golang/workflows.md
-tools/gpipe.md
-golang/release-cli.md
-github/badges.md
-golang/badges.md
-github/dependabot.md
-github/pulls.md
-github/changelog.md
+golang/tooling
+golang/testing
+golang/testing-functional
+golang/testing-integration
+tools/makefile
+golang/make
+github/actions
+golang/workflows
+tools/gpipe
+golang/release-cli
+github/badges
+golang/badges
+github/dependabot
+github/pulls
+github/changelog

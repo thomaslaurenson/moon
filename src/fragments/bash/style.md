@@ -37,8 +37,22 @@ Do not set `set -euo pipefail` in sourced files; they run in the caller's shell.
 ## Error handling and structure
 
 - Define a `die` helper at the top of every executable script: `die() { printf '[!] %s\n' "$*" >&2; exit 1; }` and use it consistently. The `[!]` is the marker every warning and error carries (see the command line output fragment).
-- Any function that is not both obvious and short has a header comment; all functions in a sourced library have one regardless of length.
+- Any function that is not both obvious and short has a header comment; all functions in a sourced library have one regardless of length. The comment describes the behaviour, then labelled sections for `Arguments:`, `Globals:`, `Outputs:` and `Returns:`, omitting any that do not apply:
 - For scripts with more than one function, wrap the entry point in `main` and call `main "$@"` at the bottom.
+
+```bash
+# Resolve an entry name to its path, following one level of alias.
+#
+# Arguments:
+#   $1 - entry name, as typed by the user
+# Globals:
+#   ENTRY_DIR - directory the entries live in, read only
+# Outputs:
+#   the resolved path on stdout
+# Returns:
+#   1 when the entry does not exist
+resolve_entry() { ... }
+```
 
 ## Verification
 

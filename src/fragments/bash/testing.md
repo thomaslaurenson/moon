@@ -69,7 +69,7 @@ Every test file must define a `setup` function that configures the environment b
 ```bash
 # Configure the environment before each test.
 #
-# Environment:
+# Globals:
 #   REPO_ROOT  - absolute path to the repository root, derived from BATS_TEST_DIRNAME
 #   DATA_DIR   - path to fixture data used by tests
 #   APP_CMD    - path to the mock command helper

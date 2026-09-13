@@ -43,7 +43,7 @@ function Get-Platform { ... }
 
 ## Error handling and output helpers
 
-Define an `Exit-Error` helper (prints a red message, exits 1) and use it rather than inline `Write-Host ... ; exit 1`. Installer scripts also define `Write-Info` (green `[INFO]`), `Write-Warn` (yellow `[WARN]`), and `Write-Step` (cyan `>`). Respect `$env:NO_COLOR`: `$script:NoColor = ($null -ne $env:NO_COLOR)`.
+Define an `Exit-Error` helper that prints `[!]` and the message in red and exits 1, and use it rather than an inline `Write-Host ... ; exit 1`. Installer scripts also define `Write-Info`, printing `[*]` in green, and `Write-Warn`, printing `[!]` in yellow. The markers are the command line output fragment's vocabulary and every message a person reads carries one; the colour is decoration on top, dropped when `$env:NO_COLOR` is set: `$script:NoColor = ($null -ne $env:NO_COLOR)`.
 
 ## Entry point
 
@@ -54,3 +54,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     Invoke-Installer @PSBoundParameters
 }
 ```
+
+## Verification
+
+A script is not done until it parses under `pwsh`. `[scriptblock]::Create((Get-Content -Raw script.ps1)) | Out-Null` exits non-zero on a syntax error without running anything, and is the minimum for a script with no test suite.

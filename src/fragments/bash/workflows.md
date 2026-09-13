@@ -2,8 +2,6 @@
 
 Supplements the shared GitHub Actions conventions. Applies to a maintained Bash repo (an installer, a set of scripts with tests); a one-off script needs no CI.
 
-`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v4`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
-
 ## Paths filter
 
 Base paths filter for `pr.yml` and `main.yml` (the two lists must stay identical):

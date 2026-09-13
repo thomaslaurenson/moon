@@ -51,7 +51,7 @@ Never use `@latest`. How tightly to pin below that depends on who publishes the 
 - **Everything else** pins to a full commit SHA, with the version it corresponds to in a trailing comment. A SHA is the only immutable reference an action has.
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: actions/checkout@vN
 - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 ```
 
@@ -59,7 +59,7 @@ The comment is not decoration: Dependabot reads it, bumps the SHA and rewrites t
 
 An action published by the same person who owns the repository using it is not third-party in the sense that matters here, since compromising it and compromising the repository are the same event. Pin it to a major like `actions/*`.
 
-Do not treat any version number that has ever appeared in this doc as the target to match - a frozen version table goes stale faster than this spec gets updated. Dependabot (see below) keeps the pin current from there.
+`@vN` in the workflow fragments means the current major at authoring time, for example `@v7`. Do not treat any version number that has ever appeared in these documents as the target to match: a frozen version goes stale faster than the spec gets updated, and Dependabot (see below) keeps the pin current from there.
 
 Use reusable workflows (`workflow_call`) for the job logic the callers share; callers compose them:
 
@@ -177,7 +177,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@vN
       - <language setup step>
       - run: make check_all
 ```

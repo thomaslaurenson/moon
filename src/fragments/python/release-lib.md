@@ -2,8 +2,6 @@
 
 How an installable library publishes a release. A library's release is a git tag; on that tag, CI builds the distribution, then creates a GitHub release with the changelog notes and the built artifacts attached. Publishing to PyPI is an optional add-on layered on top of this baseline (see the optional section below), not a requirement. Scripts-only application projects do not release and have no equivalent.
 
-`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v6`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
-
 ## `release.yml` (baseline: GitHub release)
 
 Reusable, called from `tag.yml` after lint and test pass. A single job builds the distribution and creates the GitHub release, using the changelog section for the tag as the release notes and attaching the build output.

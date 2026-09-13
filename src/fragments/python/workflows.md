@@ -18,8 +18,6 @@ paths:
   - "tests/**"
 ```
 
-`@vN` in the examples below means pin the current major of the action at authoring time (for example `@v6`); Dependabot keeps the pin current. Do not copy a version number from this document as the target to match.
-
 Lint job. Ruff lint and format both run, so CI enforces formatting as well as linting (locally the equivalent is `make check_all` and `make check_all`). No Python setup is needed:
 
 ```yaml

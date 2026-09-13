@@ -1,6 +1,6 @@
 # Python library release
 
-How an installable library publishes a release. A library's release is a git tag; on that tag, CI builds the distribution, then creates a GitHub release with the changelog notes and the built artifacts attached. Publishing to PyPI is an optional add-on layered on top of this baseline (see the optional section below), not a requirement. Scripts-only application projects do not release and have no equivalent.
+How an installable library publishes a release. A library's release is a git tag; on that tag, CI builds the distribution, then creates a GitHub release with the changelog notes and the built artefacts attached. Publishing to PyPI is an optional add-on layered on top of this baseline (see the optional section below), not a requirement. Scripts-only application projects do not release and have no equivalent.
 
 ## `release.yml` (baseline: GitHub release)
 

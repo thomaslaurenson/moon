@@ -24,7 +24,7 @@ func main() {
 		if errors.As(err, &ec) {
 			os.Exit(ec.Code)
 		}
-		fmt.Fprintf(os.Stderr, "moon: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[!] %v\n", err)
 		os.Exit(1)
 	}
 }

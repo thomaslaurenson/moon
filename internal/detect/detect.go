@@ -1,13 +1,3 @@
-// Package detect infers which moon bundles apply to a project by looking for
-// marker files (go.mod, pyproject.toml, and so on). Detection only ever picks a
-// bundle's default tier; callers that want a different tier (or a bundle detect
-// can't infer) should pass bundle names explicitly instead of relying on this
-// package. Go, C++, and Python each distinguish their tiers using cheap
-// structural signals: a main.go anywhere (Go binary), root-level include/ and
-// app/ directories (a C++ public API and a C++ shipped binary respectively), or
-// a [build-system] table in pyproject.toml (installable Python package,
-// optionally with [project.scripts] for a console script). These are heuristics;
-// when one is wrong, an explicit bundle name always wins.
 package detect
 
 import (
@@ -32,11 +22,11 @@ var skipDirs = map[string]bool{
 
 type presence struct {
 	goMod, cmakeLists, ps1, pyproject, py, sh bool
-	mainGo                                    bool // a main.go anywhere suggests a Go binary, not a library
-	includeDir                                bool // a root include/ dir is this repo's C++ public-API marker
-	appDir                                    bool // a root app/ dir is this repo's C++ shipped-binary marker
-	pyBuildSystem                             bool // pyproject.toml has [build-system] -> installable package (library)
-	pyScripts                                 bool // pyproject.toml has [project.scripts] -> ships a console script
+	mainGo                                    bool // A main.go anywhere suggests a Go binary, not a library
+	includeDir                                bool // A root include/ dir is this repo's C++ public-API marker
+	appDir                                    bool // A root app/ dir is this repo's C++ shipped-binary marker
+	pyBuildSystem                             bool // The pyproject.toml has [build-system] -> installable package (library)
+	pyScripts                                 bool // The pyproject.toml has [project.scripts] -> ships a console script
 }
 
 // Detect walks fsys (rooted at a project directory) and returns the bundles

@@ -138,7 +138,7 @@ func TestHasBundleAndHasFragment(t *testing.T) {
 	if e.HasFragment("python/nope.md") {
 		t.Error("HasFragment(python/nope.md) = true, want false")
 	}
-	if e.HasFragment("python") { // a directory, not a file
+	if e.HasFragment("python") { // A directory, not a file
 		t.Error("HasFragment should not match a directory")
 	}
 }
@@ -266,10 +266,10 @@ func TestAssembleDedupDiamond(t *testing.T) {
 func TestCheckFlagsBannedCharacters(t *testing.T) {
 	t.Parallel()
 	fsys := fstest.MapFS{
-		// An em dash (U+2014) in prose: a banned symbol, must be flagged.
-		"src/fragments/dash.md": {Data: []byte("# Dash\n\nuse an em dash — here\n")},
-		// A non-ASCII letter in a translated string: the documented exception, must not be flagged.
-		"src/fragments/umlaut.md": {Data: []byte("# Umlaut\n\n\"Auf Standard zurücksetzen\"\n")},
+		// An em dash (U+2014) in prose: a banned symbol, must be flagged
+		"src/fragments/dash.md": {Data: []byte("# Dash\n\nuse an em dash \u2014 here\n")},
+		// A non-ASCII letter in a translated string: the documented exception, must not be flagged
+		"src/fragments/umlaut.md": {Data: []byte("# Umlaut\n\n\"Auf Standard zur\u00fccksetzen\"\n")},
 		"src/bundles/all":         {Data: []byte("dash.md\numlaut.md\n")},
 	}
 	problems, _, err := New(fsys).Check()

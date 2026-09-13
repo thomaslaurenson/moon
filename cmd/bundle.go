@@ -129,6 +129,6 @@ func (a *App) bundleExpand(out, errw io.Writer, name string) error {
 	for _, f := range frags {
 		fmt.Fprintln(out, f)
 	}
-	fmt.Fprintf(errw, "(%d fragments)\n", len(frags))
+	fmt.Fprintf(errw, "[*] %d fragments\n", len(frags))
 	return nil
 }

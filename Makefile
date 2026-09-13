@@ -33,7 +33,7 @@ test: ## Run tests with the race detector
 
 .PHONY: test_coverage
 test_coverage: ## Run tests with a coverage report (internal/ only; cmd/ is wiring)
-	@go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...
+	@go test -race -count=1 -tags=integration -coverpkg=./internal/... -coverprofile=coverage.out ./...
 	@go tool cover -func=coverage.out
 	@rm coverage.out
 
@@ -50,11 +50,13 @@ check_format: ## Fail if any file needs formatting
 .PHONY: check_mod
 check_mod: ## Fail if go.mod/go.sum are not tidy
 	@go mod tidy
-	@git diff --exit-code -- go.mod go.sum || { printf 'go.mod/go.sum not tidy; commit the diff\n' >&2; exit 1; }
+	@git diff --exit-code -- go.mod go.sum || \
+	  { printf 'go.mod/go.sum not tidy; commit the diff\n' >&2; exit 1; }
 
 .PHONY: vet
-vet: ## Run go vet
+vet: ## Run go vet, including the integration-tagged files
 	@go vet ./...
+	@go vet -tags=integration ./...
 
 .PHONY: check_cross
 check_cross: ## Type-check the windows and darwin builds

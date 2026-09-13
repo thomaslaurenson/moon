@@ -37,8 +37,8 @@ func TestCheck(t *testing.T) {
 		if stdout != "" {
 			t.Errorf("stdout = %q, want empty", stdout)
 		}
-		if !strings.Contains(stderr, "FAIL") {
-			t.Errorf("stderr = %q, want a FAIL line", stderr)
+		if !strings.Contains(stderr, "[!]") || !strings.Contains(stderr, "missing fragment") {
+			t.Errorf("stderr = %q, want a marked problem line", stderr)
 		}
 	})
 
@@ -51,7 +51,7 @@ func TestCheck(t *testing.T) {
 		if err != nil {
 			t.Fatalf("check: %v", err)
 		}
-		if !strings.Contains(stderr, "WARN orphan") {
+		if !strings.Contains(stderr, "[!] orphan fragment") {
 			t.Errorf("stderr = %q, want an orphan warning", stderr)
 		}
 	})

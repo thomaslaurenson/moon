@@ -1,8 +1,8 @@
 # C++ release workflows
 
-How a shipped binary becomes a published release. Applies to any tier that ships one: an application, or a library with a bundled CLI. A plain library releases a tagged commit and nothing else; see workflows-lib.md.
+How a shipped binary becomes a published release. Applies to any tier that ships one: an application, or a library with a bundled CLI. A plain library releases a tagged commit and nothing else; see workflows-lib.
 
-Assumes cpp/workflows-app.md, which owns the paths filter, the caller wiring and the `build.yml` that produces the artefacts these workflows consume. The gpipe fragment covers the config surface and the action inputs.
+Assumes cpp/workflows-app, which owns the paths filter, the caller wiring and the `build.yml` that produces the artefacts these workflows consume. The gpipe fragment covers the config surface and the action inputs.
 
 ## `release.yml`
 
@@ -60,7 +60,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # Gated on the release: a registry outage then leaves a complete release with
-  # no image, rather than an image with no release. See tools/docker.md.
+  # no image, rather than an image with no release. See tools/docker.
   release_docker:
     needs: release
     runs-on: ubuntu-24.04
@@ -136,7 +136,7 @@ jobs:
   prerelease:
     runs-on: ubuntu-24.04
     # This job never checks out, so gh has no remote to infer the repository
-    # from and GH_REPO has to name it. See github/actions.md.
+    # from and GH_REPO has to name it. See github/actions.
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -161,9 +161,9 @@ jobs:
       - name: Create prerelease
         run: |
           gh release create dev --prerelease \
-            --target "${{ github.sha }}" \
-            --title "dev" \
-            --notes "Rolling build of ${{ github.sha }}" \
+            --target "${GITHUB_SHA}" \
+            --title "Dev (Pre-release)" \
+            --notes "Built from commit ${GITHUB_SHA}" \
             dist/myproj-linux-x86_64 \
             dist/myproj-linux-aarch64 \
             dist/myproj-windows-x86_64.exe

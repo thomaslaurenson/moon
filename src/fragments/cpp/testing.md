@@ -7,9 +7,9 @@ Standards and conventions for testing C++ projects, and the unit layer in full. 
 Every test in a C++ project belongs to exactly one of four layers. All four live under `test/`; a test binary is never built anywhere else.
 
 - **unit** - tests logic. Links the library target. Free to use fixtures, temporary files, synthetic data and loopback sockets: the test creates whatever it needs. Always built, always run.
-- **integration** - tests against real data the machine must already have: a real dataset install, a live server, a real API. Links the library target. Opt-in, and skips cleanly when the data is absent. See testing-integration.md.
-- **functional** - tests the compiled binary, spawned as a subprocess and driven through its CLI. Links neither the library nor the binary. See testing-functional.md.
-- **fuzz** - libFuzzer harnesses driving a parser with hostile input. Links the library target. Built on demand, Clang only. See testing-fuzz.md.
+- **integration** - tests against real data the machine must already have: a real dataset install, a live server, a real API. Links the library target. Opt-in, and skips cleanly when the data is absent. See testing-integration.
+- **functional** - tests the compiled binary, spawned as a subprocess and driven through its CLI. Links neither the library nor the binary. See testing-functional.
+- **fuzz** - libFuzzer harnesses driving a parser with hostile input. Links the library target. Built on demand, Clang only. See testing-fuzz.
 
 The dividing line between unit and integration is **not** whether a test touches the filesystem. A unit test that writes a synthetic archive to a temp directory and reads it back is still a unit test: it tests logic, and it brought its own data. What makes a test an integration test is depending on an environment it cannot construct: a real dataset install, a running server, a populated API. That is also what makes it opt-in, since CI has none of those things.
 
@@ -57,7 +57,7 @@ extern/
 
 - One unit test file per source file, named `test_<source>.cpp`, in a directory mirroring the module. The other layers mirror behaviour rather than source files and do not follow this rule.
 - Fixtures live in `test/fixtures/`, one header per fixture, and are shared by every layer.
-- `test/data/` holds inputs a test reads and never writes. Most are small enough to commit, and a fuzz crash reproducer always is. Inputs an integration layer needs may be too large, too proprietary or too numerous to commit, in which case they are gitignored and the project says how to obtain them; see testing-integration.md. Which of the two a given file is does not change where it lives.
+- `test/data/` holds inputs a test reads and never writes. Most are small enough to commit, and a fuzz crash reproducer always is. Inputs an integration layer needs may be too large, too proprietary or too numerous to commit, in which case they are gitignored and the project says how to obtain them; see testing-integration. Which of the two a given file is does not change where it lives.
 
 ## Catch2 setup
 
@@ -194,4 +194,4 @@ Coverage is measured over the unit layer using clang's source-based instrumentat
 
 - The unit layer alone, for the same reason `test_asan` uses it: that layer needs no external data and runs anywhere, so the number means the same thing on every machine and in every checkout. A figure that moves depending on whether the developer happens to have the integration dataset is not a figure worth publishing.
 - Vendored code and the tests themselves are kept out of the report. A project that counts its own test files reports a number that climbs as tests are added and says nothing about how well the library is covered.
-- The report goes to stdout. Nothing publishes it automatically: the percentage is copied by hand into the static coverage badge on each release, which is what cpp/badges.md asks for. That target is where the number comes from.
+- The report goes to stdout. Nothing publishes it automatically: the percentage is copied by hand into the static coverage badge on each release, which is what cpp/badges asks for. That target is where the number comes from.

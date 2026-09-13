@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.6.0 - 2026-09-13
+
+### Added
+
+- Add git branch and commit conventions to every bundle
+- Add a command line output fragment for the marker vocabulary, shipped to CLI bundles only
+- Add a Docker Compose fragment, a shared changelog extraction recipe, and Bash Makefile and badge fragments
+- Add the C++ embedded completion check and an alias for the application core
+
+### Changed
+
+- Split pull request titles from the commit conventions, state the action pin notation once
+- Require every workflow caller to declare read permissions at the top
+- Pass GitHub context through the environment and drop the tag step from the rolling prerelease
+- Align the PowerShell output helpers with the marker vocabulary
+- Bring the moon repository in line with its own Go bundle
+- Refer to fragments by name without the markdown extension, in bundles, the CLI and the prose
+
+### Fixed
+
+- Correct the Docker rules for non-root users, healthchecks and the ADD example on scratch images
+- Fix the GCC install directory detection and the integration and fuzz examples in the C++ fragments
+- Resolve the contradictions between the shared rules and the C++, Go and Bash fragments
+- Add the flat style to every badge row, and use British spelling and code fence hints throughout
+
+### Removed
+
+- Remove the WoW fragments and bundles
+- Remove cross-language references an agent reading one bundle cannot see
+
 ## 0.5.0 - 2026-09-11
 
 ### Added

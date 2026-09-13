@@ -15,7 +15,7 @@ func testFS() fstest.MapFS {
 	return fstest.MapFS{
 		"src/fragments/_core.md":        {Data: []byte("# Core\n")},
 		"src/fragments/python/style.md": {Data: []byte("# Style\n")},
-		"src/bundles/py-code":           {Data: []byte("# Python code rules\n_core.md\npython/style.md\n")},
+		"src/bundles/py-code":           {Data: []byte("# Python code rules\n_core\npython/style\n")},
 		"src/bundles/py-app":            {Data: []byte("@include py-code\n")},
 	}
 }

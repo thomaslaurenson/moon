@@ -24,8 +24,6 @@ Setup (before any `make` call). Always use `go-version-file: go.mod`; never hard
     cache: true
 ```
 
-`@vN` means pin the current major at authoring time (for example `@v6`); Dependabot keeps it current from there. Do not copy a version number from this document as the target to match. Majors are for `actions/*` and for actions you publish yourself; every other action pins to a full SHA (see the GitHub Actions fragment).
-
 The two reusable workflows fill the skeleton from the GitHub Actions fragment with the Go setup step. Calling the aggregate rather than listing its members is what keeps the workflow and the `ci` target from drifting apart:
 
 ```yaml

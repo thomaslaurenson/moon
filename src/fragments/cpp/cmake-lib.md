@@ -113,7 +113,7 @@ An example is not an application, and a library with one is still a library. The
 - `examples/` is a demonstration. It is built on request, has no tests, no Docker image, no release artefact and no badge. Its job is to prove the public API is usable and to give a consumer something to copy. It links the aggregate through its alias, exactly as a consumer would, which is what makes it an honest demonstration rather than a program with special access.
 - `app/` is a shipped binary, and having one makes the project a lib-cli, not a library. That tier adds functional tests, the Docker release matrix and released-binary badges. See cmake-lib-cli.
 
-Default `OFF` because an example is dead weight in a consumer's build. Keep examples compiling: an example that no longer builds is a worse advertisement than no example at all. CI turns the option on in the existing test job, so they are compiled and nothing runs them; see workflows-lib.md.
+Default `OFF` because an example is dead weight in a consumer's build. Keep examples compiling: an example that no longer builds is a worse advertisement than no example at all. CI turns the option on in the existing test job, so they are compiled and nothing runs them; see workflows-lib.
 
 ## Generated version header
 
@@ -139,7 +139,7 @@ A library small enough to have no modules has no aggregate either: its single `a
 
 A library has a unit layer always, plus an integration layer where it has real data to test against and a fuzz layer where it parses untrusted input. All of them link the library. There is no functional layer: that one spawns a compiled binary, and a library has none.
 
-The unit layer therefore carries the whole load, and it is meant to. A unit test may build synthetic archives, write temp files and drive loopback sockets; what it may not do is depend on data the machine must already have. See cpp/testing.md.
+The unit layer therefore carries the whole load, and it is meant to. A unit test may build synthetic archives, write temp files and drive loopback sockets; what it may not do is depend on data the machine must already have. See cpp/testing.
 
 ```cmake
 # test/CMakeLists.txt
@@ -171,10 +171,10 @@ catch_discover_tests(myproj_unit_tests
 
 Link the aggregate `myproj::myproj` unless a test binary genuinely covers one module, in which case link that module's alias and keep the binary small.
 
-`enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.md.
+`enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.
 
 `MYPROJ_TEST_DIR` gives tests the path to their own source directory, so they can find checked-in data under `test/data/` without runtime path discovery.
 
 `src/` is on the unit binary's include path, on a fuzz harness's for the same reason, and on no other test binary's. The layer tests logic, and some of it is deliberately not API: a private helper in `src/` gets a unit test like anything else, and the test includes its header by the same path the implementation does. The functional binary never sees `src/`, because it exercises the binary as a user would, and a consumer never does, because the library keeps that directory `PRIVATE`.
 
-The integration and fuzz targets are guarded by their own options and defined alongside this one; see cpp/testing-integration.md and cpp/testing-fuzz.md.
+The integration and fuzz targets are guarded by their own options and defined alongside this one; see cpp/testing-integration and cpp/testing-fuzz.

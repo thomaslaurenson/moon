@@ -43,10 +43,10 @@ USER 1001:1001
 ENTRYPOINT ["/myproj"]
 ```
 
-- `alpine` is the builder because its libc is musl, and `-static` against musl is what produces a binary with no loader and no libc version floor; see One Linux binary, not two in cpp/workflows-app.md for why that is the Linux artefact. The Docker fragment prefers Alpine anyway, so nothing is overridden. Do not copy the tag from this document as the version to match: Dependabot keeps it current (see the Dependabot fragment).
-- `-DCMAKE_EXE_LINKER_FLAGS="-static"` is not optional. Leaving it out fails the way the Docker fragment describes for any `scratch` image, the missing loader here being `/lib/ld-musl-x86_64.so.1`. The smoke run in `build.yml` is what catches it in CI (see cpp/workflows-app.md).
+- `alpine` is the builder because its libc is musl, and `-static` against musl is what produces a binary with no loader and no libc version floor; see One Linux binary, not two in cpp/workflows-app for why that is the Linux artefact. The Docker fragment prefers Alpine anyway, so nothing is overridden. Do not copy the tag from this document as the version to match: Dependabot keeps it current (see the Dependabot fragment).
+- `-DCMAKE_EXE_LINKER_FLAGS="-static"` is not optional. Leaving it out fails the way the Docker fragment describes for any `scratch` image, the missing loader here being `/lib/ld-musl-x86_64.so.1`. The smoke run in `build.yml` is what catches it in CI (see cpp/workflows-app).
 - `MYPROJ_BUILD_TESTING=OFF` keeps Catch2 out of an image that never runs tests, and `strip` cuts the binary substantially.
-- The build goes into `build/release`, the directory cpp/cmake.md reserves for the shipped artefact: optimised, testing off, nothing runs `ctest` against it.
+- The build goes into `build/release`, the directory cpp/cmake reserves for the shipped artefact: optimised, testing off, nothing runs `ctest` against it.
 - `build-base` rather than the individual packages, because it is Alpine's own name for the C and C++ toolchain and pulls in `musl-dev`, which the static link needs and which is easy to leave out of a hand-written list.
 - The whole checkout is the build context, submodules included: the image builds from the same `extern/` the tests do, so `docker build` follows `git submodule update --init` locally and a checkout with `submodules: true` in CI.
 
@@ -64,8 +64,8 @@ test/data/
 
 ## One Dockerfile
 
-The file is `Dockerfile`, with no suffix, so `docker build .` finds it and nothing needs `-f`. There is one because there is one Linux artefact: a static musl binary runs on every distribution, where a glibc build from the builder's distribution would not, and a second Dockerfile would be a strictly narrower duplicate of the first. The reasoning is in cpp/workflows-app.md.
+The file is `Dockerfile`, with no suffix, so `docker build .` finds it and nothing needs `-f`. There is one because there is one Linux artefact: a static musl binary runs on every distribution, where a glibc build from the builder's distribution would not, and a second Dockerfile would be a strictly narrower duplicate of the first. The reasoning is in cpp/workflows-app.
 
 ## Publishing
 
-`build.yml` builds the image and saves it as a tar; `release.yml` and `prerelease.yml` load and push those bytes. The jobs are in cpp/release-app.md, and they follow the Docker fragment's registry rules to the letter: `<version>` and `latest` on a release, `dev` on the rolling prerelease and never `latest`, and the push in a job of its own gated on the release having succeeded.
+`build.yml` builds the image and saves it as a tar; `release.yml` and `prerelease.yml` load and push those bytes. The jobs are in cpp/release-app, and they follow the Docker fragment's registry rules to the letter: `<version>` and `latest` on a release, `dev` on the rolling prerelease and never `latest`, and the push in a job of its own gated on the release having succeeded.

@@ -18,8 +18,8 @@ func TestFragmentList(t *testing.T) {
 			name: "default lists every fragment",
 			args: []string{"fragment", "list"},
 			check: func(t *testing.T, stdout string) {
-				if stdout != "_core.md\npython/style.md\n" {
-					t.Errorf("stdout = %q, want all fragment paths sorted", stdout)
+				if stdout != "_core\npython/style\n" {
+					t.Errorf("stdout = %q, want all fragment names sorted", stdout)
 				}
 			},
 		},
@@ -27,7 +27,7 @@ func TestFragmentList(t *testing.T) {
 			name: "filter keeps matching paths",
 			args: []string{"fragment", "list", "python"},
 			check: func(t *testing.T, stdout string) {
-				if stdout != "python/style.md\n" {
+				if stdout != "python/style\n" {
 					t.Errorf("stdout = %q, want only the python fragment", stdout)
 				}
 			},
@@ -82,12 +82,12 @@ func TestFragmentShow(t *testing.T) {
 	}{
 		{
 			name: "prints the fragment with provenance",
-			args: []string{"fragment", "show", "python/style.md"},
+			args: []string{"fragment", "show", "python/style"},
 			want: "# Style",
 		},
 		{
 			name:    "unknown fragment is an error with empty stdout",
-			args:    []string{"fragment", "show", "ghost.md"},
+			args:    []string{"fragment", "show", "ghost"},
 			wantErr: true,
 		},
 	}

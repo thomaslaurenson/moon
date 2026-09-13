@@ -1,11 +1,11 @@
 # C++ application - code-authoring rules. Point an agent here when writing or reviewing app code.
 # No Doxygen fragment: an application has no public API, so its headers are internal and
 # documented where they are not self-evident rather than as a contract to strangers.
-_core.md
-git/commits.md
-cpp/style.md
-cpp/errors.md
-cli/output.md
-cpp/logging.md
-cpp/scaffolding-cli.md
-cpp/signals.md
+_core
+git/commits
+cpp/style
+cpp/errors
+cli/output
+cpp/logging
+cpp/scaffolding-cli
+cpp/signals

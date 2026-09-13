@@ -1,6 +1,6 @@
 # C++ Makefile targets
 
-Targets common to every C++ project; see the Makefile conventions fragment for the structure they sit in, the help target and the `##@` sections. The rules these recipes implement live elsewhere: the CMake fragment owns the build directories and the clang pin, the testing fragments own the layers, and the tooling fragment owns embedded assets. This fragment is where every target is written down, so a workflow calling `make <target>` finds it defined in exactly one place. A workflow calling a target no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
+Targets common to every C++ project; see the Makefile conventions fragment for the structure they sit in, the help target and the `##@` sections. The rules these recipes implement live elsewhere: the CMake fragment owns the build directories and the clang pin, the testing fragments own the layers, and the tooling fragment owns embedded assets. This fragment is where every target is written down, so a workflow calling `make <target>` finds it defined in exactly one place; `get_changelog` is the one exception, being the same in every language, and lives in the Makefile conventions fragment. A workflow calling a target no fragment defines is a scaffolding bug that only surfaces on a real release, in the job that publishes it.
 
 ## Variables
 
@@ -82,7 +82,7 @@ test_all: build ## Run every test layer built into the current configure
 	ctest --test-dir build/dev --output-on-failure --parallel $(JOBS)
 ```
 
-- `test` runs the unit layer alone and is the everyday target; see cpp/testing.md for why that layer and no other. `-L` selects by label, never `-R`, for the reason given there.
+- `test` runs the unit layer alone and is the everyday target; see cpp/testing for why that layer and no other. `-L` selects by label, never `-R`, for the reason given there.
 - `test_functional` exists only in a tier that ships a binary. It depends on `build` because the layer spawns the compiled binary, and a stale or absent one is a failure with a confusing message rather than a test result.
 - `test_all` runs whatever the current configure contains, which is the unit layer alone unless another was configured in. It is defined once, here, so a tier with a functional layer and a tier without see the same target.
 - Every test target depends on `build`, which depends on `configure`, so `make ci` runs on a clean checkout. Without that chain `ctest` fails on a missing `build/dev` with a message about the directory rather than about the missing build.
@@ -109,9 +109,9 @@ test_integration: configure_integration ## Build and run the integration layer
 ```
 
 - The layer is off by default, so `test_integration` depends on `configure_integration` rather than on `build`: a plain `configure` never turns it on, and `ctest -L integration` against a tree with no such tests reports that nothing was found rather than running anything.
-- The guard on `INTEGRATION_DATA` belongs in a project whose variable has no default. A project that does default the variable drops it, because the condition can never be true and a check that cannot fire is one more thing to read; see cpp/testing-integration.md.
+- The guard on `INTEGRATION_DATA` belongs in a project whose variable has no default. A project that does default the variable drops it, because the condition can never be true and a check that cannot fire is one more thing to read; see cpp/testing-integration.
 - No `--parallel`: the layer's tests share real inputs the machine already has, and two of them touching the same file at once is a failure the layer did not exist to find.
-- `fetch_integration_data`: download the inputs into `$(INTEGRATION_DATA)`, where that can happen without a human deciding anything. Offered, not required: a project whose inputs are not downloadable omits it and the README carries the answer instead (see cpp/testing-integration.md).
+- `fetch_integration_data`: download the inputs into `$(INTEGRATION_DATA)`, where that can happen without a human deciding anything. Offered, not required: a project whose inputs are not downloadable omits it and the README carries the answer instead (see cpp/testing-integration).
 
 ### Sanitizers
 
@@ -130,7 +130,7 @@ test_asan: configure_asan ## Build and run the unit tests under sanitizers
 	ctest --test-dir build/asan --output-on-failure --parallel $(JOBS) -L unit
 ```
 
-A sanitized build changes code generation, so it gets its own directory and cannot share `build/dev`. `test_asan` runs the unit layer only: that layer needs no external data or server, so it is the one that can run anywhere, and sanitizer findings in it point at the project's own code rather than at a fixture. Without these targets the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent. `test.yml` calls `test_asan` as a job of its own; see cpp/workflows.md.
+A sanitized build changes code generation, so it gets its own directory and cannot share `build/dev`. `test_asan` runs the unit layer only: that layer needs no external data or server, so it is the one that can run anywhere, and sanitizer findings in it point at the project's own code rather than at a fixture. Without these targets the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent. `test.yml` calls `test_asan` as a job of its own; see cpp/workflows.
 
 ### Coverage
 
@@ -155,9 +155,9 @@ test_coverage: configure_coverage ## Report unit-test coverage
 	  --ignore-filename-regex="extern/|test/"
 ```
 
-- Its own `build/coverage` directory, because the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. The unit layer alone, for the reason cpp/testing.md gives under Coverage.
+- Its own `build/coverage` directory, because the instrumentation changes code generation, and the compiler is pinned to clang whatever the everyday build uses. The unit layer alone, for the reason cpp/testing gives under Coverage.
 - `--ignore-filename-regex` keeps vendored code and the tests themselves out of the report.
-- The report goes to stdout and nothing publishes it: the `TOTAL` line is the number copied by hand into the coverage badge on each release (see cpp/badges.md).
+- The report goes to stdout and nothing publishes it: the `TOTAL` line is the number copied by hand into the coverage badge on each release (see cpp/badges).
 
 ### Fuzzing
 
@@ -183,8 +183,8 @@ fuzz: build_fuzz ## Run one harness for FUZZ_TIME seconds (requires: NAME=archiv
 ```
 
 - `NAME` is the bare harness name, the same string `add_fuzzer` takes, so `make fuzz NAME=archive` runs `myproj_fuzz_archive` against `test/fuzz/corpus/archive`.
-- The corpus directory is passed only when it exists. libFuzzer treats a corpus path it was given as mandatory and exits 1 with `ERROR: The required directory ... does not exist`, so hardcoding the path makes a harness unrunnable in a project that has not seeded one, which cpp/testing-fuzz.md allows. Passing nothing is the supported way to run without a corpus, and libFuzzer then generates from scratch.
-- Its own `build/fuzz` directory, because `-fsanitize=fuzzer` is clang-only and a build tree cannot change compiler after its first configure; see cpp/testing-fuzz.md.
+- The corpus directory is passed only when it exists. libFuzzer treats a corpus path it was given as mandatory and exits 1 with `ERROR: The required directory ... does not exist`, so hardcoding the path makes a harness unrunnable in a project that has not seeded one, which cpp/testing-fuzz allows. Passing nothing is the supported way to run without a corpus, and libFuzzer then generates from scratch.
+- Its own `build/fuzz` directory, because `-fsanitize=fuzzer` is clang-only and a build tree cannot change compiler after its first configure; see cpp/testing-fuzz.
 
 ## LINT
 
@@ -250,19 +250,10 @@ get_version: ## Print the project version from CMakeLists.txt (fails if absent)
 	    v = substr($$0, RSTART, RLENGTH); sub(/VERSION[ \t]+/, "", v); \
 	    print v; found = 1; exit } \
 	  END { if (!found) exit 1 }' CMakeLists.txt
-
-.PHONY: get_changelog
-get_changelog: ## Print the CHANGELOG.md entry for TAG=vX.Y.Z (fails if missing)
-	@test -n "$(TAG)" || { echo "TAG is required" >&2; exit 2; }
-	@awk -v raw="$(TAG)" '\
-	  BEGIN { v = raw; sub(/^v/, "", v) } \
-	  /^## / { if (found) exit; if ($$2 == v) { found = 1; next } } \
-	  found { print } \
-	  END { if (!found) exit 1 }' CHANGELOG.md
 ```
 
-- `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style.md makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox.
-- `get_changelog` is defined here, not left to the project, because `release.yml` calls it directly (see cpp/workflows.md) and a release that reaches that step without the target fails after the artefacts are already built. It uses only POSIX `awk`, and strips a leading `v` from `TAG` because git tags are `v1.2.3` while changelog headers are bare `## 1.2.3 - ...` (see github/changelog.md). It prints the entry body without its `## X.Y.Z` header, because the release title already shows the version and repeating it puts the same string twice at the top of every release page. It exits non-zero on an empty `TAG` or an unmatched version, so a release never publishes empty notes.
+- `get_version` reads the version out of `project(... VERSION X.Y.Z)`, which cpp/style makes the single place a version is declared. It skips the `cmake_minimum_required` line first, because that also says `VERSION` and comes earlier in the file; a three-component minimum such as `3.21.0` would otherwise be reported as the project version. Nothing in CI calls it, and it is worth having anyway: it is what lets you check that the tag about to be pushed matches what the build will report, which is the mismatch nobody notices until a release is out. It uses only POSIX `awk`, so it behaves the same under gawk, mawk and busybox.
+- `get_changelog` is the shared recipe in the Makefile conventions fragment, and `release.yml` calls it directly (see cpp/workflows); a release that reaches that step without the target fails after the artefacts are already built.
 
 ## CI
 

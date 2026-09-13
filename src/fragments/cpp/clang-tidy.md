@@ -14,7 +14,7 @@ Configuration and usage conventions for clang-tidy across all C++ projects.
 
 clang-tidy requires `compile_commands.json` to resolve include paths, and it must come from a **clang-configured** build. `make check_lint` depends on `configure_lint`, which produces one in `build/lint`; nothing else needs running first.
 
-Do not point it at the everyday `build/dev` instead. That build uses whatever compiler is default, usually GCC, and clang-tidy then cannot resolve libstdc++ at all: it reports `'algorithm' file not found` and carries on emitting diagnostics from a broken AST, so the lint output is fiction rather than an error. See cpp/cmake.md for the target and the reasoning.
+Do not point it at the everyday `build/dev` instead. That build uses whatever compiler is default, usually GCC, and clang-tidy then cannot resolve libstdc++ at all: it reports `'algorithm' file not found` and carries on emitting diagnostics from a broken AST, so the lint output is fiction rather than an error. See cpp/cmake for the target and the reasoning.
 
 ## The "N warnings generated" counter
 

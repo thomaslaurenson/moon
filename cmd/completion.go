@@ -17,13 +17,13 @@ func (a *App) completeBundles(_ *cobra.Command, _ []string, toComplete string) (
 	return filterByPrefix(names, toComplete), cobra.ShellCompDirectiveNoFileComp
 }
 
-// completeFragments offers fragment paths when completing a fragment <path> argument.
+// completeFragments offers fragment names when completing a fragment <name> argument.
 func (a *App) completeFragments(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	paths, err := a.e.ListFragments()
+	names, err := a.e.ListFragments()
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
-	return filterByPrefix(paths, toComplete), cobra.ShellCompDirectiveNoFileComp
+	return filterByPrefix(names, toComplete), cobra.ShellCompDirectiveNoFileComp
 }
 
 // completeInit completes an init invocation: the target name first, then bundle

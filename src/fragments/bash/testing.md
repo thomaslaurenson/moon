@@ -14,27 +14,11 @@ All three must pass before a change is considered complete.
 
 ## Syntax check
 
-Run `bash -n` on every script and sourced file as the first lint step. It is fast and catches parse errors before any other tool runs:
-
-```makefile
-lint:
-	@printf 'bash -n  src/app.bash ... '
-	@bash -n src/app.bash \
-	  && printf 'ok\n' \
-	  || { printf 'fail\n'; exit 1; }
-```
+`bash -n` runs over every script and sourced file as the first check, through `check_syntax` in the Makefile targets fragment. It is fast and catches parse errors before any other tool runs.
 
 ## ShellCheck
 
-Run `shellcheck` on every script and sourced file. ShellCheck infers the shell dialect from the shebang line; no `-s` flag is needed when `#!/usr/bin/env bash` is present. Only specify `-s bash` explicitly when a file has no shebang, such as a fragment intended to be sourced.
-
-```makefile
-lint:
-	@printf 'shellcheck  src/app.bash ... '
-	@shellcheck src/app.bash \
-	  && printf 'ok\n' \
-	  || { printf 'fail\n'; exit 1; }
-```
+`shellcheck` runs over every script and sourced file, through `check_lint` in the Makefile targets fragment. ShellCheck infers the shell dialect from the shebang line; no `-s` flag is needed when `#!/usr/bin/env bash` is present. Only specify `-s bash` explicitly when a file has no shebang, such as a fragment intended to be sourced.
 
 ### Disabling checks
 
@@ -64,7 +48,7 @@ bats_require_minimum_version 1.7.0
 
 ### Structure
 
-```
+```text
 test/
   extern/
     bats/              # bats-core submodule
@@ -85,7 +69,7 @@ Every test file must define a `setup` function that configures the environment b
 ```bash
 # Configure the environment before each test.
 #
-# Environment:
+# Globals:
 #   REPO_ROOT  - absolute path to the repository root, derived from BATS_TEST_DIRNAME
 #   DATA_DIR   - path to fixture data used by tests
 #   APP_CMD    - path to the mock command helper
@@ -149,13 +133,7 @@ Mock executables must have a header comment describing what they replace and wha
 
 ### Running tests
 
-Run the full test suite via the Makefile:
-
-```makefile
-.PHONY: test
-test: ## Run bats test suite
-	test/extern/bats/bin/bats test/
-```
+Run the full suite with `make test`; the recipe is in the Makefile targets fragment.
 
 ## What to test
 

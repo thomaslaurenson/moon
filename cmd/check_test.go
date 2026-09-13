@@ -27,7 +27,7 @@ func TestCheck(t *testing.T) {
 	t.Run("missing fragment fails silently with exit code 1", func(t *testing.T) {
 		t.Parallel()
 		fsys := testFS()
-		fsys["src/bundles/broken"] = &fstest.MapFile{Data: []byte("python/ghost.md\n")}
+		fsys["src/bundles/broken"] = &fstest.MapFile{Data: []byte("python/ghost\n")}
 
 		stdout, stderr, err := run(t, fsys, "check")
 		var ec *ExitCodeError

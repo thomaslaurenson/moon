@@ -34,3 +34,32 @@ The help target renders the `##@` section markers as menu headings, so the group
 - Mark each logical group with a `##@` section line (`##@ BUILD`, `##@ TEST`, `##@ LINT`, `##@ GET`, `##@ CI`), which the help target prints as headings. Order groups by how often a developer reaches for them: BUILD, then TEST, then LINT, with GET and CI last. Omit empty sections.
 - Include a `ci` target so a developer can run everything CI runs in one command before pushing, and a `clean` target after it. The language fragment defines both, since their recipes are language-specific. `ci` is prerequisites only, and it composes the same aggregate targets the workflows call rather than restating their contents, so the two cannot drift. It reproduces the checks rather than any matrix CI runs them under.
 - All version and changelog extraction goes through `##@ GET` targets (`get_changelog`, `get_version`), so workflows never embed raw bash or awk.
+
+## get_changelog
+
+`get_version` differs by language, since each keeps its version somewhere else. `get_changelog` does not: every release workflow prints the `CHANGELOG.md` entry for the tag it is publishing, git tags are `v`-prefixed (`v1.2.3`) while changelog headers are bare (`## 1.2.3 - ...`, see the changelog fragment), and the recipe is the same everywhere, so it is written down once here. It strips a leading `v` from `TAG` before matching, and exits non-zero when `TAG` is empty or no entry matches, so a release never publishes empty notes. Use it verbatim:
+
+```makefile
+.PHONY: get_changelog
+get_changelog: ## Print release notes for TAG to stdout (TAG=v1.0.0)
+	@tag="$(TAG)"; tag="$${tag#v}"; \
+	if [[ -z "$$tag" ]]; then \
+	  printf 'get_changelog: TAG is empty; pass TAG=v1.0.0\n' >&2; \
+	  exit 1; \
+	fi; \
+	notes="$$(awk -v tag="$$tag" ' \
+	  /^## / { if (found) exit; if (index($$0,"## "tag" ")==1 || $$0=="## "tag) found=1; next } \
+	  found { lines[n++]=$$0 } \
+	  END { \
+	    s=0; while (s<n && lines[s]~/^[[:space:]]*$$/) s++; \
+	    e=n-1; while (e>=s && lines[e]~/^[[:space:]]*$$/) e--; \
+	    for (i=s;i<=e;i++) print lines[i] \
+	  }' CHANGELOG.md)"; \
+	if [[ -z "$$notes" ]]; then \
+	  printf 'get_changelog: no CHANGELOG entry for %s\n' "$$tag" >&2; \
+	  exit 1; \
+	fi; \
+	printf '%s\n' "$$notes"
+```
+
+The `END` block trims blank lines from both ends of the captured section, so the release body starts at the first heading rather than an empty line. Matching is anchored with `index($$0,"## "tag" ")==1` rather than a regex, so `1.2` never matches the `1.2.3` header. It prints the body without its `## X.Y.Z` header, because the release title already shows the version. It needs `SHELL := /bin/bash` for `[[`, which this fragment already requires.

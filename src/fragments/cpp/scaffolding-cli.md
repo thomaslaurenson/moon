@@ -80,9 +80,9 @@ int main(int argc, char **argv) {
 ```
 
 - `require_subcommand(1)` is what makes a bare invocation fail rather than succeeding silently. Without it CLI11 parses nothing, throws nothing, and `main` returns 0, which tells a script the command worked.
-- `set_version_flag` reads `myproj::version_string` from the generated version header, whose template is in cpp/cmake.md and whose value comes from `project(... VERSION ...)`. Never a literal here.
+- `set_version_flag` reads `myproj::version_string` from the generated version header, whose template is in cpp/cmake and whose value comes from `project(... VERSION ...)`. Never a literal here.
 - The subcommand callbacks run inside `app.parse`, which is why the library's own exceptions are caught around it rather than after. The exit codes are covered in the error handling fragment.
-- The `<myproj/...>` includes are the lib-cli form. An application has no `include/`: its own headers sit in `src/` and `app/` includes them by name, `#include "errors.h"`, through the core's public include directory, while `<myproj/version.h>` is generated into an include tree in both tiers; see cmake-app.md.
+- The `<myproj/...>` includes are the lib-cli form. An application has no `include/`: its own headers sit in `src/` and `app/` includes them by name, `#include "errors.h"`, through the core's public include directory, while `<myproj/version.h>` is generated into an include tree in both tiers; see cmake-app.
 
 ## One registration function per subcommand
 

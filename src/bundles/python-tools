@@ -5,15 +5,15 @@
 # is an installable package that ships a console command; python-script for loose,
 # unmanaged one-offs.
 @include python-tools-code
-python/testing-unit.md
-tools/makefile.md
-python/make.md
-python/tooling.md
-python/project-tools.md
-github/actions.md
-python/workflows.md
-github/badges.md
-python/badges.md
-github/dependabot.md
-github/pulls.md
-github/changelog.md
+python/testing-unit
+tools/makefile
+python/make
+python/tooling
+python/project-tools
+github/actions
+python/workflows
+github/badges
+python/badges
+github/dependabot
+github/pulls
+github/changelog

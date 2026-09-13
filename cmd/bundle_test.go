@@ -157,8 +157,8 @@ func TestBundleExpand(t *testing.T) {
 			if err != nil {
 				t.Fatalf("run(%v): %v", tc.args, err)
 			}
-			if stdout != "_core.md\npython/style.md\n" {
-				t.Errorf("stdout = %q, want the ordered fragment paths", stdout)
+			if stdout != "_core\npython/style\n" {
+				t.Errorf("stdout = %q, want the ordered fragment names", stdout)
 			}
 			if !strings.Contains(stderr, "[*] 2 fragments") {
 				t.Errorf("stderr = %q, want the fragment count", stderr)

@@ -5,7 +5,7 @@ Language-agnostic CI conventions. Per-language paths filters, setup steps, and r
 - Prefer official `actions/*` wherever one exists, and publish releases with the `gh` CLI rather than a release action. The third-party actions in the table below each do a job no `actions/*` covers. `goreleaser-action` is the one that looks like an exception and is not: it builds binaries and does not publish, so `gh release create` still does the publishing.
 - Which workflow steps become `make` targets is settled in the Makefile fragment; version and changelog extraction always are.
 - Minimal permissions: `contents: read` by default; `contents: write` only in release and prerelease workflows. Test workflows never declare `contents: write`. Every caller declares `contents: read` at the top and widens it on the jobs that need more, since a caller with no block inherits the repository default, which may be read and write.
-- No `fetch-depth: 0` unless a step actually reads git history. Changelog extraction does not: `get_changelog` reads `CHANGELOG.md` out of the working tree, which a default depth-1 checkout has in full. The real cases are tools that inspect history or tags, such as goreleaser, tag-based versioning, and `git tag -f` against an existing tag. A release that only runs `gh release create` needs the default depth.
+- No `fetch-depth: 0` unless a step actually reads git history. Changelog extraction does not: `get_changelog` reads `CHANGELOG.md` out of the working tree, which a default depth-1 checkout has in full. The real cases are tools that inspect history or tags, such as goreleaser and tag-based versioning. A release that only runs `gh release create` needs the default depth.
 - `gh` infers the repository from the local git remote, so any job that calls it without an `actions/checkout` step must set `GH_REPO: ${{ github.repository }}`. Otherwise every call fails with `not a git repository`, which is not a not-found answer and must not be treated as one. Set it at job level alongside `GH_TOKEN` rather than per step.
 - Never let a failed `gh` call stand in for a negative answer. An existence check has three outcomes, not two: it is there, it is not there, or the API could not say. Match the not-found message explicitly and fail the job on anything else. Both `|| true` and a bare `if gh view ...; then` collapse a rate limit, an auth failure or a flaky API into "it does not exist", and the step then does the wrong thing confidently.
 
@@ -51,7 +51,7 @@ Never use `@latest`. How tightly to pin below that depends on who publishes the 
 - **Everything else** pins to a full commit SHA, with the version it corresponds to in a trailing comment. A SHA is the only immutable reference an action has.
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: actions/checkout@vN
 - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 ```
 
@@ -59,7 +59,7 @@ The comment is not decoration: Dependabot reads it, bumps the SHA and rewrites t
 
 An action published by the same person who owns the repository using it is not third-party in the sense that matters here, since compromising it and compromising the repository are the same event. Pin it to a major like `actions/*`.
 
-Do not treat any version number that has ever appeared in this doc as the target to match - a frozen version table goes stale faster than this spec gets updated. Dependabot (see below) keeps the pin current from there.
+`@vN` in the workflow fragments means the current major at authoring time, for example `@v7`. Do not treat any version number that has ever appeared in these documents as the target to match: a frozen version goes stale faster than the spec gets updated, and Dependabot (see below) keeps the pin current from there.
 
 Use reusable workflows (`workflow_call`) for the job logic the callers share; callers compose them:
 
@@ -177,7 +177,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@vN
       - <language setup step>
       - run: make check_all
 ```

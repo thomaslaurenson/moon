@@ -19,11 +19,11 @@ README.md
 cmake/                # version.h.in, plus any CMake helper modules
 src/                  # implementation, built as a library target; never contains main()
 extern/               # git submodules only; never copy third-party headers manually
-test/                 # see cpp/testing.md for internal structure
+test/                 # see cpp/testing for internal structure
 ```
 
 - `extern/` contains only git submodules; never manually copied headers or installed libraries
-- `cmake/` holds build inputs that are neither source nor public headers: `version.h.in`, which every project has (see the version rule in cpp/style.md), plus helper modules such as `mark_system.cmake` where a project links a dependency that exports its own target. The version template is what makes this directory universal rather than optional. Keep templates out of `include/`: that tree is the API a consumer includes, and a file there that cannot be included misrepresents it.
+- `cmake/` holds build inputs that are neither source nor public headers: `version.h.in`, which every project has (see the version rule in cpp/style), plus helper modules such as `mark_system.cmake` where a project links a dependency that exports its own target. The version template is what makes this directory universal rather than optional. Keep templates out of `include/`: that tree is the API a consumer includes, and a file there that cannot be included misrepresents it.
 
 Two rules hold across every tier, and the tier fragments assume them:
 
@@ -92,7 +92,7 @@ endforeach()
 
 ## Version header
 
-`project(myproj VERSION 1.2.3)` is the one place a version is declared (see cpp/style.md), and every project turns it into a header with `configure_file`, from a template every project has:
+`project(myproj VERSION 1.2.3)` is the one place a version is declared (see cpp/style), and every project turns it into a header with `configure_file`, from a template every project has:
 
 ```cpp
 // cmake/version.h.in
@@ -115,7 +115,7 @@ inline constexpr const char *version_string = "@PROJECT_VERSION@";
 } // namespace myproj
 ```
 
-- Constants in the project's namespace rather than macros, so `myproj::version_string` reads like any other identifier, cannot collide with a consumer's own `VERSION`, and is a `constexpr` the compiler can fold. They follow the naming rule for constants in cpp/style.md.
+- Constants in the project's namespace rather than macros, so `myproj::version_string` reads like any other identifier, cannot collide with a consumer's own `VERSION`, and is a `constexpr` the compiler can fold. They follow the naming rule for constants in cpp/style.
 - `@ONLY` on the `configure_file` call, so only the `@VAR@` references are substituted and a `${...}` in the header survives; the tier fragments show the call.
 - The template lives in `cmake/`, never in `src/` or `include/`: it is a build input the compiler never sees. The generated header goes to `${PROJECT_BINARY_DIR}/include/myproj/version.h`, so it is included as `<myproj/version.h>` in every tier, beside the public headers where there are any.
 - `get_version` in the Makefile targets fragment reads the same `project()` line, so the tag about to be pushed can be checked against what the build will report.
@@ -266,7 +266,7 @@ Unprefixed module names like `crypto`, `common`, `config`, `net` or `parser` are
 
 Consumers link the alias, never the raw name, so the prefix costs nothing at the call site.
 
-The bare project name belongs to the one target a user or consumer reaches for: the aggregate or single library target in a library, and the executable in a tier that ships one. Everything else carries the prefix: `myproj_<module>`, `myproj_core`, `myproj_lib`, `myproj_unit_tests`, `myproj_fuzz_<name>`. That is what lets a library with a bundled CLI call both halves `myproj` without a collision: the executable is `myproj`, the library target is `myproj_lib`, and every link goes through the `myproj::myproj` alias, so the suffix is a name nothing outside `src/CMakeLists.txt` ever writes; see cmake-lib-cli.md.
+The bare project name belongs to the one target a user or consumer reaches for: the aggregate or single library target in a library, and the executable in a tier that ships one. Everything else carries the prefix: `myproj_<module>`, `myproj_core`, `myproj_lib`, `myproj_unit_tests`, `myproj_fuzz_<name>`. That is what lets a library with a bundled CLI call both halves `myproj` without a collision: the executable is `myproj`, the library target is `myproj_lib`, and every link goes through the `myproj::myproj` alias, so the suffix is a name nothing outside `src/CMakeLists.txt` ever writes; see cmake-lib-cli.
 
 ## Warnings
 
@@ -368,9 +368,9 @@ endif()
 
 The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable: a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 
-This, and the fuzz option's instrumentation in cpp/testing-fuzz.md, are the two legitimate uses of the directory-scoped `add_compile_options` rather than `target_compile_options`, for the same reason. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
+This, and the fuzz option's instrumentation in cpp/testing-fuzz, are the two legitimate uses of the directory-scoped `add_compile_options` rather than `target_compile_options`, for the same reason. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
 
-Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job: that job is `test_asan` in cpp/workflows.md, and the reason it is separate is the same 2x.
+Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job: that job is `test_asan` in cpp/workflows, and the reason it is separate is the same 2x.
 
 A sanitized build changes code generation, so it gets its own `build/asan` directory rather than sharing `build/dev`. `configure_asan` and `test_asan` in the Makefile targets fragment configure it and run the unit layer there, which is the layer that needs no external data and whose findings point at the project's own code. Without them the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent.
 
@@ -504,7 +504,7 @@ clang-tidy resolves headers through the compiler that produced `compile_commands
 
 So clang-tidy gets its own configure, pinned to clang. `configure_lint` in the Makefile targets fragment writes `build/lint` with `CMAKE_CXX_COMPILER` set to the resolved clang, and `check_lint` reads its `compile_commands.json` from there rather than from the everyday build.
 
-A second directory rather than pinning clang in `configure` itself, because `configure` has to stay compiler-neutral: CI builds under both GCC and clang (see cpp/workflows.md), and `--gcc-install-dir` is a clang flag that `g++` rejects outright. The cost is close to nothing: `configure_lint` only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
+A second directory rather than pinning clang in `configure` itself, because `configure` has to stay compiler-neutral: CI builds under both GCC and clang (see cpp/workflows), and `--gcc-install-dir` is a clang flag that `g++` rejects outright. The cost is close to nothing: `configure_lint` only configures, never builds, so it produces `compile_commands.json` without a second compile of the project.
 
 Every target the Makefile defines, from `configure` and `build` through `format`, `check_format` and `check_lint` to the `get_*` targets and the CI aggregates, is in the Makefile targets fragment, which is the only place a target is written down. One rule of theirs follows from this section: `format` and `check_format` include `test/`, since test code is held to the same formatting standard as production code, and `check_lint` deliberately does not run clang-tidy over `test/`, because test files use Catch2 macros and fixture patterns that trip naming and readability checks written for production code. Format tests, but do not tidy them.
 

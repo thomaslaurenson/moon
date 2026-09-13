@@ -2,13 +2,13 @@
 # reviewing code for a library that also ships a CLI binary. Same rules as cpp-lib-code:
 # the library half carries the public API, and the errors fragment covers both sides of
 # the library/app boundary that the CLI layer sits on.
-_core.md
-git/commits.md
-cpp/style.md
-cpp/doxygen.md
-cpp/scaffolding-lib.md
-cpp/errors.md
-cli/output.md
-cpp/logging.md
-cpp/scaffolding-cli.md
-cpp/signals.md
+_core
+git/commits
+cpp/style
+cpp/doxygen
+cpp/scaffolding-lib
+cpp/errors
+cli/output
+cpp/logging
+cpp/scaffolding-cli
+cpp/signals

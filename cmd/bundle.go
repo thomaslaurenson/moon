@@ -107,7 +107,7 @@ func (a *App) bundleShow(out io.Writer, name string) error {
 func (a *App) newBundleExpandCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:               "expand <name>",
-		Short:             "Print the ordered fragment paths a bundle expands to",
+		Short:             "Print the ordered fragment names a bundle expands to",
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: a.completeBundles,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -116,7 +116,7 @@ func (a *App) newBundleExpandCmd() *cobra.Command {
 	}
 }
 
-// bundleExpand prints the ordered fragment paths name expands to (with @include
+// bundleExpand prints the ordered fragment names name expands to (with @include
 // resolved), one per line to out, and a count to errw.
 func (a *App) bundleExpand(out, errw io.Writer, name string) error {
 	if !a.e.HasBundle(name) {

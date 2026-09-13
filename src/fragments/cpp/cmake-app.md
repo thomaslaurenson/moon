@@ -168,8 +168,8 @@ catch_discover_tests(myproj_functional_tests
 
 The separation is intentional. Unit tests link the core because they call it directly; functional tests link neither the core nor the binary, because they exercise the binary through its CLI as a user would. Mixing them produces a test binary with unclear dependencies and lets a functional test quietly call a function instead of the command. The unit binary sees every header in `src/`, private ones included, through the core's `PUBLIC` include directory; the functional binary sees only `test/`.
 
-`enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.md.
+`enable_testing()` and `include(Catch)` are called once in the root `CMakeLists.txt`, not here; see the universal fragment. `LABELS` is what lets `ctest -L unit` select a layer, and `SKIP_RETURN_CODE 4` is what stops a `SKIP()` being reported as a failure; both are explained in cpp/testing.
 
-These two layers are what an application always has. It adds an integration layer if it has real data worth testing against below the CLI (see cpp/testing-integration.md), and a fuzz layer if the core parses untrusted input (see cpp/testing-fuzz.md).
+These two layers are what an application always has. It adds an integration layer if it has real data worth testing against below the CLI (see cpp/testing-integration), and a fuzz layer if the core parses untrusted input (see cpp/testing-fuzz).
 
 Between the unit and functional layers, prefer the unit layer. It is faster, it fails with a stack trace instead of a diff of stdout, and a fixture can provoke a case that would take a contrived command line to reach. Reserve the functional layer for what only it can see: argv parsing, exit codes, and what lands on stdout.

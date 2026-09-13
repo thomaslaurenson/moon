@@ -4,7 +4,7 @@
 
 ![Release Version](https://img.shields.io/github/v/release/thomaslaurenson/moon?style=flat&logo=github) ![Release downloads](https://img.shields.io/github/downloads/thomaslaurenson/moon/total?style=flat&label=downloads&logo=github)
 
-![Go Version](https://img.shields.io/github/go-mod/go-version/thomaslaurenson/moon?style=flat&logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-91.2%25-blue?style=flat&logo=go)
+![Go Version](https://img.shields.io/github/go-mod/go-version/thomaslaurenson/moon?style=flat&logo=go) ![Code Coverage](https://img.shields.io/badge/Coverage-91.1%25-blue?style=flat&logo=go)
 
 To the moon! A self-contained binary that composes AI agent instructions from markdown fragments.
 

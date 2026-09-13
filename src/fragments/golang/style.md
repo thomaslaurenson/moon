@@ -97,7 +97,6 @@ The one sanctioned `init()` is the version stamp in `cmd/version.go`, where the 
 
 Cobra's own generator emits the `init()` form, so it is common in examples. It predates the practice of injecting writers and contexts, and cannot support either.
 
-
 ## Constants
 
 Package-level constants use `CamelCase` when exported, `mixedCase` when unexported. Never `UPPER_SNAKE_CASE` in Go.

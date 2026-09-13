@@ -9,9 +9,10 @@ import (
 func TestFragmentList(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name  string
-		args  []string
-		check func(t *testing.T, stdout string)
+		name    string
+		args    []string
+		wantErr bool
+		check   func(t *testing.T, stdout string)
 	}{
 		{
 			name: "default lists every fragment",
@@ -44,11 +45,25 @@ func TestFragmentList(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:    "a second argument is an error with empty stdout",
+			args:    []string{"fragment", "list", "a", "b"},
+			wantErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			stdout, _, err := run(t, testFS(), tc.args...)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("want error, got nil")
+				}
+				if stdout != "" {
+					t.Errorf("stdout = %q, want empty on failure", stdout)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("run(%v): %v", tc.args, err)
 			}

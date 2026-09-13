@@ -105,8 +105,8 @@ func TestDetect(t *testing.T) {
 			name: "marker files inside skipped dirs are ignored",
 			fsys: fstest.MapFS{
 				"README.md":                   {},
-				"node_modules/pkg/go.mod":     {}, // must NOT trigger go-cli
-				"vendor/thing/CMakeLists.txt": {}, // must NOT trigger cpp-app
+				"node_modules/pkg/go.mod":     {}, // Must not trigger go-cli
+				"vendor/thing/CMakeLists.txt": {}, // Must not trigger cpp-app
 			},
 			wantBundles: nil,
 		},

@@ -9,9 +9,10 @@ import (
 func TestBundleList(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name  string
-		args  []string
-		check func(t *testing.T, stdout string)
+		name    string
+		args    []string
+		wantErr bool
+		check   func(t *testing.T, stdout string)
 	}{
 		{
 			name: "default lists names only",
@@ -53,11 +54,25 @@ func TestBundleList(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:    "an argument is an error with empty stdout",
+			args:    []string{"bundle", "list", "extra"},
+			wantErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			stdout, _, err := run(t, testFS(), tc.args...)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("want error, got nil")
+				}
+				if stdout != "" {
+					t.Errorf("stdout = %q, want empty on failure", stdout)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("run(%v): %v", tc.args, err)
 			}
@@ -145,7 +160,7 @@ func TestBundleExpand(t *testing.T) {
 			if stdout != "_core.md\npython/style.md\n" {
 				t.Errorf("stdout = %q, want the ordered fragment paths", stdout)
 			}
-			if !strings.Contains(stderr, "(2 fragments)") {
+			if !strings.Contains(stderr, "[*] 2 fragments") {
 				t.Errorf("stderr = %q, want the fragment count", stderr)
 			}
 		})

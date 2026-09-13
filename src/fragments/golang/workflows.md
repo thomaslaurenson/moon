@@ -61,7 +61,7 @@ Tests themselves stay on Linux. A macOS or Windows leg would run the same unit t
 
 ### If real cross-platform test execution is needed
 
-Should a platform bug ever escape, add a matrix leg to `tag.yml` rather than `pr.yml`, so pull requests stay fast and only releases pay. Standard runners are free on public repositories, on every plan, so cost is not the constraint.
+Should a platform bug ever escape, add a matrix leg to `tag.yml` rather than `pr.yml`, so pull requests stay fast and only releases pay; What a job costs in the GitHub Actions fragment is why the leg is gated rather than added everywhere.
 
 - **macOS** is straightforward: add `macos-15` to the matrix and it runs `make test` unchanged, because the image has GNU make.
 - **Windows needs a carve-out**, and the two obvious fixes both fail. The image has no GNU make. Installing it via Chocolatey gives a native Windows binary that cannot resolve the Makefile's `SHELL := /bin/bash`, since Git Bash lives at `C:\Program Files\Git\bin\bash.exe`. Installing MSYS2's make does resolve `/bin/bash`, but then Go, a native Windows binary, receives MSYS paths such as `/c/Users/...` and mishandles them. The workable route is to call `go test -race -count=1 ./...` directly on the Windows leg, accepting that the command then exists both there and in the Makefile.

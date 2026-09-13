@@ -86,13 +86,17 @@ func (a *App) runInit(out, errw io.Writer, targetName string, bundleNames []stri
 	}
 	for _, f := range files {
 		dst := filepath.Join(root, f.Path)
+		marker := "[+]"
+		if _, err := os.Stat(dst); err == nil {
+			marker = "[~]"
+		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
 		if err := os.WriteFile(dst, f.Content, 0o644); err != nil {
 			return err
 		}
-		fmt.Fprintf(errw, "[*] wrote %s\n", dst)
+		fmt.Fprintf(errw, "%s wrote %s\n", marker, dst)
 	}
 	fmt.Fprintf(errw, "[*] initialised %s (%d file(s)) for target %s\n", root, len(files), targetName)
 	return nil

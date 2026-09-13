@@ -1,9 +1,3 @@
-// Package bundler resolves bundle definitions and assembles instruction bundles
-// from a fragment tree.
-//
-// A bundle definition (src/bundles/<name>) is an ordered list of fragment paths
-// relative to src/fragments. Blank lines and content after '#' are ignored. A line
-// "@include <bundle>" expands another bundle in place, so bundles share a common base.
 package bundler
 
 import (
@@ -247,7 +241,7 @@ func (e *Engine) emit(header string, frags []string, origin string) ([]byte, err
 		buf.Write(bytes.TrimRight(data, "\n"))
 		buf.WriteString("\n\n")
 	}
-	// End with exactly one trailing newline.
+	// End with exactly one trailing newline
 	out := append(bytes.TrimRight(buf.Bytes(), "\n"), '\n')
 	return out, nil
 }

@@ -2,7 +2,7 @@
 
 CLI application layout:
 
-```
+```text
 cmd/           # cobra commands (root.go, version.go, etc.)
 internal/      # private packages
 main.go        # minimal entry point, delegates to cmd/
@@ -11,6 +11,7 @@ main.go        # minimal entry point, delegates to cmd/
   dependabot.yml
 .goreleaser.yml
 .goreleaser.prerelease.yml
+.gpipe.yml
 go.mod
 go.sum
 Makefile
@@ -156,7 +157,7 @@ Follow semantic versioning strictly: `go install` and the module proxy key off t
 
 For a v2 or later major version, the module path itself must gain the version suffix, per Go's module rules:
 
-```
+```text
 module github.com/x/mytool/v2
 ```
 

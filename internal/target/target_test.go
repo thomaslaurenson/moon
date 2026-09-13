@@ -8,28 +8,28 @@ import (
 func TestGlobForBundle(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		bundle string
-		want   string
+		name string
+		want string
 	}{
-		{"python-script", "**/*.py"},
-		{"python-lib-code", "**/*.py"},
-		{"python-lib", "**"},
-		{"go-cli", "**"},
-		{"go-cli-code", "**/*.go"},
-		{"cpp-app", "**"},
-		{"cpp-app-code", "**/*.{cpp,cc,h,hpp}"},
-		{"bash-script", "**/*.sh"},
-		{"bash-project", "**"},
-		{"powershell-script", "**/*.ps1"},
-		{"markdown", "**/*.md"},
-		{"docker", "**/{Dockerfile,docker-compose.yml,docker-compose.yaml}"},
-		{"totally-unknown-bundle", "**"},
+		{name: "python-script", want: "**/*.py"},
+		{name: "python-lib-code", want: "**/*.py"},
+		{name: "python-lib", want: "**"},
+		{name: "go-cli", want: "**"},
+		{name: "go-cli-code", want: "**/*.go"},
+		{name: "cpp-app", want: "**"},
+		{name: "cpp-app-code", want: "**/*.{cpp,cc,h,hpp}"},
+		{name: "bash-script", want: "**/*.sh"},
+		{name: "bash-project", want: "**"},
+		{name: "powershell-script", want: "**/*.ps1"},
+		{name: "markdown", want: "**/*.md"},
+		{name: "docker", want: "**/{Dockerfile,docker-compose.yml,docker-compose.yaml}"},
+		{name: "totally-unknown-bundle", want: "**"},
 	}
 	for _, tc := range tests {
-		t.Run(tc.bundle, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := GlobForBundle(tc.bundle); got != tc.want {
-				t.Errorf("GlobForBundle(%q) = %q, want %q", tc.bundle, got, tc.want)
+			if got := GlobForBundle(tc.name); got != tc.want {
+				t.Errorf("GlobForBundle(%q) = %q, want %q", tc.name, got, tc.want)
 			}
 		})
 	}

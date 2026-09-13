@@ -6,12 +6,11 @@ How a CLI project builds and publishes release binaries. Applies to every Go pro
 
 Every project has two configs: `.goreleaser.yml` (versioned releases via `release.yml`) and `.goreleaser.prerelease.yml` (dev snapshot via `prerelease.yml`).
 
-- GoReleaser builds binaries only; it does not create checksums, sign, or publish.
+- GoReleaser builds binaries only. Checksums, install scripts and signing are gpipe's job (see the gpipe fragment), and `gh release create` publishes.
 - Always inject version via `ldflags`. Default matrix is `linux`/`darwin`/`windows` x `amd64`/`arm64`, excluding `windows/arm64`.
 - Windows on ARM runs x64 binaries under emulation, so the excluded `windows/arm64` build is a performance optimisation rather than a compatibility requirement. A project that ships `install.ps1` may include it: `Get-Platform` reports `windows_arm64`, and if no such asset exists the installer fails outright rather than falling back to the emulated x64 build. Include it in both goreleaser configs and in `.gpipe.yml`, or in neither.
 - Always set `no_unique_dist_dir: true` so binaries land flat in `dist/`.
 - Prefer `CGO_ENABLED=0` and `mod_timestamp` for reproducible static builds.
-- Checksums, install scripts, and signing are gpipe's job, not goreleaser's; see the gpipe fragment.
 
 ```yaml
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
@@ -35,7 +34,7 @@ git:
 
 `git.ignore_tags` belongs in both configs, not just the prerelease one. The prerelease channel publishes under a moving `dev` tag (see below), so once a developer has fetched tags, goreleaser's own tag discovery names that tag as the last release. A tagged CI release never sees it, because `GORELEASER_CURRENT_TAG` overrides discovery outright, and neither does the prerelease build, which already carried the setting. What it fixes is the local preview:
 
-```
+```text
 $ make snapshot        # without it
 dev-SNAPSHOT-120e4d7
 $ make snapshot        # with it
@@ -88,21 +87,21 @@ jobs:
           cosign_sign: true
 
       - name: Get changelog
-        run: make get_changelog TAG=${{ github.ref_name }} > /tmp/release-notes.md
+        run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
 
       - name: Create release
         run: |
-          gh release create "${{ github.ref_name }}" \
+          gh release create "${GITHUB_REF_NAME}" \
             dist/<name>-* \
             install.sh install.ps1 \
             checksums.txt checksums.txt.sigstore.json \
-            --title "${{ github.ref_name }}" \
+            --title "${GITHUB_REF_NAME}" \
             --notes-file /tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
 ```
 
-Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action.
+Three details in there are load-bearing. `fetch-depth: 0` is needed because goreleaser reads tags. `GORELEASER_CURRENT_TAG` must always be set, so goreleaser does not pick up a `-dev` tag sitting on the same commit. And `version: "~> v2"` pins the goreleaser binary, which is a separate thing from the `@<sha>` pinning the action. The tag reaches the shell as `${GITHUB_REF_NAME}`, never as an interpolated `${{ github.ref_name }}`: an expression inside `run:` is pasted into the script as text before it runs, while an environment variable is only ever a value.
 
 The `actions/setup-go` here is for goreleaser, and gpipe rides on it. gpipe installs no Go of its own and builds with whatever is on `PATH`, so this step is what settles the version both of them get (see the gpipe fragment).
 
@@ -114,7 +113,7 @@ goreleaser writes the binaries into `dist/`. Everything else a release publishes
 
 The prerelease channel is a single rolling GitHub release under the literal tag `dev`, rebuilt on every push to main: raw binaries only, no install scripts, checksums or signing, because gpipe cannot run against a `dev` tag at all (see the gpipe fragment). `prerelease.yml` therefore needs `contents: write` and not `id-token: write`.
 
-`dev` is a real git tag that moves, which is why checkout needs both `fetch-depth: 0` and `fetch-tags: true`: `git tag -f` has to see the existing tag.
+`dev` is a real git tag that moves. Deleting the old release with `--cleanup-tag` removes it, and `gh release create dev --target <sha>` then creates a fresh one at the built commit, so there is no `git tag -f` step and no push. Pass `--target` explicitly rather than letting `gh` default it to the head of the default branch, which can already have moved on by the time the job publishes. `fetch-depth: 0` stays, because goreleaser reads the release tags to compute the snapshot version.
 
 ```yaml
 # prerelease.yml
@@ -132,7 +131,6 @@ jobs:
       - uses: actions/checkout@vN
         with:
           fetch-depth: 0
-          fetch-tags: true
 
       - uses: actions/setup-go@vN
         with:
@@ -152,13 +150,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Tag and push dev
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f dev
-          git push origin dev --force
-
       - name: Build binaries
         uses: goreleaser/goreleaser-action@<sha> # v<version>
         with:
@@ -168,8 +159,9 @@ jobs:
       - name: Create dev release
         run: |
           gh release create dev \
+            --target "${GITHUB_SHA}" \
             --title "Dev (Pre-release)" \
-            --notes "Built from commit ${{ github.sha }}" \
+            --notes "Built from commit ${GITHUB_SHA}" \
             --prerelease \
             dist/<name>-*
         env:
@@ -184,4 +176,4 @@ Three outcomes, three behaviours: the release exists, so delete it; `gh` reports
 
 `2>&1 >/dev/null` captures stderr while discarding stdout, and the order matters. Redirections apply left to right, so this points stderr at the still-open capture and only then sends stdout to `/dev/null`. Writing `>/dev/null 2>&1` sends both to `/dev/null`, leaves `err` empty, and the not-found branch can never match.
 
-Never write this as `gh release delete dev --yes --cleanup-tag || true`. That collapses all three outcomes into one and continues regardless. `--cleanup-tag` deletes the git tag along with the release, which step 2 then recreates at the new commit.
+Never write this as `gh release delete dev --yes --cleanup-tag || true`. That collapses all three outcomes into one and continues regardless. `--cleanup-tag` deletes the git tag along with the release, which `gh release create --target` then recreates at the new commit.

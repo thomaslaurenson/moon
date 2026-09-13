@@ -10,10 +10,11 @@ Standard library first even so. Reach for an `x/` module where the standard libr
 
 | Tool | Purpose |
 |---|---|
-| `gofmt` | Format source files |
+| `goimports` | Format source files and group imports; `gofmt` alone cannot group (see the style fragment) |
 | `go vet` | Static analysis |
 | `go test` | Run tests |
 | `go mod tidy` | Keep go.mod/go.sum clean |
+| `govulncheck` | Scan for reachable vulnerabilities, on a schedule |
 
 - No `replace` directives in committed code. Run `go mod tidy` before committing.
 - Third-party release tools (`goreleaser`, `cosign`) are permitted, since they build and sign the release rather than judge the source.
@@ -37,15 +38,15 @@ The workflows pass `go-version-file: go.mod` (see the workflows fragment), so th
 | `go 1.27` | the newest 1.27.x available | arrive automatically |
 | `go 1.27.0` | exactly 1.27.0 | frozen until the line is edited |
 
-**Write the minor-only form.** A patch release of Go is security and bug fixes for the same language version, and pinning one holds a signed public binary on a standard library that is known to be superseded. Verify with `go version -m <binary>` against a published artifact rather than assuming; the directive alone does not tell you what shipped.
+**Write the minor-only form.** A patch release of Go is security and bug fixes for the same language version, and pinning one holds a signed public binary on a standard library that is known to be superseded. Verify with `go version -m <binary>` against a published artefact rather than assuming; the directive alone does not tell you what shipped.
 
 The trade-off is that rebuilding an old tag later may use a newer toolchain and produce a different binary. That is the right way round: a rebuild should pick up the fixes.
 
-Locally the directive is only a minimum, and a newer installed toolchain always wins. A developer therefore never sees the pin, and the released artifact is the only place it takes effect.
+Locally the directive is only a minimum, and a newer installed toolchain always wins. A developer therefore never sees the pin, and the released artefact is the only place it takes effect.
 
 Dependabot does not bump the `go` directive; it updates module requirements only. Raise the minor version deliberately when moving to a new Go release, and raise it with `go mod edit`:
 
-```
+```text
 go mod edit -go=1.27      # writes "go 1.27"
 go get go@1.27            # writes "go 1.27.4", the pinned form above
 ```
@@ -60,7 +61,7 @@ It can arrive without anyone choosing it, since `go get toolchain@go1.27.0` adds
 
 ## Vulnerability scanning
 
-`govulncheck` is the one permitted addition to the toolchain table above. It is maintained by the Go team, has no configuration, and answers a question no other tool here can.
+`govulncheck` earns its row in the toolchain table: it is maintained by the Go team, has no configuration, and answers a question no other tool here can.
 
 Dependabot covers dependencies and cannot see the standard library, since the toolchain is not a go.mod requirement. On a project with a handful of dependencies the standard library is most of the attack surface, so the small dependency count argues for the scan rather than against it.
 

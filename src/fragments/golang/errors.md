@@ -83,7 +83,7 @@ A command that needs a context adds signal handling above this and calls `Execut
 
 - `main` builds the tree through `NewRootCmd` rather than a package-level `Execute` wrapper, so production and tests construct it exactly one way (see the scaffolding and functional testing fragments). A wrapper that only forwards its arguments is a second construction path that can drift from the one the tests use.
 - `main` imports `cmd` and the standard library, nothing else. A sentinel it has to match on, such as one meaning the user backed out of a prompt, is exported from `cmd` rather than reached for in `internal/`.
-- The line is marked `[!]`, like every other warning or error the program prints (see the core conventions). Never an `error:` prefix, which carries nothing the marker does not.
+- The line is marked `[!]`, like every other warning or error the program prints (see the command line output fragment). Never an `error:` prefix, which carries nothing the marker does not.
 - Exit 1 for every ordinary failure.
 
 | Code | Meaning |
@@ -94,7 +94,7 @@ A command that needs a context adds signal handling above this and calls `Execut
 | other | only via `ExitCodeError`, when the command has a specific code to report |
 
 There is no separate code for a usage error. A mistyped invocation is an ordinary failure, and splitting it out would signal to a script that the user typed it wrong without telling the user anything more than exit 1 already does.
-- `ExitCodeError` covers the cases where 1 is the wrong code: propagating a wrapped process's exit status, or signalling findings from a scan. Its `Error()` returns the empty string, so a command that has already written its own output returns `&ExitCodeError{Code: 1}` and exits non-zero without a second message.
+`ExitCodeError` covers the cases where 1 is the wrong code: propagating a wrapped process's exit status, or signalling findings from a scan. Its `Error()` returns the empty string, so a command that has already written its own output returns `&ExitCodeError{Code: 1}` and exits non-zero without a second message.
 
 ```go
 // ExitCodeError is returned by a command that has already produced its output

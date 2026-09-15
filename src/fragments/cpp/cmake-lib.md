@@ -129,7 +129,9 @@ configure_file(
 )
 ```
 
-The generated directory is then carried by the module targets (see Module targets), and never added to the aggregate. The aggregate is an `INTERFACE` library, and `target_include_directories(myproj PUBLIC ...)` on one of those is not a style preference but a configure error: "target_include_directories may only set INTERFACE properties on INTERFACE targets". Writing `INTERFACE` there instead configures cleanly and is still wrong, because only code linking the aggregate would see the header: a module wanting its own version constant would fail to compile, and the aggregate is declared after the modules that would need it. A `PUBLIC` path on each module reaches both, since the aggregate links the modules and inherits their interface.
+Every module then carries the generated directory, `PUBLIC`, as Module targets shows. That is the part that is load-bearing: a `PUBLIC` path on each module reaches both a module's own sources and an outside consumer, since the aggregate links the modules and inherits their interface.
+
+Putting it on the aggregate is not a substitute for that. `target_include_directories(myproj PUBLIC ...)` on an `INTERFACE` library is a configure error outright: "target_include_directories may only set INTERFACE properties on INTERFACE targets". Writing `INTERFACE` there configures cleanly but reaches only code linking the aggregate, so a module wanting its own version constant would still fail to compile, and the aggregate is declared after the modules that would need it. Adding it there as well as on the modules is harmless and redundant; adding it there instead does not work.
 
 A consumer then writes `#include <myproj/version.h>`, matching every other public header. Naming `"${PROJECT_BINARY_DIR}"` itself instead would put every generated file in the build tree on their include path.
 

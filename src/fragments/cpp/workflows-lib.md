@@ -86,7 +86,7 @@ It costs one extra compile of a handful of small programs on a job that is alrea
 name: Test
 
 on:
-  workflow_call
+  workflow_call:
 
 permissions:
   contents: read

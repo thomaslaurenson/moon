@@ -246,7 +246,7 @@ Check out with submodules: the test binaries link Catch2 and `subprocess.h`, whi
 name: Test
 
 on:
-  workflow_call
+  workflow_call:
 
 permissions:
   contents: read

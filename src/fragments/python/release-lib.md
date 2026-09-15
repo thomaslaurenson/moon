@@ -10,7 +10,7 @@ Reusable, called from `tag.yml` after lint and test pass. A single job builds th
 name: Release
 
 on:
-  workflow_call
+  workflow_call:
 
 jobs:
   release:

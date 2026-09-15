@@ -14,7 +14,7 @@ This is the build -> gpipe -> release pattern; the gpipe fragment covers what gp
 name: Release
 
 on:
-  workflow_call
+  workflow_call:
 
 # contents: write to create the release and upload assets
 # id-token: write to obtain the OIDC token for cosign keyless signing
@@ -127,7 +127,7 @@ Existence-check the delete: three outcomes, not two. Never write `gh release del
 name: Prerelease
 
 on:
-  workflow_call
+  workflow_call:
 
 permissions:
   contents: write

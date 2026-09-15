@@ -65,8 +65,16 @@ private:
 - Public API functions throw the library's own types, never a bare `std::runtime_error`, `std::invalid_argument`, or a third-party library's exception. Catch a dependency's exception at the boundary and rethrow as your own with `std::throw_with_nested` where the original matters.
 - Carry structured data as members (`Path()`, `ErrorCode()`), not just a formatted string. A caller that wants to retry needs the path, not prose. The accessors are methods, so they are `PascalCase` like any other; the members they return keep the trailing underscore. See Naming in the C++ style fragment, which clang-tidy enforces through `MethodCase`.
 - A path member is a `std::filesystem::path`, for the same reason a path parameter is; see the C++ style fragment. Building the message then needs an explicit `path.string()`, because there is no `operator+` between a string literal and a path. That conversion is the one place the narrow form is correct: the message is prose for a human, not something anyone reopens the file with.
-- Exception types live in `include/myproj/errors.h` in a tier with a public API, so a consumer imports them from one place. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app).
+- `include/myproj/errors.h` holds the root, and the types shared across the whole library, in a tier with a public API. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app). Where a module's own error type is declared is settled below.
 - `Interrupted`, thrown by library code when the cancellation flag it was handed is set, derives from `Error` like every other type and is declared in the same header; see the interrupts fragment.
+
+## Where a derived type is declared
+
+A library built as one target declares its whole hierarchy in `errors.h`; there is nowhere else for it to go. A library split into modules declares the root there and each module's own error type in that module's public header, beside the API that throws it.
+
+That follows from what the module split is for. cmake-lib lets a consumer link `myproj::record` alone under `EXCLUDE_FROM_ALL` and compile nothing else, and a single header naming every module's exception would undo it: catching anything at all would mean compiling declarations for modules the consumer never linked, and every module's error type would be a file every consumer recompiles when any one of them changes. Keeping the type beside its API also keeps it beside the `@throws` line that names it, which is where a consumer finds out it exists at all.
+
+The root is what makes the split safe. One `catch (const myproj::Error &)` covers the whole library however many modules it grows, so a consumer wanting everything includes one header and a consumer wanting one module includes one module. Without the root the split would be a real cost to a caller; with it, it costs nothing.
 
 ## What is not an exception
 

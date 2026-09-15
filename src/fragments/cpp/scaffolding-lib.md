@@ -45,7 +45,7 @@ A type a consumer never names stays in `src/`, in a private header beside the im
 
 ## The two headers every library has
 
-`errors.h` declares the exception hierarchy, rooted at `myproj::Error`, and is the header a consumer includes to catch anything the library throws; the error handling fragment gives its shape. `version.h` is generated from `project(... VERSION ...)` and gives the version as constants. A consumer that includes nothing else can still ask what it linked and catch what it throws.
+`errors.h` roots the exception hierarchy at `myproj::Error` and is the header a consumer includes to catch anything the library throws; the error handling fragment gives its shape, and says which derived types belong there and which belong in a module's own header. `version.h` is generated from `project(... VERSION ...)` and gives the version as constants. A consumer that includes nothing else can still ask what it linked and catch what it throws.
 
 ## What the README says
 

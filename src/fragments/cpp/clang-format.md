@@ -79,6 +79,20 @@ IncludeCategories:
     Priority: 2
 ```
 
+A tier with a public API needs a third tier, because its own headers are angle-included. The library scaffolding fragment puts every public header under `include/myproj/` and has consumers write `#include <myproj/archive/archive.h>`, and the project's own sources do the same. Under the two-tier split above those match `^<` like any standard header and sort alphabetically among them, so `<myproj/archive.h>` lands between `<optional>` and `<span>`. Give them a tier of their own:
+
+```yaml
+IncludeCategories:
+  - Regex:    '^<myproj/'   # Tier 2: this project's public headers
+    Priority: 2
+  - Regex:    '^<'          # Tier 1: stdlib and third-party
+    Priority: 1
+  - Regex:    '^"'          # Tier 3: private headers under src/
+    Priority: 3
+```
+
+Substitute the real project name in the regex, as everywhere else `myproj` appears. An application has no `include/myproj/` and needs no such tier; the two-tier split is the whole of its configuration.
+
 For projects with a large third-party dependency that needs its own tier, split tier 1:
 
 ```yaml

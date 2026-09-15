@@ -131,7 +131,7 @@ Installs the clang toolchain and runs format check and clang-tidy. No `make conf
 name: Lint
 
 on:
-  workflow_call
+  workflow_call:
 
 permissions:
   contents: read

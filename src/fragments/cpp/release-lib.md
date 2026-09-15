@@ -12,7 +12,7 @@ A library's release is a tagged commit; there is no compiled artefact to attach.
 name: Release
 
 on:
-  workflow_call
+  workflow_call:
 
 permissions:
   contents: write

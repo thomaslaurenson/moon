@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.7.0 - 2026-09-15
+
+### Added
+
+- Add a GENERATE section for Makefile targets that rewrite checked-in files
+- Add an include ordering tier for a library's own public headers
+
+### Changed
+
+- Say where a modular library declares each module's error type
+- Describe the aggregate include path as redundant rather than forbidden
+
+### Fixed
+
+- Correct the error accessor names to the method casing the C++ fragments enforce
+- Add the examples directory to the C++ paths filter
+- Spell workflow_call consistently across the workflow fragments
+
 ## 0.6.0 - 2026-09-13
 
 ### Added

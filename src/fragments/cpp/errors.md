@@ -50,8 +50,8 @@ public:
         : ArchiveError("could not open archive: " + path.string()), path_(std::move(path)),
           error_code_(error_code) {}
 
-    const std::filesystem::path &path() const { return path_; }
-    int error_code() const { return error_code_; }
+    const std::filesystem::path &Path() const { return path_; }
+    int ErrorCode() const { return error_code_; }
 
 private:
     std::filesystem::path path_;
@@ -63,7 +63,7 @@ private:
 
 - Every exception class gets a Doxygen comment saying when it is thrown; see the Doxygen fragment.
 - Public API functions throw the library's own types, never a bare `std::runtime_error`, `std::invalid_argument`, or a third-party library's exception. Catch a dependency's exception at the boundary and rethrow as your own with `std::throw_with_nested` where the original matters.
-- Carry structured data as members (`path()`, `error_code()`), not just a formatted string. A caller that wants to retry needs the path, not prose.
+- Carry structured data as members (`Path()`, `ErrorCode()`), not just a formatted string. A caller that wants to retry needs the path, not prose. The accessors are methods, so they are `PascalCase` like any other; the members they return keep the trailing underscore. See Naming in the C++ style fragment, which clang-tidy enforces through `MethodCase`.
 - A path member is a `std::filesystem::path`, for the same reason a path parameter is; see the C++ style fragment. Building the message then needs an explicit `path.string()`, because there is no `operator+` between a string literal and a path. That conversion is the one place the narrow form is correct: the message is prose for a human, not something anyone reopens the file with.
 - Exception types live in `include/myproj/errors.h` in a tier with a public API, so a consumer imports them from one place. An application has no `include/`: its `errors.h` sits in `src/` beside the core, and `app/` includes it by name (see cmake-app).
 - `Interrupted`, thrown by library code when the cancellation flag it was handed is set, derives from `Error` like every other type and is declared in the same header; see the interrupts fragment.

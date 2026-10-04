@@ -38,10 +38,13 @@ if(MYPROJ_BUILD_FUZZERS)
     # declared. Coverage feedback and ASan only see code compiled with these
     # flags, so putting them on a harness alone would leave the parser under
     # test uninstrumented: the fuzzer would run blind and ASan would see nothing.
-    add_compile_options(-fsanitize=fuzzer-no-link,address,undefined -fno-omit-frame-pointer -g -O1)
+    add_compile_options(-fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined
+                        -fno-omit-frame-pointer -g -O1)
     add_link_options(-fsanitize=address,undefined)
 endif()
 ```
+
+`-fno-sanitize-recover=undefined` makes a UBSan finding a crash the fuzzer records, rather than a report it prints and runs past; see the sanitizer section of cpp/cmake, which also covers a finding in vendored code.
 
 Never use a bare `BUILD_FUZZERS`; it is as collision-prone as `BUILD_TESTING`, and a vendored dependency with the same idea will pick it up. Default `OFF` keeps the fuzzing runtime out of a normal build entirely.
 

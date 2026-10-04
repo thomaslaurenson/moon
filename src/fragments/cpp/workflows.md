@@ -98,7 +98,7 @@ jobs:
       - run: make test_asan
 ```
 
-This is the whole of `test.yml` for a library. A tier that ships a binary adds `make test_functional` to `test_linux` and the native platform jobs; see workflows-app. Both tiers get `test_asan` unchanged.
+This is the whole of `test.yml` for a library, apart from the jobs for a deployment architecture that cpp/workflows-lib adds. A tier that ships a binary adds `make test_functional` to `test_linux` and the native platform jobs; see workflows-app. Both tiers get `test_asan` unchanged.
 
 `test_asan` is the CI job the sanitizer section of cpp/cmake asks for. It is a Linux job at the lowest billing rate and it runs on every trigger, because a memory error is exactly the kind of defect that is cheapest to find on the pull request that introduced it. A project whose unit layer is slow enough for the doubled runtime to matter can gate it to `main.yml` and `tag.yml`, at the cost of learning about the finding later.
 

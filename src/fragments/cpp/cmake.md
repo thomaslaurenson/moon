@@ -465,10 +465,10 @@ Compile the vendored sources that read the setting through project-owned wrapper
 #define LUA_LIB
 #include "luaconf.h"
 #define LUA_COMPAT_GETN
-#include "lauxlib.c"
+#include "lauxlib.c" // NOLINT(bugprone-suspicious-include)
 ```
 
-The wrapper replaces the vendored source in the target's source list. Wrap only the sources the setting affects, and give each wrapper a comment naming the setting and why it is needed. Force-including an override header with `-include` looks simpler and fails: a configuration header with sections conditional on macros its includers define first (`luaconf.h` checks `LUA_CORE` and `lua_c`) is then read once, too early, and those sections are lost. The wrapper sets the includer's macros first, which is the order the vendored source expects.
+The wrapper replaces the vendored source in the target's source list. Wrap only the sources the setting affects, and give each wrapper a comment naming the setting and why it is needed. Including a `.c` file is the wrapper's purpose, so its vendored include carries `// NOLINT(bugprone-suspicious-include)` and nothing else in it is exempt from clang-tidy. Force-including an override header with `-include` looks simpler and fails: a configuration header with sections conditional on macros its includers define first (`luaconf.h` checks `LUA_CORE` and `lua_c`) is then read once, too early, and those sections are lost. The wrapper sets the includer's macros first, which is the order the vendored source expects.
 
 ### Including extern/ headers
 

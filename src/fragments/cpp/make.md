@@ -58,7 +58,7 @@ build: configure ## Build the project
 - `configure` stays compiler-neutral. CI builds under both GCC and clang by passing `-DCMAKE_CXX_COMPILER` through `CMAKE_ARGS`, and the configurations below that need clang pin it themselves.
 - `build` depends on `configure`, and every test target depends on `build`, so any entry point works from a fresh clone. CMake keeps cached `-D` values across a reconfigure, so the repeat does not discard the compiler or `-Werror` a CI job set with `make configure CMAKE_ARGS=...`.
 
-A project that needs a configuration of its own, such as a 32-bit build in `build/32`, adds a `configure_<name>` and `test_<name>` pair with the shape of `configure_asan` and `test_asan` below: its own directory under `build/`, named for what makes it different (see Build directory in the CMake fragment), and the unit layer run there.
+A project that needs a configuration of its own, such as a 32-bit build in `build/32`, adds a `configure_<name>` and `test_<name>` pair with the shape of `configure_asan` and `test_asan` below: its own directory under `build/`, named for what makes it different (see Build directory in the CMake fragment), and the unit layer run there. The 32-bit and MinGW pairs, for a library deployed into those binaries, are written down with the sanitizer targets below.
 
 ## TEST
 
@@ -129,6 +129,37 @@ test_asan: configure_asan ## Build and run the unit tests under sanitizers
 	cmake --build build/asan --parallel $(JOBS)
 	ctest --test-dir build/asan --output-on-failure --parallel $(JOBS) -L unit
 ```
+
+A project deployed into a 32-bit process, or a MinGW-built Windows one, adds the matching pair (see 32-bit and Windows cross builds in the CMake fragment):
+
+```makefile
+.PHONY: configure_32
+configure_32: ## Configure build/32 for a 32-bit build
+	cmake -B build/32 \
+	  -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+	  -DMYPROJ_BUILD_32BIT=ON \
+	  $(CMAKE_ARGS)
+
+.PHONY: test_32
+test_32: configure_32 ## Build and run the unit tests 32-bit
+	cmake --build build/32 --parallel $(JOBS)
+	ctest --test-dir build/32 --output-on-failure --parallel $(JOBS) -L unit
+
+.PHONY: configure_mingw
+configure_mingw: ## Configure build/mingw for a 32-bit Windows (MinGW) build
+	cmake -B build/mingw \
+	  -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+	  -DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchain-mingw32.cmake \
+	  -DCMAKE_CROSSCOMPILING_EMULATOR=wine \
+	  $(CMAKE_ARGS)
+
+.PHONY: test_mingw
+test_mingw: configure_mingw ## Build and run the unit tests as 32-bit Windows, under Wine
+	cmake --build build/mingw --parallel $(JOBS)
+	ctest --test-dir build/mingw --output-on-failure --parallel $(JOBS) -L unit
+```
+
+`CMAKE_CROSSCOMPILING_EMULATOR` is needed at build time, not only to run the tests: `catch_discover_tests` runs each test binary after linking it to list its tests, so a cross build without the emulator fails in the build.
 
 A sanitized build changes code generation, so it gets its own directory and cannot share `build/dev`. `test_asan` runs the unit layer only: that layer needs no external data or server, so it is the one that can run anywhere, and sanitizer findings in it point at the project's own code rather than at a fixture. Without these targets the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent. `test.yml` calls `test_asan` as a job of its own; see cpp/workflows.
 

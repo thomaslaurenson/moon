@@ -1,6 +1,6 @@
 # C++ library workflows
 
-Applies to libraries. A library isn't distributed as a prebuilt binary (consumers pull it in as a git submodule and compile it themselves), so CI is a single plain build-and-test job: no Docker, no libc/arch matrix, no separate build.yml. The release is in release-lib.
+Applies to libraries. A library isn't distributed as a prebuilt binary (consumers pull it in as a git submodule and compile it themselves), so CI is plain build-and-test jobs: no Docker, no libc matrix, no separate build.yml. The only jobs beyond those in cpp/workflows are for an architecture the library is deployed to; see the end of this fragment. The release is in release-lib.
 
 ## Workflow set
 
@@ -98,4 +98,4 @@ jobs:
 
 That self-containment is why there is no `build.yml` here for anything to wait on.
 
-If broader platform confidence is wanted later, add more runners to the `test.yml` job directly rather than reaching for the application's Docker/matrix pattern, which exists specifically for producing distributable binaries.
+A library never reaches for the application's Docker/matrix pattern, which exists to produce distributable binaries. A library whose consumer runs on another architecture tests there too, because that is a deployment target rather than extra confidence (see github/actions). A library linked into a 32-bit process gets a `test_32` job running `make test_32 CMAKE_ARGS="-DMYPROJ_WERROR=ON"`, after installing `g++-multilib`. One linked into a 32-bit Windows binary built with MinGW gets a `test_mingw` job running `make test_mingw` with the same `CMAKE_ARGS`, which builds into `build/mingw` with the MinGW toolchain and runs the tests under Wine. That job runs `dpkg --add-architecture i386` and `apt-get update`, installs `g++-mingw-w64-i686`, `wine` and `wine32:i386`, sets `WINEDEBUG=-all`, and runs `wineboot` once before the tests so the first test does not pay for Wine's start-up. Each is a separate job in `test.yml`, not a matrix entry, because its steps differ.

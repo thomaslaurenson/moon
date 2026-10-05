@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.1 - 2026-10-05
+
+### Added
+
+- Add C++ rules for dependencies shared with a sibling library and overriding a vendored configuration
+- Add 32-bit and MinGW cross builds for C++ libraries, with their Makefile targets and CI jobs
+- Add a project macro that tells a C++ test UBSan is on
+
+### Changed
+
+- Make UBSan findings fail C++ sanitizer and fuzz runs, with a per-target opt-out for vendored code
+- Move C++ submodules by hand to upstream releases rather than through Dependabot
+- Cap bash lines at 80 characters
+
 ## 0.7.0 - 2026-09-15
 
 ### Added

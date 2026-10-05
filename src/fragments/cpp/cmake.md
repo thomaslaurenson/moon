@@ -23,7 +23,7 @@ test/                 # see cpp/testing for internal structure
 ```
 
 - `extern/` contains only git submodules; never manually copied headers or installed libraries
-- `cmake/` holds build inputs that are neither source nor public headers: `version.h.in`, which every project has (see the version rule in cpp/style), plus helper modules such as `mark_system.cmake` where a project links a dependency that exports its own target. The version template is what makes this directory universal rather than optional. Keep templates out of `include/`: that tree is the API a consumer includes, and a file there that cannot be included misrepresents it.
+- `cmake/` holds build inputs that are neither source nor public headers: `version.h.in`, which every project has (see the version rule in cpp/style), plus helper modules such as `mark_system.cmake` where a project links a dependency that exports its own target, and `toolchain-mingw32.cmake` where it cross-builds for Windows (see 32-bit and Windows cross builds). The version template is what makes this directory universal rather than optional. Keep templates out of `include/`: that tree is the API a consumer includes, and a file there that cannot be included misrepresents it.
 
 Two rules hold across every tier, and the tier fragments assume them:
 
@@ -155,6 +155,7 @@ cmake --build build/dev
 | `build/asan` | Different code generation |
 | `build/coverage` | Different code generation: clang's instrumentation, so pinned to clang whatever the everyday compiler is |
 | `build/32` | Different architecture |
+| `build/mingw` | Different compiler and target: MinGW i686, tests run under Wine |
 | `build/lint` | Different compiler: clang, so clang-tidy can parse the sources |
 
 Only create a directory when the configuration genuinely cannot share one. A configuration that differs by a `-D` option affecting compiler, architecture or instrumentation cannot: reconfiguring in place silently replaces the previous one, and nothing afterwards tells you which of them you are looking at. Naming the directory for the configuration puts that answer in the path.
@@ -360,19 +361,54 @@ if(MYPROJ_ASAN)
         # its runtime automatically, so there is no matching add_link_options.
         add_compile_options(/fsanitize=address /Oy-)
     else()
-        add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+        add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=undefined
+                            -fno-omit-frame-pointer -g)
         add_link_options(-fsanitize=address,undefined)
+        # GCC has no macro that says UBSan is on, and __has_feature arrived
+        # only in GCC 14, so a test that must step around UBSan reads this
+        add_compile_definitions(MYPROJ_SANITIZE_UNDEFINED)
     endif()
 endif()
 ```
 
+`-fno-sanitize-recover=undefined` is what makes a UBSan finding fail the run. UBSan recovers by default: it prints the report and carries on, the test passes, and the process exits 0, so a sanitizer job stays green over undefined behaviour unless someone reads its output. AddressSanitizer already aborts on its first finding and needs no flag.
+
+A finding inside vendored code cannot be fixed in this tree, and with recovery off it cannot be suppressed either, because a suppression file only applies to recoverable checks. Turn off the narrowest check that covers it, on that dependency's target alone, and report the finding upstream unless the dependency is no longer maintained. Name the one check that fires (`-fno-sanitize=null` for a member access through a null pointer) rather than `-fno-sanitize=undefined`, so the dependency keeps every other check. The opt-out goes after the target is declared, guarded on the options that turn UBSan on, with a comment naming the finding:
+
+```cmake
+# Lua 5.1.1's ngcotouv macro forms &o->uv from a null list head (lfunc.c:58
+# and :99); it only computes the address, and 5.1 is no longer maintained
+if((MYPROJ_ASAN OR MYPROJ_BUILD_FUZZERS) AND NOT MSVC)
+    target_compile_options(myproj_lua PRIVATE -fno-sanitize=null)
+endif()
+```
+
+It only works for a dependency compiled into a target of its own. A header-only dependency is compiled into the project's own sources, so a finding there has to be fixed upstream or avoided at the call site.
+
+A test that has to step around UBSan itself, such as one whose conditions make UBSan's runtime report findings that are not there, checks `MYPROJ_SANITIZE_UNDEFINED`. Every option that turns UBSan on defines it, because the compiler cannot be asked: GCC defines `__SANITIZE_ADDRESS__` for ASan but nothing for UBSan, and `__has_feature(undefined_behavior_sanitizer)` answers only on clang and GCC 14 or later.
+
 The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable: a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 
-This, and the fuzz option's instrumentation in cpp/testing-fuzz, are the two legitimate uses of the directory-scoped `add_compile_options` rather than `target_compile_options`, for the same reason. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared.
+This, the fuzz option's instrumentation in cpp/testing-fuzz and the 32-bit option below are the legitimate uses of the directory-scoped `add_compile_options` rather than `target_compile_options`, for the same reason. A sanitizer is not a per-target property: instrumenting the library but not the test binary that links it produces link errors and false negatives. It has to be all or nothing, and it has to be set before the first target is declared. The one exception is dropping a UBSan check from a single vendored target, above: UBSan instruments each object on its own and links no shadow memory, so an object built without a check links cleanly, which is not true of ASan.
 
 Default `OFF`, because ASan costs roughly 2x runtime and 3x memory. Run it locally when hunting a bug, and in a dedicated CI job rather than the main test job: that job is `test_asan` in cpp/workflows, and the reason it is separate is the same 2x.
 
 A sanitized build changes code generation, so it gets its own `build/asan` directory rather than sharing `build/dev`. `configure_asan` and `test_asan` in the Makefile targets fragment configure it and run the unit layer there, which is the layer that needs no external data and whose findings point at the project's own code. Without them the option is reachable only through a raw `cmake -D` invocation, which the Makefile exists to prevent.
+
+### 32-bit and Windows cross builds
+
+A library deployed into a 32-bit process declares a 32-bit option, applied globally like the sanitizers because a 64-bit object cannot link into a 32-bit binary:
+
+```cmake
+option(MYPROJ_BUILD_32BIT "Force a 32-bit build (-m32)" OFF)
+
+if(MYPROJ_BUILD_32BIT)
+    add_compile_options(-m32)
+    add_link_options(-m32)
+endif()
+```
+
+`configure_32` and `test_32` in the Makefile targets fragment build it into `build/32`. A library also deployed into a MinGW-built Windows binary keeps a toolchain file, `cmake/toolchain-mingw32.cmake`, which sets `CMAKE_SYSTEM_NAME Windows` and `CMAKE_SYSTEM_PROCESSOR i686`, names the `i686-w64-mingw32-gcc-win32`/`g++-win32` compilers, sets `CMAKE_EXE_LINKER_FLAGS_INIT` to `-static`, and points the find-root at `/usr/i686-w64-mingw32`. The `-win32` variants matter: the `-posix` ones link `libwinpthread-1.dll`, which every consumer would then have to ship, and GCC 13 and later give the win32 thread model `std::thread`, which needs `_WIN32_WINNT` at least `0x0600`. mingw-w64 defaults it to `0x0A00` once a Windows header is included. A dependency that checks for it earlier still needs it set: asio warns unless `_WIN32_WINNT` is defined on its target, so a library using asio defines it there, as `0x0601` (asio's own suggestion), and a consumer that sets its own must match it. Define `ASIO_HAS_THREADS` on the same target: on MinGW asio detects threads from `_MT`, which only a C runtime header defines, so a file that includes asio first builds it without threads while the others build it with them, and the mismatched layouts deadlock the first `io_context` constructed. Nothing fails to compile; the test binary hangs. `configure_mingw` and `test_mingw` build it into `build/mingw` and run the tests under Wine.
 
 ## Dependencies
 
@@ -407,6 +443,37 @@ add_subdirectory(extern/ThirdPartyLib)
 ```
 
 Single-header libraries check for the header file directly rather than a `CMakeLists.txt`. Never assume submodules are initialised. Always guard every dependency.
+
+### Dependencies shared with a sibling library
+
+Two libraries that vendor the same dependency collide when a consumer adds both to one build: the second `add_subdirectory(extern/zlib)` declares `zlibstatic` again, and CMake stops with a duplicate-target error. Guard the dependency on the target it exports, so whichever library is added first provides it:
+
+```cmake
+if(NOT TARGET zlibstatic)
+    set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    add_subdirectory(extern/zlib)
+    mark_system(zlibstatic)
+endif()
+```
+
+The first `add_subdirectory` wins, so sibling libraries pin the same release tag of a shared dependency. Keep the existence check outside the guard when the project also reads files from the submodule directly, such as a source file compiled into one of its own targets: that file comes from this project's checkout whichever library provided the target.
+
+### Overriding a dependency's configuration
+
+Some dependencies configure themselves through a header rather than CMake options, and a few hard-code a setting the project needs changed: Lua 5.1's `luaconf.h` undefines `LUA_COMPAT_GETN` and says to edit the file to turn it on. Never copy or edit the vendored file; the change disappears at the next bump, and `extern/` holds submodules only.
+
+Compile the vendored sources that read the setting through project-owned wrapper translation units instead. Each wrapper defines the macros the vendored source defines before its first include, includes the configuration header, sets the override, and then includes the vendored source, whose own include of the header is skipped by the header's include guard:
+
+```cpp
+// src/lua/lauxlib_compat.cpp: lauxlib.c with Lua 5.0's getn/setn
+#define lauxlib_c
+#define LUA_LIB
+#include "luaconf.h"
+#define LUA_COMPAT_GETN
+#include "lauxlib.c" // NOLINT(bugprone-suspicious-include)
+```
+
+The wrapper replaces the vendored source in the target's source list. Wrap only the sources the setting affects, and give each wrapper a comment naming the setting and why it is needed. Including a `.c` file is the wrapper's purpose, so its vendored include carries `// NOLINT(bugprone-suspicious-include)` and nothing else in it is exempt from clang-tidy. Force-including an override header with `-include` looks simpler and fails: a configuration header with sections conditional on macros its includers define first (`luaconf.h` checks `LUA_CORE` and `lua_c`) is then read once, too early, and those sections are lost. The wrapper sets the includer's macros first, which is the order the vendored source expects.
 
 ### Including extern/ headers
 

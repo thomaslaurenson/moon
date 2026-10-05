@@ -30,7 +30,7 @@ Where the answer is a dependency, the bar is that it does something the project 
 
 Prefer header-only or single-purpose libraries that build with the project. A dependency that wants a system package, a package manager, or its own build step is a dependency that breaks somebody's build; everything here compiles from `extern/` with no prerequisites beyond a compiler.
 
-A dependency is worth taking when the standard library has no answer and the problem is genuinely hard. It is not worth taking to avoid twenty lines, because here it costs a submodule, a pin, an existence check, a `SYSTEM` include, and a Dependabot pull request every time upstream moves.
+A dependency is worth taking when the standard library has no answer and the problem is genuinely hard. It is not worth taking to avoid twenty lines, because here it costs a submodule, a pin, an existence check, a `SYSTEM` include, and a deliberate bump to every upstream release worth taking.
 
 ## Embedded assets
 
@@ -70,12 +70,9 @@ Where a project embeds something that has to be valid, add a `check_embed` targe
 
 There is no C++ equivalent of `govulncheck`, and it is worth saying so plainly rather than leaving each project to look for one. Nothing here can tell you whether a vulnerability in a vendored library is reachable from this code, because the analysis that would answer that does not exist for a tree of pinned submodules.
 
-What is available is narrower:
+What is available is narrower. Upstream release notes are where a security fix is actually announced, and with a handful of dependencies, watching their releases is a realistic thing to do and is the only route that reports severity.
 
-- **Dependabot with the `gitsubmodule` ecosystem** opens a pull request when a submodule's upstream moves; see the Dependabot fragment. It tracks commits, not advisories, so it tells you a bump exists and never why it matters.
-- **Upstream release notes** are where a security fix is actually announced. With a handful of dependencies, watching their releases is a realistic thing to do and is the only route that reports severity.
-
-So the practice is to keep the pins current rather than to scan. A submodule that has not moved in two years is the risk, and the Dependabot pull request is what surfaces it.
+So the practice is to keep the pins current rather than to scan. A submodule that has not moved in two years is the risk, and watching its releases is what surfaces it. The pin moves by hand, to the release tag or, where upstream does not tag releases, to a reviewed commit, in a pull request of its own. Dependabot is no help here: its `gitsubmodule` ecosystem tracks the commits on a submodule's branch rather than its releases or advisories, so it reports that something moved and never which move is a release; see the Dependabot fragment.
 
 Do not add a scanner that reports on the whole vendored tree without reachability. It produces a list dominated by findings in code the project never calls, and a list nobody can act on is one nobody reads.
 

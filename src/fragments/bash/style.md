@@ -14,7 +14,7 @@ Do not set `set -euo pipefail` in sourced files; they run in the caller's shell.
 
 ## Formatting
 
-- Indent with 2 spaces, never tabs. Max line length 100.
+- Indent with 2 spaces, never tabs. Max line length 80.
 - Put `; then` and `; do` on the same line as `if`/`for`/`while`.
 
 ## Naming

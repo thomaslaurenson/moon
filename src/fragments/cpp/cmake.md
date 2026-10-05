@@ -364,6 +364,9 @@ if(MYPROJ_ASAN)
         add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=undefined
                             -fno-omit-frame-pointer -g)
         add_link_options(-fsanitize=address,undefined)
+        # GCC has no macro that says UBSan is on, and __has_feature arrived
+        # only in GCC 14, so a test that must step around UBSan reads this
+        add_compile_definitions(MYPROJ_SANITIZE_UNDEFINED)
     endif()
 endif()
 ```
@@ -381,6 +384,8 @@ endif()
 ```
 
 It only works for a dependency compiled into a target of its own. A header-only dependency is compiled into the project's own sources, so a finding there has to be fixed upstream or avoided at the call site.
+
+A test that has to step around UBSan itself, such as one whose conditions make UBSan's runtime report findings that are not there, checks `MYPROJ_SANITIZE_UNDEFINED`. Every option that turns UBSan on defines it, because the compiler cannot be asked: GCC defines `__SANITIZE_ADDRESS__` for ASan but nothing for UBSan, and `__has_feature(undefined_behavior_sanitizer)` answers only on clang and GCC 14 or later.
 
 The compiler branch is not optional on a project that builds on Windows. `-fsanitize=address,undefined` is GCC and Clang syntax; MSVC rejects it, so without the branch turning the option on fails the build outright rather than producing an uninstrumented one. `-fno-omit-frame-pointer` is `/Oy-` there, and UB sanitizing is simply unavailable: a Windows sanitizer run catches memory errors only, which is worth stating in a bug report that compares platforms.
 

@@ -70,9 +70,7 @@ Where a project embeds something that has to be valid, add a `check_embed` targe
 
 There is no C++ equivalent of `govulncheck`, and it is worth saying so plainly rather than leaving each project to look for one. Nothing here can tell you whether a vulnerability in a vendored library is reachable from this code, because the analysis that would answer that does not exist for a tree of pinned submodules.
 
-What is available is narrower:
-
-- **Upstream release notes** are where a security fix is actually announced. With a handful of dependencies, watching their releases is a realistic thing to do and is the only route that reports severity.
+What is available is narrower. Upstream release notes are where a security fix is actually announced, and with a handful of dependencies, watching their releases is a realistic thing to do and is the only route that reports severity.
 
 So the practice is to keep the pins current rather than to scan. A submodule that has not moved in two years is the risk, and watching its releases is what surfaces it. The pin moves by hand, to the release tag or, where upstream does not tag releases, to a reviewed commit, in a pull request of its own. Dependabot is no help here: its `gitsubmodule` ecosystem tracks the commits on a submodule's branch rather than its releases or advisories, so it reports that something moved and never which move is a release; see the Dependabot fragment.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2 - 2026-10-23
+
+### Updated
+
+- Build release binaries with the newest Go 1.27 patch release
+- Update dependencies
+
 ## 0.7.1 - 2026-10-05
 
 ### Added

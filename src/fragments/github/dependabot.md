@@ -53,3 +53,16 @@ When the project wants security updates but no routine version-bump PRs, set `op
 ```
 
 This only suppresses routine version-update PRs from this file. GitHub's separate Dependabot security-updates feature (a repo-level setting, independent of this file) still opens PRs for vulnerable dependencies regardless of this limit. One ecosystem entry covers every dependency in this mode.
+
+## Its pull requests
+
+Fold Dependabot's pull requests into one `update/<short-description>` branch rather than merging them one by one, whenever more than one is open or a release is due. Each of its pull requests edits the same manifest and lockfile, so merging them in turn conflicts, and every merge is a `main` run of its own.
+
+- Apply the version each pull request names. Where the fold takes a single bump, `gh pr diff <number>` is the diff to compare the manifest and lockfile against.
+- After the update pull request merges, close each one it replaced, with a pointer to it. Close them after the merge, not before, so a failed update leaves them open. Dependabot does not reliably delete its branch when a pull request is closed, so `--delete-branch` does:
+
+```text
+gh pr close <number> --comment "Folded into #<update-number>." --delete-branch
+```
+
+- One pull request with no release due, typically a GitHub Actions bump, can be merged on its own: squash it with Dependabot's subject line and an empty body, as the pull request fragment describes.

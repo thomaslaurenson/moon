@@ -1,8 +1,8 @@
 # Changelog format
 
-The changelog tells someone who uses the project what changed between releases. It is not a record of the work done, and not a summary of the diff. A reader who wants the reasoning reads the pull request; a reader who wants the detail reads the log.
+The changelog tells someone who uses the project what changed between releases. It is not a record of the work done, and not a summary of the diff. A reader who wants the detail reads the log and the diff.
 
-- Source content from the PR description and recent commits; do not invent entries.
+- Source content from the commits since the last release and their diffs; do not invent entries.
 - One bullet per logical change; imperative voice ("Add support for X"), no trailing period, no inline code.
 - Newest release at the top. Only include sections that have entries.
 

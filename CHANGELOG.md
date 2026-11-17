@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.3 - 2026-11-18
+
+### Added
+
+- Add the pull request flow from push to release: empty body, checks, squash merge, signed tag
+- Add folding Dependabot pull requests into one update branch
+
+### Changed
+
+- Source changelog entries from the commits rather than the pull request description
+- Fix a standard library vulnerability by cutting a new release rather than editing the go directive
+
+### Updated
+
+- Build release binaries with Go 1.27.4
+
 ## 0.7.2 - 2026-10-23
 
 ### Updated

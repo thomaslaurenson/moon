@@ -70,4 +70,4 @@ Dependabot covers dependencies and cannot see the standard library, since the to
 - Scan with the same Go version the release is built with, which `go-version-file: go.mod` gives for free. Scanning with a newer toolchain than the one that builds the binary reports the wrong standard library.
 - Act on the `Your code is affected by` count only. The trailing counts for packages imported and modules required are vulnerabilities the analysis proved unreachable, and are the noise the reachability analysis exists to remove.
 
-A standard library finding is usually fixed by bumping the `go` directive to the patched release and cutting a new release.
+A standard library finding is fixed by cutting a new release, which builds with the newest patch the `go` directive allows. Raise the directive only when the fix is in a newer minor version than the one it names.

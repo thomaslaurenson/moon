@@ -63,14 +63,13 @@ Add `.gpipe.yml` to the `pr.yml` and `main.yml` paths filters: a change to it is
 ## The action
 
 ```yaml
-- uses: thomaslaurenson/gpipe@<sha> # v<version>
+- uses: thomaslaurenson/gpipe@vN
   with:
     cosign_sign: true
 ```
 
-- Pin it to a commit SHA like any action outside `actions/*`, for the reason the GitHub Actions fragment gives.
 - `version` and `repo` default to `github.ref_name` and `github.repository`. A `tag.yml` that fires only on `v*` therefore needs neither, since `ref_name` is already the semantic version gpipe expects.
-- The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. That ref, the commit SHA, is what the `Gpipe-Version` line of each install script records.
+- The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. That ref is what the `Gpipe-Version` line of each install script records.
 - It sets up its own Go from gpipe's `go.mod` with `actions/setup-go`, so a caller adds nothing for gpipe's sake, whatever Go the runner has. That Go stays on `PATH` for the rest of the job, which is one more reason gpipe runs after the build step and never before it.
 - `cosign_sign: true` needs `id-token: write` on this job **and** on the caller job in `tag.yml`. Granting it in only one of the two fails at signing time.
 

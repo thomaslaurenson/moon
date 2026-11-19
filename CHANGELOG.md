@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.4 - 2026-11-20
+
+### Changed
+
+- Pin actions from the repository's own owner, such as gpipe, to a commit SHA
+- Resolve the newest Go patch in setup-go rather than one cached on the runner
+
+### Fixed
+
+- Name the workflow when watching the main and tag runs
+- Describe gpipe setting up its own Go rather than using the runner's
+
 ## 0.7.3 - 2026-11-18
 
 ### Added

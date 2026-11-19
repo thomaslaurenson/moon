@@ -15,12 +15,13 @@ paths:
 
 If the binary embeds non-Go assets (via `go:embed`), add those trees to the filter too. A change under an embedded directory is a change to the compiled binary, so CI must run for it even though no `.go` file changed. For example, a tool that embeds `templates/` and `schemas/` adds `"templates/**"` and `"schemas/**"`.
 
-Setup (before any `make` call). Always use `go-version-file: go.mod`; never hardcode a version:
+Setup (before any `make` call). Always use `go-version-file: go.mod`; never hardcode a version. `check-latest: true` makes setup-go resolve the newest patch of that version, where without it a Go already cached on the runner image satisfies the request and can be a patch behind:
 
 ```yaml
 - uses: actions/setup-go@vN
   with:
     go-version-file: go.mod
+    check-latest: true
     cache: true
 ```
 
@@ -44,6 +45,7 @@ jobs:
       - uses: actions/setup-go@vN
         with:
           go-version-file: go.mod
+          check-latest: true
           cache: true
 
       - run: make check_all
@@ -86,6 +88,7 @@ jobs:
       - uses: actions/setup-go@vN
         with:
           go-version-file: go.mod
+          check-latest: true
           cache: true
       - run: make vuln
 ```

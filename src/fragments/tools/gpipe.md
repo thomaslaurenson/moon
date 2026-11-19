@@ -63,20 +63,15 @@ Add `.gpipe.yml` to the `pr.yml` and `main.yml` paths filters: a change to it is
 ## The action
 
 ```yaml
-- uses: thomaslaurenson/gpipe@vN
+- uses: thomaslaurenson/gpipe@<sha> # v<version>
   with:
     cosign_sign: true
 ```
 
+- Pin it to a commit SHA like any action outside `actions/*`, for the reason the GitHub Actions fragment gives.
 - `version` and `repo` default to `github.ref_name` and `github.repository`. A `tag.yml` that fires only on `v*` therefore needs neither, since `ref_name` is already the semantic version gpipe expects.
-- The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current.
-- It installs no Go of its own. The action sets `GOTOOLCHAIN=local` and builds with whatever Go the runner already has, so gpipe's `go` directive is a floor the runner must meet rather than a toolchain the build downloads to satisfy it. A runner below that floor fails outright:
-
-  ```text
-  go: go.mod requires go >= 1.25.0 (running go 1.24.0; GOTOOLCHAIN=local)
-  ```
-
-  GitHub-hosted images ship a current Go, so a caller normally adds nothing. Where a runner is below the floor, or a self-hosted one has no Go at all, put `actions/setup-go` before this step: `GOTOOLCHAIN=local` resolves `go` through `PATH`, so the version setup-go puts there is the version that builds gpipe. A caller that already runs setup-go for its own build is therefore covered by that step too.
+- The action builds gpipe from its own checkout, so the ref pinned in `uses:` is the gpipe that runs and there is no separate version input to keep current. That ref, the commit SHA, is what the `Gpipe-Version` line of each install script records.
+- It sets up its own Go from gpipe's `go.mod` with `actions/setup-go`, so a caller adds nothing for gpipe's sake, whatever Go the runner has. That Go stays on `PATH` for the rest of the job, which is one more reason gpipe runs after the build step and never before it.
 - `cosign_sign: true` needs `id-token: write` on this job **and** on the caller job in `tag.yml`. Granting it in only one of the two fails at signing time.
 
 ## Not for prereleases

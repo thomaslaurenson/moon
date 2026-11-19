@@ -39,7 +39,7 @@ jobs:
       - name: Extract release notes from CHANGELOG.md
         run: make get_changelog TAG="${GITHUB_REF_NAME}" > /tmp/release-notes.md
 
-      - uses: thomaslaurenson/gpipe@vN
+      - uses: thomaslaurenson/gpipe@<sha> # v<version>
         with:
           cosign_sign: true
 

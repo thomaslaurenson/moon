@@ -83,7 +83,7 @@ jobs:
         env:
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
-      - uses: thomaslaurenson/gpipe@<sha> # v<version>
+      - uses: thomaslaurenson/gpipe@vN
         with:
           cosign_sign: true
 

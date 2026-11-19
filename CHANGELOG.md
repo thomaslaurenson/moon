@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.5 - 2026-11-20
+
+### Changed
+
+- Pin actions from the repository's own owner, such as gpipe, to a major version again
+
 ## 0.7.4 - 2026-11-20
 
 ### Changed

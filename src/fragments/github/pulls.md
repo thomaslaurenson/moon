@@ -51,11 +51,13 @@ git fetch --prune
 Watch the run on the merged commit before building anything on it:
 
 ```text
-gh run list --branch main --commit "$(git rev-parse HEAD)"
+gh run list --workflow main.yml --commit "$(git rev-parse HEAD)"
 gh run watch <run-id> --exit-status
 ```
 
 The `main` run is the first to execute what only `main` runs, such as a prerelease build, so a tooling upgrade that passed its pull request can still fail here. The run takes a few seconds to appear after the merge.
+
+Name the workflow. Other workflows run on the same commit, such as the Dependabot Updates run that a change to `dependabot.yml` starts, and whichever started last is listed first.
 
 ## Releasing
 
@@ -69,10 +71,10 @@ git tag -s vX.Y.Z -m "Release vX.Y.Z" <sha>
 git push origin vX.Y.Z
 ```
 
-- Watch the tag's run. `--branch` takes the tag name; `--commit` would also match the `main` run on the same commit:
+- Watch the tag's run, named the same way, with the tag name as the branch:
 
 ```text
-gh run list --branch vX.Y.Z
+gh run list --workflow tag.yml --branch vX.Y.Z
 gh run watch <run-id> --exit-status
 ```
 

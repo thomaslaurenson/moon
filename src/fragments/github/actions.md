@@ -57,7 +57,7 @@ Never use `@latest`. How tightly to pin below that depends on who publishes the 
 
 The comment is not decoration: Dependabot reads it, bumps the SHA and rewrites the comment together, so a SHA pin costs no more to maintain than a tag. Without it the pin is an unreadable hex string that nobody dares touch.
 
-An action published by the same person who owns the repository using it is not third-party in the sense that matters here, since compromising it and compromising the repository are the same event. Pin it to a major like `actions/*`.
+That includes an action published by the owner of the repository using it, such as `thomaslaurenson/gpipe`. A shared owner does not make its tag safe to follow: gpipe's own release moves `v1`, so a broken gpipe release would reach every caller's next release before anyone chose to take it. Pinned to a SHA, each new release arrives as a Dependabot pull request, and every caller records exactly which gpipe built its release.
 
 `@vN` in the workflow fragments means the current major at authoring time, for example `@v7`. Do not treat any version number that has ever appeared in these documents as the target to match: a frozen version goes stale faster than the spec gets updated, and Dependabot (see below) keeps the pin current from there.
 
